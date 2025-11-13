@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -12,11 +13,18 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").max(100),
 });
 
+const signUpSchema = authSchema.extend({
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions",
+  }),
+});
+
 export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -44,7 +52,11 @@ export default function Auth() {
     
     // Validate input
     try {
-      authSchema.parse({ email, password });
+      if (isLogin) {
+        authSchema.parse({ email, password });
+      } else {
+        signUpSchema.parse({ email, password, termsAccepted });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -74,6 +86,19 @@ export default function Auth() {
         });
 
         if (error) throw error;
+
+        // Update profile with terms acceptance
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from("profiles")
+            .update({
+              terms_accepted: true,
+              terms_accepted_at: new Date().toISOString(),
+            })
+            .eq("id", user.id);
+        }
+        
         toast.success("Account created! You can now log in.");
       }
     } catch (error: any) {
@@ -129,6 +154,25 @@ export default function Auth() {
                 disabled={loading}
               />
             </div>
+
+            {!isLogin && (
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                />
+                <label
+                  htmlFor="terms"
+                  className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I accept the{" "}
+                  <Link to="/terms" className="text-primary hover:underline">
+                    terms and conditions
+                  </Link>
+                </label>
+              </div>
+            )}
 
             <Button
               type="submit"
