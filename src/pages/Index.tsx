@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield } from "lucide-react";
+import { Shield, MoreVertical } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 
 type SortOption = "name" | "date" | "size";
@@ -404,7 +410,7 @@ export default function Index() {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 pb-20 lg:pb-0">
             {/* Upload Area */}
             <div 
               className={`bg-card rounded-xl shadow-sm border-2 border-dashed transition-colors p-8 mb-6 ${
@@ -443,9 +449,9 @@ export default function Index() {
                   <h4 className="text-sm font-medium">Uploading files...</h4>
                   {Array.from(uploadProgress.entries()).map(([id, progress]) => (
                     <div key={id} className="bg-muted/30 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <span className="text-sm truncate flex-1">{progress.fileName}</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-sm text-muted-foreground">
                             {progress.progress}%
                           </span>
@@ -487,22 +493,24 @@ export default function Index() {
             </div>
 
             {/* File List */}
-            <div className="bg-card rounded-xl shadow-sm border border-border/50 p-6">
-              <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-                <div className="flex items-center gap-4">
+            <div className="bg-card rounded-xl shadow-sm border border-border/50 p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <h2 className="text-xl font-semibold">
                     {selectedCategory === "all" ? "All Files" : categories.find(c => c.id === selectedCategory)?.name} ({fileCount})
                   </h2>
                   {selectedFiles.size > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-muted-foreground">
                         {selectedFiles.size} selected
                       </span>
                       <Button size="sm" variant="outline" onClick={handleBulkMove}>
-                        Move to Category
+                        <span className="hidden sm:inline">Move to Category</span>
+                        <span className="sm:hidden">Move</span>
                       </Button>
                       <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
-                        Delete Selected
+                        <span className="hidden sm:inline">Delete Selected</span>
+                        <span className="sm:hidden">Delete</span>
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setSelectedFiles(new Set())}>
                         Clear
@@ -510,30 +518,32 @@ export default function Index() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                   <Input
                     type="text"
                     placeholder="Search PDFs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="max-w-xs"
+                    className="w-full sm:max-w-xs"
                   />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
-                  >
-                    <option value="date">Date</option>
-                    <option value="name">Name</option>
-                    <option value="size">Size</option>
-                  </select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                  >
-                    {sortOrder === "asc" ? "↑" : "↓"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      className="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                    >
+                      <option value="date">Date</option>
+                      <option value="name">Name</option>
+                      <option value="size">Size</option>
+                    </select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    >
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -569,71 +579,88 @@ export default function Index() {
                   {sortedFiles.map((file) => (
                     <div
                       key={file.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                      className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-3 md:p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.id)}
-                        onChange={() => toggleFileSelection(file.id)}
-                        className="w-4 h-4 cursor-pointer flex-shrink-0"
-                      />
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                          </svg>
+                      {/* First row: Checkbox, Icon, File info */}
+                      <div className="flex items-center gap-3 w-full md:w-auto md:flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedFiles.has(file.id)}
+                          onChange={() => toggleFileSelection(file.id)}
+                          className="w-4 h-4 cursor-pointer flex-shrink-0"
+                        />
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                            <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {editingFileId === file.id ? (
+                            <div className="flex gap-2 items-center flex-wrap">
+                              <Input
+                                value={editingFileName}
+                                onChange={(e) => setEditingFileName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveEdit();
+                                  if (e.key === "Escape") handleCancelEdit();
+                                }}
+                                className="h-8 flex-1 min-w-[120px]"
+                                autoFocus
+                              />
+                              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                              <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                            </div>
+                          ) : (
+                            <>
+                              <h3 className="font-medium truncate">{file.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {(file.file_size / 1024).toFixed(2)} KB
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        {editingFileId === file.id ? (
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              value={editingFileName}
-                              onChange={(e) => setEditingFileName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveEdit();
-                                if (e.key === "Escape") handleCancelEdit();
-                              }}
-                              className="h-8"
-                              autoFocus
-                            />
-                            <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                      
+                      {/* Second row: Actions - responsive layout */}
+                      {editingFileId !== file.id && (
+                        <div className="flex items-center gap-2 flex-wrap justify-end md:justify-start ml-14 md:ml-0">
+                          {/* Favorite - always visible */}
+                          <button
+                            onClick={() => toggleFavorite(file.id, file.is_favorite)}
+                            className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.is_favorite ? "text-yellow-500" : ""}`}
+                            title={file.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                          >
+                            <svg className="w-5 h-5" fill={file.is_favorite ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          </button>
+
+                          {/* Category - badge on mobile, dropdown on desktop */}
+                          <div className="md:hidden">
+                            <span className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground">
+                              {file.category_id 
+                                ? categories.find(c => c.id === file.category_id)?.name 
+                                : "Uncategorized"}
+                            </span>
                           </div>
-                        ) : (
-                          <>
-                            <h3 className="font-medium truncate">{file.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {(file.file_size / 1024).toFixed(2)} KB
-                            </p>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {editingFileId !== file.id && (
-                          <>
-                            <button
-                              onClick={() => toggleFavorite(file.id, file.is_favorite)}
-                              className={`p-2 hover:bg-accent rounded-lg ${file.is_favorite ? "text-yellow-500" : ""}`}
-                              title={file.is_favorite ? "Remove from favorites" : "Add to favorites"}
-                            >
-                              <svg className="w-5 h-5" fill={file.is_favorite ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                              </svg>
-                            </button>
-                            <select
-                              value={file.category_id || "uncategorized"}
-                              onChange={(e) => updateFileCategory(file.id, e.target.value === "uncategorized" ? null : e.target.value)}
-                              className="p-2 rounded-lg border border-border bg-background text-sm"
-                            >
-                              <option value="uncategorized">Uncategorized</option>
-                              {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                              ))}
-                            </select>
+                          <select
+                            value={file.category_id || "uncategorized"}
+                            onChange={(e) => updateFileCategory(file.id, e.target.value === "uncategorized" ? null : e.target.value)}
+                            className="hidden md:block p-2 rounded-lg border border-border bg-background text-sm flex-shrink-0"
+                          >
+                            <option value="uncategorized">Uncategorized</option>
+                            {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+
+                          {/* Desktop actions - visible on md+ screens */}
+                          <div className="hidden md:flex md:items-center md:gap-2">
                             <button
                               onClick={() => handleStartEdit(file.id, file.name)}
-                              className="p-2 hover:bg-accent rounded-lg"
+                              className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
                               title="Rename file"
                             >
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -644,7 +671,7 @@ export default function Index() {
                               <>
                                 <button
                                   onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}
-                                  className="p-2 hover:bg-accent rounded-lg"
+                                  className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
                                   title="Preview PDF"
                                 >
                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -654,7 +681,7 @@ export default function Index() {
                                 <a
                                   href={file.url}
                                   download={file.name}
-                                  className="p-2 hover:bg-accent rounded-lg"
+                                  className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
                                   title="Download file"
                                 >
                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -663,18 +690,74 @@ export default function Index() {
                                 </a>
                               </>
                             )}
-                            <button
-                              onClick={() => deleteFile(file.id, file.storage_path)}
-                              className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
-                              title="Delete file"
-                            >
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-                              </svg>
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          </div>
+
+                          {/* Mobile: More actions dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="md:hidden p-2 h-auto">
+                                <MoreVertical className="w-5 h-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-50 bg-popover">
+                              <DropdownMenuItem onClick={() => {
+                                const dropdown = document.activeElement as HTMLElement;
+                                dropdown?.blur();
+                                setTimeout(() => handleStartEdit(file.id, file.name), 100);
+                              }}>
+                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+                                </svg>
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                const currentCategory = file.category_id || "uncategorized";
+                                const nextCategory = categories.find(c => c.id !== currentCategory && c.id !== "favorites" && c.id !== "uncategorized");
+                                if (nextCategory) {
+                                  updateFileCategory(file.id, nextCategory.id);
+                                }
+                              }}>
+                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
+                                </svg>
+                                Change Category
+                              </DropdownMenuItem>
+                              {file.url && (
+                                <>
+                                  <DropdownMenuItem onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}>
+                                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
+                                    </svg>
+                                    Preview
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = file.url!;
+                                    link.download = file.name;
+                                    link.click();
+                                  }}>
+                                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                    </svg>
+                                    Download
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          {/* Delete - always visible */}
+                          <button
+                            onClick={() => deleteFile(file.id, file.storage_path)}
+                            className="p-2 hover:bg-destructive/10 rounded-lg text-destructive flex-shrink-0"
+                            title="Delete file"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
