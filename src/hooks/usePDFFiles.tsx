@@ -10,12 +10,21 @@ export interface PDFFile {
   storage_path: string;
   category_id: string | null;
   created_at: string;
+  is_favorite: boolean;
   url?: string;
+}
+
+export interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: "uploading" | "complete" | "error" | "cancelled";
 }
 
 export function usePDFFiles(userId: string | undefined) {
   const [files, setFiles] = useState<PDFFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
+  const [uploadIntervals, setUploadIntervals] = useState<Map<string, NodeJS.Timeout>>(new Map());
 
   const loadFiles = async () => {
     if (!userId) return;
@@ -59,16 +68,63 @@ export function usePDFFiles(userId: string | undefined) {
   const uploadFile = async (file: File, categoryId: string | null) => {
     if (!userId) return;
 
+    const uploadId = `${Date.now()}-${file.name}`;
+
+    // Initialize upload progress
+    setUploadProgress(prev => new Map(prev).set(uploadId, {
+      fileName: file.name,
+      progress: 0,
+      status: "uploading"
+    }));
+
     try {
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${userId}/${fileName}`;
+
+      // Simulate upload progress (Supabase storage doesn't provide real progress callbacks)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const current = prev.get(uploadId);
+          if (current && current.status === "uploading" && current.progress < 90) {
+            const newProgress = new Map(prev);
+            newProgress.set(uploadId, { ...current, progress: current.progress + 10 });
+            return newProgress;
+          }
+          return prev;
+        });
+      }, 200);
+
+      setUploadIntervals(prev => new Map(prev).set(uploadId, progressInterval));
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from("pdfs")
         .upload(filePath, file);
 
+      clearInterval(progressInterval);
+      setUploadIntervals(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(uploadId);
+        return newMap;
+      });
+
+      // Check if cancelled
+      const currentProgress = uploadProgress.get(uploadId);
+      if (currentProgress?.status === "cancelled") {
+        return;
+      }
+
       if (uploadError) throw uploadError;
+
+      // Update progress to 95% while creating DB record
+      setUploadProgress(prev => {
+        const newProgress = new Map(prev);
+        const current = prev.get(uploadId);
+        if (current && current.status !== "cancelled") {
+          newProgress.set(uploadId, { ...current, progress: 95 });
+        }
+        return newProgress;
+      });
 
       // Create database record
       const { error: dbError } = await supabase.from("pdf_files").insert({
@@ -82,12 +138,88 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (dbError) throw dbError;
 
+      // Complete upload
+      setUploadProgress(prev => {
+        const newProgress = new Map(prev);
+        const current = prev.get(uploadId);
+        if (current && current.status !== "cancelled") {
+          newProgress.set(uploadId, { ...current, progress: 100, status: "complete" });
+        }
+        return newProgress;
+      });
+
+      // Remove from progress after 2 seconds
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const newProgress = new Map(prev);
+          newProgress.delete(uploadId);
+          return newProgress;
+        });
+      }, 2000);
+
       await loadFiles();
       toast.success("File uploaded successfully");
     } catch (error: any) {
+      const currentProgress = uploadProgress.get(uploadId);
+      if (currentProgress?.status === "cancelled") {
+        return;
+      }
+
+      setUploadProgress(prev => {
+        const newProgress = new Map(prev);
+        const current = prev.get(uploadId);
+        if (current) {
+          newProgress.set(uploadId, { ...current, status: "error" });
+        }
+        return newProgress;
+      });
+
       toast.error("Failed to upload file");
       console.error("Error uploading file:", error);
+
+      // Remove from progress after 3 seconds
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const newProgress = new Map(prev);
+          newProgress.delete(uploadId);
+          return newProgress;
+        });
+      }, 3000);
     }
+  };
+
+  const cancelUpload = (uploadId: string) => {
+    // Clear interval
+    const interval = uploadIntervals.get(uploadId);
+    if (interval) {
+      clearInterval(interval);
+      setUploadIntervals(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(uploadId);
+        return newMap;
+      });
+    }
+
+    // Mark as cancelled
+    setUploadProgress(prev => {
+      const newProgress = new Map(prev);
+      const current = prev.get(uploadId);
+      if (current) {
+        newProgress.set(uploadId, { ...current, status: "cancelled" });
+      }
+      return newProgress;
+    });
+
+    toast.info("Upload cancelled");
+
+    // Remove after 2 seconds
+    setTimeout(() => {
+      setUploadProgress(prev => {
+        const newProgress = new Map(prev);
+        newProgress.delete(uploadId);
+        return newProgress;
+      });
+    }, 2000);
   };
 
   const deleteFile = async (fileId: string, storagePath: string) => {
@@ -154,5 +286,24 @@ export function usePDFFiles(userId: string | undefined) {
     }
   };
 
-  return { files, loading, uploadFile, deleteFile, updateFileCategory, renameFile, refreshFiles: loadFiles };
+  const toggleFavorite = async (fileId: string, currentState: boolean) => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from("pdf_files")
+        .update({ is_favorite: !currentState })
+        .eq("id", fileId);
+
+      if (error) throw error;
+
+      await loadFiles();
+      toast.success(currentState ? "Removed from favorites" : "Added to favorites");
+    } catch (error: any) {
+      toast.error("Failed to update favorite");
+      console.error("Error updating favorite:", error);
+    }
+  };
+
+  return { files, loading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles: loadFiles };
 }

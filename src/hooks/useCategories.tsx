@@ -11,6 +11,7 @@ export interface Category {
 }
 
 const DEFAULT_CATEGORIES = [
+  { id: "favorites", name: "Favorites", color: "bg-yellow-100 text-yellow-700" },
   { id: "uncategorized", name: "Uncategorized", color: "bg-gray-100 text-gray-700" },
   { id: "work", name: "Work", color: "bg-red-100 text-red-700" },
   { id: "personal", name: "Personal", color: "bg-blue-100 text-blue-700" },
@@ -39,7 +40,7 @@ export function useCategories(userId: string | undefined) {
       // Check if user has default categories
       if (!data || data.length === 0) {
         // Create default categories for new user
-        const defaultCatsToInsert = DEFAULT_CATEGORIES.slice(1).map((cat) => ({
+        const defaultCatsToInsert = DEFAULT_CATEGORIES.slice(2).map((cat) => ({
           user_id: userId,
           name: cat.name,
           color: cat.color,
@@ -50,9 +51,9 @@ export function useCategories(userId: string | undefined) {
           .insert(defaultCatsToInsert)
           .select();
 
-        setCategories([DEFAULT_CATEGORIES[0], ...(inserted || [])]);
+        setCategories([DEFAULT_CATEGORIES[0], DEFAULT_CATEGORIES[1], ...(inserted || [])]);
       } else {
-        setCategories([DEFAULT_CATEGORIES[0], ...data]);
+        setCategories([DEFAULT_CATEGORIES[0], DEFAULT_CATEGORIES[1], ...data]);
       }
     } catch (error: any) {
       toast.error("Failed to load categories");
@@ -87,7 +88,7 @@ export function useCategories(userId: string | undefined) {
   };
 
   const deleteCategory = async (categoryId: string) => {
-    if (!userId || categoryId === "uncategorized") return;
+    if (!userId || categoryId === "uncategorized" || categoryId === "favorites") return;
 
     try {
       const { error } = await supabase

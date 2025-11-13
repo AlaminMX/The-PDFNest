@@ -53,6 +53,7 @@ export type Database = {
           file_name: string
           file_size: number
           id: string
+          is_favorite: boolean
           name: string
           storage_path: string
           user_id: string
@@ -63,6 +64,7 @@ export type Database = {
           file_name: string
           file_size: number
           id?: string
+          is_favorite?: boolean
           name: string
           storage_path: string
           user_id: string
@@ -73,6 +75,7 @@ export type Database = {
           file_name?: string
           file_size?: number
           id?: string
+          is_favorite?: boolean
           name?: string
           storage_path?: string
           user_id?: string

@@ -22,10 +22,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PDFPreviewModal } from "@/components/PDFPreviewModal";
+
+type SortOption = "name" | "date" | "size";
+type SortOrder = "asc" | "desc";
 
 export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile } = usePDFFiles(user?.id);
+  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -38,6 +42,13 @@ export default function Index() {
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingFileName, setEditingFileName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
+  const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -132,6 +143,54 @@ export default function Index() {
     setEditingFileName("");
   };
 
+  const toggleFileSelection = (fileId: string) => {
+    const newSelection = new Set(selectedFiles);
+    if (newSelection.has(fileId)) {
+      newSelection.delete(fileId);
+    } else {
+      newSelection.add(fileId);
+    }
+    setSelectedFiles(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.size === sortedFiles.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(sortedFiles.map(f => f.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkAction("delete");
+    setBulkActionDialogOpen(true);
+  };
+
+  const handleBulkMove = () => {
+    setBulkAction("move");
+    setBulkActionDialogOpen(true);
+  };
+
+  const confirmBulkAction = async () => {
+    if (bulkAction === "delete") {
+      const filesToDelete = sortedFiles.filter(f => selectedFiles.has(f.id));
+      for (const file of filesToDelete) {
+        await deleteFile(file.id, file.storage_path);
+      }
+      toast.success(`Deleted ${filesToDelete.length} files`);
+    } else if (bulkAction === "move" && bulkMoveCategory) {
+      for (const fileId of selectedFiles) {
+        await updateFileCategory(fileId, bulkMoveCategory === "uncategorized" ? null : bulkMoveCategory);
+      }
+      toast.success(`Moved ${selectedFiles.size} files`);
+    }
+    
+    setSelectedFiles(new Set());
+    setBulkActionDialogOpen(false);
+    setBulkAction(null);
+    setBulkMoveCategory("");
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -162,13 +221,34 @@ export default function Index() {
 
   const filteredFiles = selectedCategory === "all" 
     ? files 
+    : selectedCategory === "favorites"
+    ? files.filter((f) => f.is_favorite)
     : files.filter((f) => f.category_id === selectedCategory || (selectedCategory === "uncategorized" && !f.category_id));
 
   const searchFilteredFiles = searchQuery.trim()
     ? filteredFiles.filter((f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : filteredFiles;
 
-  const fileCount = searchFilteredFiles.length;
+  // Sort files
+  const sortedFiles = [...searchFilteredFiles].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortBy) {
+      case "name":
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case "date":
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+      case "size":
+        comparison = a.file_size - b.file_size;
+        break;
+    }
+    
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
+
+  const fileCount = sortedFiles.length;
 
   return (
     <div className="min-h-screen">
@@ -214,7 +294,9 @@ export default function Index() {
               <div className="space-y-1 mb-4">
                 {categories.map((category) => {
                   const count = files.filter((f) => 
-                    category.id === "uncategorized" 
+                    category.id === "favorites"
+                      ? f.is_favorite
+                      : category.id === "uncategorized" 
                       ? !f.category_id 
                       : f.category_id === category.id
                   ).length;
@@ -234,7 +316,7 @@ export default function Index() {
                           <span className="text-sm">{count}</span>
                         </div>
                       </button>
-                      {category.id !== "uncategorized" && (
+                      {category.id !== "uncategorized" && category.id !== "favorites" && (
                         <button
                           onClick={() => handleDeleteCategory(category.id)}
                           className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
@@ -335,21 +417,105 @@ export default function Index() {
                   Choose Files
                 </Button>
               </div>
+
+              {/* Upload Progress */}
+              {uploadProgress.size > 0 && (
+                <div className="mt-6 space-y-3">
+                  <h4 className="text-sm font-medium">Uploading files...</h4>
+                  {Array.from(uploadProgress.entries()).map(([id, progress]) => (
+                    <div key={id} className="bg-muted/30 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm truncate flex-1">{progress.fileName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            {progress.progress}%
+                          </span>
+                          {progress.status === "uploading" && (
+                            <button
+                              onClick={() => cancelUpload(id)}
+                              className="p-1 hover:bg-destructive/10 rounded text-destructive"
+                              title="Cancel upload"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            progress.status === "error" 
+                              ? "bg-destructive" 
+                              : progress.status === "complete"
+                              ? "bg-green-500"
+                              : "bg-primary"
+                          }`}
+                          style={{ width: `${progress.progress}%` }}
+                        />
+                      </div>
+                      {progress.status === "error" && (
+                        <p className="text-xs text-destructive mt-1">Upload failed</p>
+                      )}
+                      {progress.status === "complete" && (
+                        <p className="text-xs text-green-600 mt-1">Upload complete!</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* File List */}
             <div className="bg-card rounded-xl shadow-sm border border-border/50 p-6">
               <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-                <h2 className="text-xl font-semibold">
-                  {selectedCategory === "all" ? "All Files" : categories.find(c => c.id === selectedCategory)?.name} ({fileCount})
-                </h2>
-                <Input
-                  type="text"
-                  placeholder="Search PDFs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-xs"
-                />
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-semibold">
+                    {selectedCategory === "all" ? "All Files" : categories.find(c => c.id === selectedCategory)?.name} ({fileCount})
+                  </h2>
+                  {selectedFiles.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedFiles.size} selected
+                      </span>
+                      <Button size="sm" variant="outline" onClick={handleBulkMove}>
+                        Move to Category
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                        Delete Selected
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedFiles(new Set())}>
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Input
+                    type="text"
+                    placeholder="Search PDFs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-xs"
+                  />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                  >
+                    <option value="date">Date</option>
+                    <option value="name">Name</option>
+                    <option value="size">Size</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  >
+                    {sortOrder === "asc" ? "↑" : "↓"}
+                  </Button>
+                </div>
               </div>
 
               {filesLoading ? (
@@ -370,11 +536,28 @@ export default function Index() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {searchFilteredFiles.map((file) => (
+                  {sortedFiles.length > 0 && (
+                    <div className="flex items-center gap-2 p-2 border-b border-border">
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.size === sortedFiles.length}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-sm text-muted-foreground">Select all</span>
+                    </div>
+                  )}
+                  {sortedFiles.map((file) => (
                     <div
                       key={file.id}
                       className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
                     >
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(file.id)}
+                        onChange={() => toggleFileSelection(file.id)}
+                        className="w-4 h-4 cursor-pointer flex-shrink-0"
+                      />
                       <div className="flex-shrink-0">
                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                           <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
@@ -410,13 +593,22 @@ export default function Index() {
                       <div className="flex items-center gap-2">
                         {editingFileId !== file.id && (
                           <>
+                            <button
+                              onClick={() => toggleFavorite(file.id, file.is_favorite)}
+                              className={`p-2 hover:bg-accent rounded-lg ${file.is_favorite ? "text-yellow-500" : ""}`}
+                              title={file.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                            >
+                              <svg className="w-5 h-5" fill={file.is_favorite ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                              </svg>
+                            </button>
                             <select
                               value={file.category_id || "uncategorized"}
                               onChange={(e) => updateFileCategory(file.id, e.target.value === "uncategorized" ? null : e.target.value)}
                               className="p-2 rounded-lg border border-border bg-background text-sm"
                             >
                               <option value="uncategorized">Uncategorized</option>
-                              {categories.filter(c => c.id !== "uncategorized").map((cat) => (
+                              {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                               ))}
                             </select>
@@ -430,16 +622,27 @@ export default function Index() {
                               </svg>
                             </button>
                             {file.url && (
-                              <a
-                                href={file.url}
-                                download={file.name}
-                                className="p-2 hover:bg-accent rounded-lg"
-                                title="Download file"
-                              >
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                </svg>
-                              </a>
+                              <>
+                                <button
+                                  onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}
+                                  className="p-2 hover:bg-accent rounded-lg"
+                                  title="Preview PDF"
+                                >
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
+                                  </svg>
+                                </button>
+                                <a
+                                  href={file.url}
+                                  download={file.name}
+                                  className="p-2 hover:bg-accent rounded-lg"
+                                  title="Download file"
+                                >
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                  </svg>
+                                </a>
+                              </>
                             )}
                             <button
                               onClick={() => deleteFile(file.id, file.storage_path)}
@@ -461,6 +664,51 @@ export default function Index() {
           </div>
         </div>
       </div>
+
+      <PDFPreviewModal
+        isOpen={!!previewPdf}
+        onClose={() => setPreviewPdf(null)}
+        pdfUrl={previewPdf?.url || ""}
+        fileName={previewPdf?.name || ""}
+      />
+
+      <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkAction === "delete" ? "Delete Files" : "Move Files"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkAction === "delete" 
+                ? `Are you sure you want to delete ${selectedFiles.size} files? This action cannot be undone.`
+                : "Select a category to move the selected files to:"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkAction === "move" && (
+            <select
+              value={bulkMoveCategory}
+              onChange={(e) => setBulkMoveCategory(e.target.value)}
+              className="w-full p-2 rounded-lg border border-border bg-background"
+            >
+              <option value="">Select category...</option>
+              <option value="uncategorized">Uncategorized</option>
+              {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkAction}
+              className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              disabled={bulkAction === "move" && !bulkMoveCategory}
+            >
+              {bulkAction === "delete" ? "Delete" : "Move"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
