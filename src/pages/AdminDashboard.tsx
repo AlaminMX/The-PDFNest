@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Download, Eye, Trash2, Search, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
@@ -159,10 +160,13 @@ export default function AdminDashboard() {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage all user PDFs</p>
           </div>
-          <Button onClick={handleSignOut} variant="outline" className="w-full sm:w-auto">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <ThemeToggle />
+            <Button onClick={handleSignOut} variant="outline" className="flex-1 sm:flex-initial">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6">

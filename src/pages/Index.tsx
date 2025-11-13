@@ -5,6 +5,7 @@ import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
@@ -274,6 +275,7 @@ export default function Index() {
               Upload, categorize, and manage your documents effortlessly
             </p>
             <div className="flex gap-2 justify-center mt-4 flex-wrap">
+              <ThemeToggle />
               <Button onClick={signOut} variant="outline">
                 Sign Out
               </Button>
