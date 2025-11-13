@@ -70,10 +70,29 @@ export function useCategories(userId: string | undefined) {
   const addCategory = async (name: string, color: string) => {
     if (!userId) return;
 
+    const trimmedName = name.trim();
+
+    // Length validation
+    if (trimmedName.length === 0) {
+      toast.error("Category name cannot be empty");
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      toast.error("Category name must be less than 50 characters");
+      return;
+    }
+
+    // Character validation
+    if (!/^[a-zA-Z0-9\s\-_]+$/.test(trimmedName)) {
+      toast.error("Category name can only contain letters, numbers, spaces, hyphens, and underscores");
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("categories")
-        .insert({ user_id: userId, name, color })
+        .insert({ user_id: userId, name: trimmedName, color })
         .select()
         .single();
 
