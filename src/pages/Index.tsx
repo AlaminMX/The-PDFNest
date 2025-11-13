@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -18,7 +25,7 @@ import {
 
 export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory } = usePDFFiles(user?.id);
+  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -27,6 +34,10 @@ export default function Index() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [showMobileCategories, setShowMobileCategories] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editingFileName, setEditingFileName] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -103,11 +114,61 @@ export default function Index() {
     }
   };
 
+  const handleStartEdit = (fileId: string, fileName: string) => {
+    setEditingFileId(fileId);
+    setEditingFileName(fileName);
+  };
+
+  const handleSaveEdit = async () => {
+    if (editingFileId && editingFileName.trim()) {
+      await renameFile(editingFileId, editingFileName.trim());
+      setEditingFileId(null);
+      setEditingFileName("");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingFileId(null);
+    setEditingFileName("");
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (file) => file.type === "application/pdf"
+    );
+
+    if (droppedFiles.length === 0) {
+      toast.error("Please drop PDF files only");
+      return;
+    }
+
+    for (const file of droppedFiles) {
+      await uploadFile(file, selectedCategory === "all" ? null : selectedCategory);
+    }
+  };
+
   const filteredFiles = selectedCategory === "all" 
     ? files 
     : files.filter((f) => f.category_id === selectedCategory || (selectedCategory === "uncategorized" && !f.category_id));
 
-  const fileCount = selectedCategory === "all" ? files.length : filteredFiles.length;
+  const searchFilteredFiles = searchQuery.trim()
+    ? filteredFiles.filter((f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : filteredFiles;
+
+  const fileCount = searchFilteredFiles.length;
 
   return (
     <div className="min-h-screen">
@@ -244,7 +305,14 @@ export default function Index() {
           {/* Main Content */}
           <div className="flex-1">
             {/* Upload Area */}
-            <div className="bg-card rounded-xl shadow-sm border-2 border-dashed border-border hover:border-primary/50 transition-colors p-8 mb-6">
+            <div 
+              className={`bg-card rounded-xl shadow-sm border-2 border-dashed transition-colors p-8 mb-6 ${
+                isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
                   <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
@@ -271,10 +339,17 @@ export default function Index() {
 
             {/* File List */}
             <div className="bg-card rounded-xl shadow-sm border border-border/50 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
                 <h2 className="text-xl font-semibold">
                   {selectedCategory === "all" ? "All Files" : categories.find(c => c.id === selectedCategory)?.name} ({fileCount})
                 </h2>
+                <Input
+                  type="text"
+                  placeholder="Search PDFs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                />
               </div>
 
               {filesLoading ? (
@@ -282,18 +357,20 @@ export default function Index() {
                   <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-muted-foreground">Loading files...</p>
                 </div>
-              ) : filteredFiles.length === 0 ? (
+              ) : searchFilteredFiles.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
                     <svg className="w-8 h-8 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z" />
                     </svg>
                   </div>
-                  <p className="text-muted-foreground">No files yet. Upload some PDFs to get started!</p>
+                  <p className="text-muted-foreground">
+                    {searchQuery ? "No files match your search" : "No files yet. Upload some PDFs to get started!"}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredFiles.map((file) => (
+                  {searchFilteredFiles.map((file) => (
                     <div
                       key={file.id}
                       className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
@@ -306,31 +383,75 @@ export default function Index() {
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {(file.file_size / 1024).toFixed(2)} KB
-                        </p>
+                        {editingFileId === file.id ? (
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              value={editingFileName}
+                              onChange={(e) => setEditingFileName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveEdit();
+                                if (e.key === "Escape") handleCancelEdit();
+                              }}
+                              className="h-8"
+                              autoFocus
+                            />
+                            <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <>
+                            <h3 className="font-medium truncate">{file.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {(file.file_size / 1024).toFixed(2)} KB
+                            </p>
+                          </>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {file.url && (
-                          <a
-                            href={file.url}
-                            download={file.name}
-                            className="p-2 hover:bg-accent rounded-lg"
-                          >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                            </svg>
-                          </a>
+                        {editingFileId !== file.id && (
+                          <>
+                            <select
+                              value={file.category_id || "uncategorized"}
+                              onChange={(e) => updateFileCategory(file.id, e.target.value === "uncategorized" ? null : e.target.value)}
+                              className="p-2 rounded-lg border border-border bg-background text-sm"
+                            >
+                              <option value="uncategorized">Uncategorized</option>
+                              {categories.filter(c => c.id !== "uncategorized").map((cat) => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleStartEdit(file.id, file.name)}
+                              className="p-2 hover:bg-accent rounded-lg"
+                              title="Rename file"
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+                              </svg>
+                            </button>
+                            {file.url && (
+                              <a
+                                href={file.url}
+                                download={file.name}
+                                className="p-2 hover:bg-accent rounded-lg"
+                                title="Download file"
+                              >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                </svg>
+                              </a>
+                            )}
+                            <button
+                              onClick={() => deleteFile(file.id, file.storage_path)}
+                              className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
+                              title="Delete file"
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                              </svg>
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => deleteFile(file.id, file.storage_path)}
-                          className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-                          </svg>
-                        </button>
                       </div>
                     </div>
                   ))}

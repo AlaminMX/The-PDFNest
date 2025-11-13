@@ -135,5 +135,24 @@ export function usePDFFiles(userId: string | undefined) {
     }
   };
 
-  return { files, loading, uploadFile, deleteFile, updateFileCategory, refreshFiles: loadFiles };
+  const renameFile = async (fileId: string, newName: string) => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from("pdf_files")
+        .update({ name: newName })
+        .eq("id", fileId);
+
+      if (error) throw error;
+
+      await loadFiles();
+      toast.success("File renamed successfully");
+    } catch (error: any) {
+      toast.error("Failed to rename file");
+      console.error("Error renaming file:", error);
+    }
+  };
+
+  return { files, loading, uploadFile, deleteFile, updateFileCategory, renameFile, refreshFiles: loadFiles };
 }
