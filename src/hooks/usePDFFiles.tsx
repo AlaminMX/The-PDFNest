@@ -68,17 +68,32 @@ export function usePDFFiles(userId: string | undefined) {
   const uploadFile = async (file: File, categoryId: string | null) => {
     if (!userId) return;
 
-    const uploadId = `${Date.now()}-${file.name}`;
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast.error('Only PDF files are allowed');
+      return;
+    }
+
+    // Validate file size (50MB limit)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error('File size must be under 50MB');
+      return;
+    }
+
+    // Sanitize filename
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const uploadId = `${Date.now()}-${sanitizedFileName}`;
 
     // Initialize upload progress
     setUploadProgress(prev => new Map(prev).set(uploadId, {
-      fileName: file.name,
+      fileName: sanitizedFileName,
       progress: 0,
       status: "uploading"
     }));
 
     try {
-      const fileName = `${Date.now()}-${file.name}`;
+      const fileName = `${Date.now()}-${sanitizedFileName}`;
       const filePath = `${userId}/${fileName}`;
 
       // Simulate upload progress (Supabase storage doesn't provide real progress callbacks)
