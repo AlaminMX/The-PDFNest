@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { InstallPWA } from "@/components/InstallPWA";
+import { Link } from "react-router-dom";
+import { Shield } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,6 +33,7 @@ type SortOrder = "asc" | "desc";
 
 export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const { isAdmin } = useAdminStatus();
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
@@ -251,25 +256,37 @@ export default function Index() {
   const fileCount = sortedFiles.length;
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4">
-            <svg className="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-            </svg>
+    <>
+      <InstallPWA />
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4">
+              <svg className="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
+              Organize Your PDFs
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Upload, categorize, and manage your documents effortlessly
+            </p>
+            <div className="flex gap-2 justify-center mt-4 flex-wrap">
+              <Button onClick={signOut} variant="outline">
+                Sign Out
+              </Button>
+              {isAdmin && (
+                <Button asChild variant="default">
+                  <Link to="/admin">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin Dashboard
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
-            Organize Your PDFs
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Upload, categorize, and manage your documents effortlessly
-          </p>
-          <Button onClick={signOut} variant="outline" className="mt-4">
-            Sign Out
-          </Button>
-        </div>
 
         <div className="flex gap-6">
           {/* Sidebar - Desktop */}
@@ -664,68 +681,69 @@ export default function Index() {
           </div>
         </div>
       </div>
-
-      <PDFPreviewModal
-        isOpen={!!previewPdf}
-        onClose={() => setPreviewPdf(null)}
-        pdfUrl={previewPdf?.url || ""}
-        fileName={previewPdf?.name || ""}
-      />
-
-      <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {bulkAction === "delete" ? "Delete Files" : "Move Files"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {bulkAction === "delete" 
-                ? `Are you sure you want to delete ${selectedFiles.size} files? This action cannot be undone.`
-                : "Select a category to move the selected files to:"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {bulkAction === "move" && (
-            <select
-              value={bulkMoveCategory}
-              onChange={(e) => setBulkMoveCategory(e.target.value)}
-              className="w-full p-2 rounded-lg border border-border bg-background"
-            >
-              <option value="">Select category...</option>
-              <option value="uncategorized">Uncategorized</option>
-              {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmBulkAction}
-              className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
-              disabled={bulkAction === "move" && !bulkMoveCategory}
-            >
-              {bulkAction === "delete" ? "Delete" : "Move"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this category? Files in this category will be moved to "Uncategorized".
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
-  );
+
+    <PDFPreviewModal
+      isOpen={!!previewPdf}
+      onClose={() => setPreviewPdf(null)}
+      pdfUrl={previewPdf?.url || ""}
+      fileName={previewPdf?.name || ""}
+    />
+
+    <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {bulkAction === "delete" ? "Delete Files" : "Move Files"}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {bulkAction === "delete" 
+              ? `Are you sure you want to delete ${selectedFiles.size} files? This action cannot be undone.`
+              : "Select a category to move the selected files to:"}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {bulkAction === "move" && (
+          <select
+            value={bulkMoveCategory}
+            onChange={(e) => setBulkMoveCategory(e.target.value)}
+            className="w-full p-2 rounded-lg border border-border bg-background"
+          >
+            <option value="">Select category...</option>
+            <option value="uncategorized">Uncategorized</option>
+            {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={confirmBulkAction}
+            className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            disabled={bulkAction === "move" && !bulkMoveCategory}
+          >
+            {bulkAction === "delete" ? "Delete" : "Move"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Category</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this category? Files in this category will be moved to "Uncategorized".
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
+);
 }

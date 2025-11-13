@@ -152,14 +152,14 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage all user PDFs</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage all user PDFs</p>
           </div>
-          <Button onClick={handleSignOut} variant="outline">
+          <Button onClick={handleSignOut} variant="outline" className="w-full sm:w-auto">
             <LogOut className="mr-2 h-4 w-4" />
             Sign Out
           </Button>
@@ -178,24 +178,25 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-card rounded-lg shadow-lg overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block bg-card rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     File Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     User Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Upload Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -210,19 +211,19 @@ export default function AdminDashboard() {
                 ) : (
                   filteredFiles.map((file) => (
                     <tr key={file.id} className="hover:bg-muted/50">
-                      <td className="px-6 py-4 text-sm font-medium text-foreground">
+                      <td className="px-4 lg:px-6 py-4 text-sm font-medium text-foreground truncate max-w-xs">
                         {file.name}
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-4 lg:px-6 py-4 text-sm text-muted-foreground truncate max-w-xs">
                         {file.profiles?.email || "Unknown"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-4 lg:px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
                         {(file.file_size / 1024 / 1024).toFixed(2)} MB
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-4 lg:px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
                         {new Date(file.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-4 lg:px-6 py-4 text-sm">
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -253,6 +254,55 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-4">
+          {filteredFiles.length === 0 ? (
+            <div className="bg-card rounded-lg shadow p-8 text-center text-muted-foreground">
+              No files found
+            </div>
+          ) : (
+            filteredFiles.map((file) => (
+              <div key={file.id} className="bg-card rounded-lg shadow-lg p-4 space-y-3">
+                <div>
+                  <h3 className="font-semibold text-foreground truncate">{file.name}</h3>
+                  <p className="text-sm text-muted-foreground truncate">{file.profiles?.email || "Unknown"}</p>
+                </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>{(file.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                  <span>{new Date(file.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handlePreview(file)}
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDownload(file)}
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(file)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
