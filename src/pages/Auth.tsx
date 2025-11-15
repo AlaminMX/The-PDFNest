@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,7 +16,15 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").max(100),
 });
 
-const signUpSchema = authSchema.extend({
+const signUpSchema = z.object({
+  email: z.string().email("Invalid email address").max(255),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100)
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string(),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
@@ -229,6 +238,7 @@ export default function Auth() {
                   required
                   disabled={loading}
                 />
+                {!isLogin && <PasswordStrengthIndicator password={password} show={password.length > 0} />}
               </div>
 
               {!isLogin && (
