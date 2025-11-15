@@ -677,11 +677,21 @@ export default function Index() {
                           className="w-4 h-4 cursor-pointer flex-shrink-0"
                         />
                         <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                            </svg>
-                          </div>
+                          {file.thumbnail_url ? (
+                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-border">
+                              <img 
+                                src={file.thumbnail_url} 
+                                alt={`${file.name} thumbnail`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0 max-w-full overflow-hidden">
                           {editingFileId === file.id ? (
