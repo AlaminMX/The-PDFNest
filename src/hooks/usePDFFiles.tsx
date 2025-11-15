@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { generatePDFThumbnail } from "@/lib/pdfThumbnail";
 
 export interface PDFFile {
   id: string;
@@ -11,6 +12,7 @@ export interface PDFFile {
   category_id: string | null;
   created_at: string;
   is_favorite: boolean;
+  thumbnail_url: string | null;
   url?: string;
 }
 
@@ -45,9 +47,19 @@ export function usePDFFiles(userId: string | undefined) {
             .from("pdfs")
             .createSignedUrl(file.storage_path, 3600);
 
+          // Get thumbnail URL if it exists
+          let thumbnailUrl = null;
+          if (file.thumbnail_url) {
+            const { data: thumbData } = await supabase.storage
+              .from("pdf-thumbnails")
+              .createSignedUrl(file.thumbnail_url, 3600);
+            thumbnailUrl = thumbData?.signedUrl;
+          }
+
           return {
             ...file,
             url: urlData?.signedUrl,
+            thumbnail_url: thumbnailUrl,
           };
         })
       );
@@ -131,6 +143,38 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (uploadError) throw uploadError;
 
+      // Update progress to 90% while generating thumbnail
+      setUploadProgress(prev => {
+        const newProgress = new Map(prev);
+        const current = prev.get(uploadId);
+        if (current && current.status !== "cancelled") {
+          newProgress.set(uploadId, { ...current, progress: 90 });
+        }
+        return newProgress;
+      });
+
+      // Generate and upload thumbnail
+      let thumbnailPath = null;
+      try {
+        const thumbnailBlob = await generatePDFThumbnail(file);
+        const thumbnailFileName = `${Date.now()}-thumb-${sanitizedFileName.replace('.pdf', '.jpg')}`;
+        thumbnailPath = `${userId}/${thumbnailFileName}`;
+
+        const { error: thumbError } = await supabase.storage
+          .from("pdf-thumbnails")
+          .upload(thumbnailPath, thumbnailBlob, {
+            contentType: 'image/jpeg',
+          });
+
+        if (thumbError) {
+          console.error("Failed to upload thumbnail:", thumbError);
+          thumbnailPath = null; // Continue without thumbnail if it fails
+        }
+      } catch (thumbError) {
+        console.error("Failed to generate thumbnail:", thumbError);
+        // Continue without thumbnail
+      }
+
       // Update progress to 95% while creating DB record
       setUploadProgress(prev => {
         const newProgress = new Map(prev);
@@ -149,6 +193,7 @@ export function usePDFFiles(userId: string | undefined) {
         file_size: file.size,
         storage_path: filePath,
         category_id: categoryId === "uncategorized" ? null : categoryId,
+        thumbnail_url: thumbnailPath,
       });
 
       if (dbError) throw dbError;
@@ -241,12 +286,26 @@ export function usePDFFiles(userId: string | undefined) {
     if (!userId) return;
 
     try {
+      // Get the file record to find thumbnail path
+      const { data: fileData } = await supabase
+        .from("pdf_files")
+        .select("thumbnail_url")
+        .eq("id", fileId)
+        .single();
+
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from("pdfs")
         .remove([storagePath]);
 
       if (storageError) throw storageError;
+
+      // Delete thumbnail if it exists
+      if (fileData?.thumbnail_url) {
+        await supabase.storage
+          .from("pdf-thumbnails")
+          .remove([fileData.thumbnail_url]);
+      }
 
       // Delete from database
       const { error: dbError } = await supabase

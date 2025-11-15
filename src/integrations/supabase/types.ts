@@ -56,6 +56,7 @@ export type Database = {
           is_favorite: boolean
           name: string
           storage_path: string
+          thumbnail_url: string | null
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           is_favorite?: boolean
           name: string
           storage_path: string
+          thumbnail_url?: string | null
           user_id: string
         }
         Update: {
@@ -78,6 +80,7 @@ export type Database = {
           is_favorite?: boolean
           name?: string
           storage_path?: string
+          thumbnail_url?: string | null
           user_id?: string
         }
         Relationships: [
