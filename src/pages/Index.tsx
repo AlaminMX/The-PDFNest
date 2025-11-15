@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,7 +31,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -55,8 +54,6 @@ import {
 } from "@/components/ui/sidebar";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
-import { ThumbnailGenerator } from "@/components/ThumbnailGenerator";
-import { LazyImage } from "@/components/LazyImage";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -244,7 +241,7 @@ function AppSidebar({
 export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdminStatus();
-  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
+  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -263,7 +260,6 @@ export default function Index() {
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -485,25 +481,6 @@ export default function Index() {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <div className="ml-auto flex items-center gap-2">
-                {isAdmin && <ThumbnailGenerator onComplete={refreshFiles} />}
-                <div className="flex items-center border rounded-md">
-                  <Button
-                    variant={viewMode === "list" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                    className="rounded-r-none"
-                  >
-                    <LayoutList className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "grid" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("grid")}
-                    className="rounded-l-none"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </Button>
-                </div>
                 <InstallPWA />
                 <ThemeToggle />
               </div>
@@ -675,21 +652,19 @@ export default function Index() {
                   </p>
                 </div>
               ) : (
-                <>
-                  {viewMode === "list" ? (
-                    <div className="space-y-2">
-                      {sortedFiles.length > 0 && (
-                        <div className="flex items-center gap-2 p-2 border-b border-border">
-                          <input
-                            type="checkbox"
-                            checked={selectedFiles.size === sortedFiles.length}
-                            onChange={toggleSelectAll}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                          <span className="text-sm text-muted-foreground">Select all</span>
-                        </div>
-                      )}
-                      {sortedFiles.map((file) => (
+                <div className="space-y-2">
+                  {sortedFiles.length > 0 && (
+                    <div className="flex items-center gap-2 p-2 border-b border-border">
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.size === sortedFiles.length}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-sm text-muted-foreground">Select all</span>
+                    </div>
+                  )}
+                  {sortedFiles.map((file) => (
                     <div
                       key={file.id}
                       className="flex flex-col gap-2 p-3 md:p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
@@ -704,21 +679,17 @@ export default function Index() {
                         <div className="flex-shrink-0">
                           {file.thumbnail_url ? (
                             <div className="w-10 h-10 rounded-lg overflow-hidden border border-border">
-                              <LazyImage
-                                src={file.thumbnail_url}
+                              <img 
+                                src={file.thumbnail_url} 
                                 alt={`${file.name} thumbnail`}
                                 className="w-full h-full object-cover"
-                                skeletonClassName="w-10 h-10"
-                                fallback={
-                                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-primary" />
-                                  </div>
-                                }
                               />
                             </div>
                           ) : (
                             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-primary" />
+                              <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                              </svg>
                             </div>
                           )}
                         </div>
@@ -890,152 +861,6 @@ export default function Index() {
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {sortedFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="group relative flex flex-col gap-2 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.id)}
-                        onChange={() => toggleFileSelection(file.id)}
-                        className="absolute top-2 left-2 w-4 h-4 z-10"
-                      />
-
-                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-muted">
-                        {file.thumbnail_url ? (
-                          <LazyImage
-                            src={file.thumbnail_url}
-                            alt={file.name}
-                            className="w-full h-full object-cover cursor-pointer"
-                            skeletonClassName="w-full h-full"
-                            fallback={
-                              <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                                <FileText className="w-16 h-16 text-primary" />
-                              </div>
-                            }
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                            <FileText className="w-16 h-16 text-primary" />
-                          </div>
-                        )}
-                        
-                        {file.is_favorite && (
-                          <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          </div>
-                        )}
-
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}
-                            className="h-8 w-8 p-0"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                          {file.url && (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = file.url!;
-                                link.download = file.name;
-                                link.click();
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1 min-w-0">
-                        {editingFileId === file.id ? (
-                          <div className="flex gap-1 items-center">
-                            <Input
-                              value={editingFileName}
-                              onChange={(e) => setEditingFileName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveEdit();
-                                if (e.key === "Escape") handleCancelEdit();
-                              }}
-                              className="h-7 text-xs"
-                              autoFocus
-                            />
-                            <Button size="sm" onClick={handleSaveEdit} className="h-7 w-7 p-0">
-                              <Check className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <h3 className="font-medium text-xs truncate overflow-hidden text-ellipsis whitespace-nowrap" title={file.name}>
-                            {file.name}
-                          </h3>
-                        )}
-                        <p className="text-[10px] text-muted-foreground">
-                          {(file.file_size / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleFavorite(file.id, file.is_favorite)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Star className={`w-3 h-3 ${file.is_favorite ? "fill-yellow-400 text-yellow-400" : ""}`} />
-                        </Button>
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                              <MoreVertical className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleStartEdit(file.id, file.name)}>
-                              <Edit2 className="w-3 h-3 mr-2" />
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <Folder className="w-3 h-3 mr-2" />
-                                Category
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={() => updateFileCategory(file.id, null)}>
-                                  Uncategorized
-                                </DropdownMenuItem>
-                                {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
-                                  <DropdownMenuItem 
-                                    key={cat.id} 
-                                    onClick={() => updateFileCategory(file.id, cat.id)}
-                                  >
-                                    {cat.name}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => deleteFile(file.id, file.storage_path)} className="text-destructive">
-                              <Trash2 className="w-3 h-3 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-                </>
               )}
             </div>
           </div>
