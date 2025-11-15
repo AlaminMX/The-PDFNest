@@ -1,1 +1,4 @@
 project_id = "xanbbjxvxktiupefvkha"
+
+[functions.get-pdfs-without-thumbnails]
+verify_jwt = true
