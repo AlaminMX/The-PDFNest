@@ -100,26 +100,43 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          default_category_id: string | null
+          default_sort_order: string | null
           email: string | null
+          email_notifications_enabled: boolean | null
           id: string
           terms_accepted: boolean | null
           terms_accepted_at: string | null
         }
         Insert: {
           created_at?: string | null
+          default_category_id?: string | null
+          default_sort_order?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean | null
           id: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
         }
         Update: {
           created_at?: string | null
+          default_category_id?: string | null
+          default_sort_order?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean | null
           id?: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_category_id_fkey"
+            columns: ["default_category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

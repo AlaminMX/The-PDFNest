@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical } from "lucide-react";
+import { Shield, MoreVertical, User } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
@@ -282,6 +285,12 @@ export default function Index() {
             </p>
             <div className="flex gap-2 justify-center mt-4 flex-wrap">
               <ThemeToggle />
+              <Button asChild variant="outline">
+                <Link to="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </Button>
               <Button onClick={signOut} variant="outline">
                 Sign Out
               </Button>
@@ -710,18 +719,27 @@ export default function Index() {
                                 </svg>
                                 Rename
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
-                                const currentCategory = file.category_id || "uncategorized";
-                                const nextCategory = categories.find(c => c.id !== currentCategory && c.id !== "favorites" && c.id !== "uncategorized");
-                                if (nextCategory) {
-                                  updateFileCategory(file.id, nextCategory.id);
-                                }
-                              }}>
-                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
-                                </svg>
-                                Change Category
-                              </DropdownMenuItem>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
+                                  </svg>
+                                  Change Category
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="z-50 bg-popover">
+                                  <DropdownMenuItem onClick={() => updateFileCategory(file.id, null)}>
+                                    Uncategorized
+                                  </DropdownMenuItem>
+                                  {categories.filter(c => c.id !== "uncategorized" && c.id !== "favorites").map((cat) => (
+                                    <DropdownMenuItem 
+                                      key={cat.id} 
+                                      onClick={() => updateFileCategory(file.id, cat.id)}
+                                    >
+                                      {cat.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
                               {file.url && (
                                 <>
                                   <DropdownMenuItem onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}>
