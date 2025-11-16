@@ -19,13 +19,23 @@ interface PDFFile {
   user_id: string;
   profiles?: {
     email: string;
+    full_name: string | null;
   };
+}
+
+interface UserWithPDFs {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  pdfs: PDFFile[];
 }
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [files, setFiles] = useState<PDFFile[]>([]);
+  const [userGroups, setUserGroups] = useState<UserWithPDFs[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
@@ -45,18 +55,46 @@ export default function AdminDashboard() {
 
   const fetchAllFiles = async () => {
     try {
+      // Fetch all PDF files with user info
       const { data, error } = await supabase
         .from("pdf_files")
         .select(`
           *,
           profiles (
-            email
+            email,
+            full_name
           )
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setFiles(data || []);
+
+      // Group PDFs by user
+      const grouped = (data || []).reduce((acc: UserWithPDFs[], file: PDFFile) => {
+        const existingUser = acc.find(u => u.user_id === file.user_id);
+        if (existingUser) {
+          existingUser.pdfs.push(file);
+        } else {
+          acc.push({
+            user_id: file.user_id,
+            user_name: file.profiles?.full_name || "Unknown User",
+            user_email: file.profiles?.email || "No email",
+            pdfs: [file]
+          });
+        }
+        return acc;
+      }, []);
+
+      setUserGroups(grouped);
+
+      // Fetch total user count
+      const { count, error: countError } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      if (countError) throw countError;
+      setTotalUsers(count || 0);
     } catch (error) {
       console.error("Error fetching files:", error);
       toast.error("Failed to load files");
