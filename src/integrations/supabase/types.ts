@@ -107,6 +107,7 @@ export type Database = {
           default_sort_order: string | null
           email: string | null
           email_notifications_enabled: boolean | null
+          full_name: string | null
           id: string
           terms_accepted: boolean | null
           terms_accepted_at: string | null
@@ -117,6 +118,7 @@ export type Database = {
           default_sort_order?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
+          full_name?: string | null
           id: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           default_sort_order?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
+          full_name?: string | null
           id?: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
