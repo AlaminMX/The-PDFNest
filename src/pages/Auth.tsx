@@ -17,6 +17,10 @@ const authSchema = z.object({
 });
 
 const signUpSchema = z.object({
+  fullName: z.string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be less than 100 characters"),
   email: z.string().email("Invalid email address").max(255),
   password: z.string()
     .min(8, "Password must be at least 8 characters")
@@ -38,6 +42,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -72,7 +77,7 @@ export default function Auth() {
       if (isLogin) {
         authSchema.parse({ email, password });
       } else {
-        signUpSchema.parse({ email, password, confirmPassword, termsAccepted });
+        signUpSchema.parse({ fullName, email, password, confirmPassword, termsAccepted });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -99,6 +104,9 @@ export default function Auth() {
           password,
           options: {
             emailRedirectTo: redirectUrl,
+            data: {
+              full_name: fullName.trim()
+            }
           },
         });
 
@@ -215,6 +223,21 @@ export default function Auth() {
             </form>
           ) : (
             <form onSubmit={handleAuth} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

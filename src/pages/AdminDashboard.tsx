@@ -5,7 +5,8 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Download, Eye, Trash2, Search, LogOut, Users, FileText, CheckCircle, LayoutList, LayoutGrid } from "lucide-react";
+import { Download, Eye, Trash2, Search, LogOut, Users, FileText, CheckCircle, LayoutList, LayoutGrid, HardDrive } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { toast } from "sonner";
 import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -34,6 +35,7 @@ interface UserWithPDFs {
   pdfCount: number;
   pdfs: PDFFile[];
   createdAt: string;
+  totalStorage: number;
 }
 
 function getUserDisplayName(email: string, fullName: string | null): string {
@@ -41,6 +43,14 @@ function getUserDisplayName(email: string, fullName: string | null): string {
     return fullName;
   }
   return email.split('@')[0];
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 function groupFilesByUser(files: PDFFile[]): UserWithPDFs[] {
@@ -59,13 +69,15 @@ function groupFilesByUser(files: PDFFile[]): UserWithPDFs[] {
         fullName,
         pdfCount: 0,
         pdfs: [],
-        createdAt: file.created_at
+        createdAt: file.created_at,
+        totalStorage: 0
       });
     }
     
     const userData = userMap.get(userId)!;
     userData.pdfs.push(file);
     userData.pdfCount++;
+    userData.totalStorage += file.file_size || 0;
   });
   
   return Array.from(userMap.values()).sort((a, b) => 
@@ -84,6 +96,7 @@ export default function AdminDashboard() {
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeUsers, setActiveUsers] = useState(0);
+  const [totalStorage, setTotalStorage] = useState(0);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -125,9 +138,15 @@ export default function AdminDashboard() {
         pdfsByUser.get(pdf.user_id)!.push(pdf);
       });
 
+      // Calculate total storage
+      const totalStorageBytes = pdfData?.reduce((sum, pdf) => sum + (pdf.file_size || 0), 0) || 0;
+      setTotalStorage(totalStorageBytes);
+
       // Build UserWithPDFs array for ALL users
       const usersWithPdfs: UserWithPDFs[] = (profilesData || []).map(profile => {
         const userPdfs = pdfsByUser.get(profile.id) || [];
+        const userStorage = userPdfs.reduce((sum, pdf) => sum + (pdf.file_size || 0), 0);
+        
         return {
           userId: profile.id,
           email: profile.email || "Unknown",
@@ -135,7 +154,8 @@ export default function AdminDashboard() {
           fullName: profile.full_name,
           pdfCount: userPdfs.length,
           pdfs: userPdfs,
-          createdAt: profile.created_at
+          createdAt: profile.created_at,
+          totalStorage: userStorage
         };
       });
 
@@ -309,7 +329,87 @@ export default function AdminDashboard() {
               </div>
             </div>
           </Card>
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <HardDrive className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Storage</p>
+                <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
+              </div>
+            </div>
+          </Card>
         </div>
+
+        {/* Storage Analytics Section */}
+        <Card className="p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Storage Analytics by User</h2>
+          
+          {allUsers.length > 0 ? (
+            <div className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={allUsers.map(user => ({
+                    name: user.displayName,
+                    storage: user.totalStorage / (1024 * 1024),
+                    storageFormatted: formatBytes(user.totalStorage)
+                  }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45} 
+                    textAnchor="end"
+                    height={100}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Storage (MB)', angle: -90, position: 'insideLeft' }}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-card border border-border p-3 rounded-lg shadow-lg">
+                            <p className="font-semibold">{payload[0].payload.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Storage: {payload[0].payload.storageFormatted}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="storage" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]}>
+                    {allUsers.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.pdfCount === 0 ? 'hsl(var(--muted))' : 'hsl(var(--primary))'} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No storage data available</p>
+          )}
+          
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-4 h-4 rounded bg-primary"></div>
+              <span>Active users (with PDFs)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-4 h-4 rounded bg-muted"></div>
+              <span>Inactive users (no PDFs)</span>
+            </div>
+          </div>
+        </Card>
 
         <div className="mb-6 space-y-4">
           <div className="relative">
@@ -369,7 +469,12 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     </div>
-                    <Badge variant="secondary">{userData.pdfCount} PDF{userData.pdfCount !== 1 ? 's' : ''}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{userData.pdfCount} PDF{userData.pdfCount !== 1 ? 's' : ''}</Badge>
+                      {userData.totalStorage > 0 && (
+                        <Badge variant="outline">{formatBytes(userData.totalStorage)}</Badge>
+                      )}
+                    </div>
                   </div>
                 </AccordionTrigger>
                 
