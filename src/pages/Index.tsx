@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, HardDrive } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -57,6 +57,7 @@ import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { ThumbnailGenerator } from "@/components/ThumbnailGenerator";
 import { LazyImage } from "@/components/LazyImage";
+import { Progress } from "@/components/ui/progress";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -72,7 +73,9 @@ function AppSidebar({
   onDeleteCategory,
   isAdmin,
   onSignOut,
-  onOpenTutorial
+  onOpenTutorial,
+  totalStorage,
+  storageLimit
 }: {
   categories: any[];
   selectedCategory: string;
@@ -85,7 +88,16 @@ function AppSidebar({
   isAdmin: boolean;
   onSignOut: () => void;
   onOpenTutorial: () => void;
+  totalStorage: number;
+  storageLimit: number;
 }) {
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   
@@ -210,6 +222,17 @@ function AppSidebar({
       </SidebarContent>
       
       <SidebarFooter>
+        {/* Storage indicator */}
+        <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+          <div className="flex items-center justify-between mb-1">
+            <span>Storage</span>
+            <span className="font-medium">
+              {formatBytes(totalStorage)} / {formatBytes(storageLimit)}
+            </span>
+          </div>
+          <Progress value={(totalStorage / storageLimit) * 100} className="h-1" />
+        </div>
+        
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onOpenTutorial}>
@@ -260,10 +283,31 @@ export default function Index() {
   const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [totalStorage, setTotalStorage] = useState<number>(0);
+
+  const STORAGE_LIMIT = 100 * 1024 * 1024; // 100MB
+
+  // Format bytes to human readable
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // Calculate storage percentage
+  const storagePercentage = (totalStorage / STORAGE_LIMIT) * 100;
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
+  // Calculate total storage when files change
+  useEffect(() => {
+    const total = files.reduce((sum, file) => sum + (file.file_size || 0), 0);
+    setTotalStorage(total);
+  }, [files]);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -477,6 +521,8 @@ export default function Index() {
           isAdmin={isAdmin}
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
+          totalStorage={totalStorage}
+          storageLimit={STORAGE_LIMIT}
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
@@ -601,6 +647,33 @@ export default function Index() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Storage Usage Indicator */}
+            <div className="bg-card border rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <HardDrive className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Storage Usage</span>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {formatBytes(totalStorage)} / {formatBytes(STORAGE_LIMIT)}
+                </span>
+              </div>
+              <Progress 
+                value={storagePercentage} 
+                className={`h-2 ${storagePercentage > 90 ? 'bg-red-100 dark:bg-red-950' : ''}`}
+              />
+              {storagePercentage > 90 && (
+                <p className="text-xs text-red-500 mt-2">
+                  ⚠️ You're running low on storage space. Consider deleting unused files.
+                </p>
+              )}
+              {storagePercentage > 80 && storagePercentage <= 90 && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
+                  Storage is getting full. You have {formatBytes(STORAGE_LIMIT - totalStorage)} remaining.
+                </p>
               )}
             </div>
 
