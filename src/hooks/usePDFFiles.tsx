@@ -77,6 +77,24 @@ export function usePDFFiles(userId: string | undefined) {
     loadFiles();
   }, [userId]);
 
+  const calculateUserStorage = async (userId: string): Promise<number> => {
+    try {
+      const { data, error } = await supabase
+        .from("pdf_files")
+        .select("file_size")
+        .eq("user_id", userId);
+      
+      if (error) throw error;
+      
+      // Sum all file sizes
+      const totalBytes = (data || []).reduce((sum, file) => sum + (file.file_size || 0), 0);
+      return totalBytes;
+    } catch (error) {
+      console.error("Error calculating storage:", error);
+      return 0;
+    }
+  };
+
   const uploadFile = async (file: File, categoryId: string | null) => {
     if (!userId) return;
 
@@ -86,10 +104,24 @@ export function usePDFFiles(userId: string | undefined) {
       return;
     }
 
-    // Validate file size (50MB limit)
+    // Validate file size (50MB limit per file)
     const MAX_SIZE = 50 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       toast.error('File size must be under 50MB');
+      return;
+    }
+
+    // Check total storage limit (100MB)
+    const TOTAL_STORAGE_LIMIT = 100 * 1024 * 1024; // 100MB in bytes
+    const currentStorage = await calculateUserStorage(userId);
+    
+    if (currentStorage + file.size > TOTAL_STORAGE_LIMIT) {
+      const currentMB = (currentStorage / (1024 * 1024)).toFixed(2);
+      const limitMB = (TOTAL_STORAGE_LIMIT / (1024 * 1024)).toFixed(0);
+      toast.error(
+        `Storage limit exceeded! You've used ${currentMB}MB of ${limitMB}MB. This file would exceed your limit. Please delete some files to free up space.`,
+        { duration: 6000 }
+      );
       return;
     }
 
@@ -286,10 +318,10 @@ export function usePDFFiles(userId: string | undefined) {
     if (!userId) return;
 
     try {
-      // Get the file record to find thumbnail path
+      // Get the file record to find thumbnail path and file size
       const { data: fileData } = await supabase
         .from("pdf_files")
-        .select("thumbnail_url")
+        .select("thumbnail_url, file_size")
         .eq("id", fileId)
         .single();
 
@@ -316,7 +348,18 @@ export function usePDFFiles(userId: string | undefined) {
       if (dbError) throw dbError;
 
       await loadFiles();
-      toast.success("File deleted");
+      
+      // Format freed space
+      const formatBytes = (bytes: number): string => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+      };
+      
+      const freedSpace = fileData?.file_size ? formatBytes(fileData.file_size) : '';
+      toast.success(`File deleted${freedSpace ? `. ${freedSpace} freed` : ''}`);
     } catch (error: any) {
       toast.error("Failed to delete file");
       console.error("Error deleting file:", error);

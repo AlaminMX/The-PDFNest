@@ -344,7 +344,10 @@ export default function AdminDashboard() {
 
         {/* Storage Analytics Section */}
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Storage Analytics by User</h2>
+          <h2 className="text-xl font-semibold mb-1">Storage Analytics by User</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Each user has a 100MB storage limit
+          </p>
           
           {allUsers.length > 0 ? (
             <div className="h-[400px]">
