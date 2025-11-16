@@ -1102,6 +1102,13 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 py-2 text-center">
+        <p className="text-xs text-muted-foreground/60">
+          Made with love ❤️ by Nexel
+        </p>
+      </footer>
     </SidebarProvider>
   );
 }
