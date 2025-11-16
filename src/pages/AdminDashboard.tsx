@@ -77,6 +77,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [files, setFiles] = useState<PDFFile[]>([]);
+  const [allUsers, setAllUsers] = useState<UserWithPDFs[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
@@ -99,33 +100,56 @@ export default function AdminDashboard() {
 
   const fetchAllFiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from("pdf_files")
-        .select(`
-          *,
-          profiles (
-            email,
-            full_name
-          )
-        `)
+      // Fetch ALL profiles (including those with 0 PDFs)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, created_at")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setFiles(data || []);
+      if (profilesError) throw profilesError;
 
-      const uniqueUsers = new Set(data?.map(f => f.user_id) || []);
-      setActiveUsers(uniqueUsers.size);
+      // Fetch ALL PDF files
+      const { data: pdfData, error: pdfError } = await supabase
+        .from("pdf_files")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      const { count, error: countError } = await supabase
-        .from("profiles")
-        .select("*", { count: 'exact', head: true });
+      if (pdfError) throw pdfError;
 
-      if (!countError) {
-        setTotalUsers(count || 0);
-      }
+      // Map PDFs by user_id for efficient lookup
+      const pdfsByUser = new Map<string, PDFFile[]>();
+      pdfData?.forEach(pdf => {
+        if (!pdfsByUser.has(pdf.user_id)) {
+          pdfsByUser.set(pdf.user_id, []);
+        }
+        pdfsByUser.get(pdf.user_id)!.push(pdf);
+      });
+
+      // Build UserWithPDFs array for ALL users
+      const usersWithPdfs: UserWithPDFs[] = (profilesData || []).map(profile => {
+        const userPdfs = pdfsByUser.get(profile.id) || [];
+        return {
+          userId: profile.id,
+          email: profile.email || "Unknown",
+          displayName: getUserDisplayName(profile.email || "Unknown", profile.full_name),
+          fullName: profile.full_name,
+          pdfCount: userPdfs.length,
+          pdfs: userPdfs,
+          createdAt: profile.created_at
+        };
+      });
+
+      // Sort by display name
+      usersWithPdfs.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+      // Set state
+      setAllUsers(usersWithPdfs);
+      setFiles(pdfData || []);
+      setTotalUsers(profilesData?.length || 0);
+      setActiveUsers(usersWithPdfs.filter(u => u.pdfCount > 0).length);
     } catch (error) {
-      console.error("Error fetching files:", error);
-      toast.error("Failed to load files");
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -350,78 +374,84 @@ export default function AdminDashboard() {
                 </AccordionTrigger>
                 
                 <AccordionContent className="px-6 pb-4">
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">Name</th>
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">File Name</th>
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">Size</th>
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
-                          <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  {userData.pdfs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">No PDFs uploaded yet</p>
+                  ) : (
+                    <>
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Name</th>
+                              <th className="text-left p-3 text-sm font-medium text-muted-foreground">File Name</th>
+                              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Size</th>
+                              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
+                              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userData.pdfs.map((file) => (
+                              <tr key={file.id} className="border-b border-border/50 hover:bg-muted/30">
+                                <td className="p-3">{file.name}</td>
+                                <td className="p-3 text-muted-foreground text-sm">{file.file_name}</td>
+                                <td className="p-3 text-muted-foreground text-sm">
+                                  {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                                </td>
+                                <td className="p-3 text-muted-foreground text-sm">
+                                  {new Date(file.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handlePreview(file)} title="Preview">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} title="Download">
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(file)} title="Delete">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="md:hidden space-y-3">
                         {userData.pdfs.map((file) => (
-                          <tr key={file.id} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="p-3">{file.name}</td>
-                            <td className="p-3 text-muted-foreground text-sm">{file.file_name}</td>
-                            <td className="p-3 text-muted-foreground text-sm">
-                              {(file.file_size / 1024 / 1024).toFixed(2)} MB
-                            </td>
-                            <td className="p-3 text-muted-foreground text-sm">
-                              {new Date(file.created_at).toLocaleDateString()}
-                            </td>
-                            <td className="p-3">
-                              <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => handlePreview(file)} title="Preview">
-                                  <Eye className="h-4 w-4" />
+                          <div key={file.id} className="p-4 border border-border/50 rounded-lg bg-background">
+                            <div className="space-y-2">
+                              <div>
+                                <h4 className="font-medium">{file.name}</h4>
+                                <p className="text-sm text-muted-foreground">{file.file_name}</p>
+                              </div>
+                              
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <p>Size: {(file.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                                <p>Date: {new Date(file.created_at).toLocaleDateString()}</p>
+                              </div>
+
+                              <div className="flex gap-2 pt-2">
+                                <Button variant="outline" size="sm" onClick={() => handlePreview(file)} className="flex-1">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Preview
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} title="Download">
-                                  <Download className="h-4 w-4" />
+                                <Button variant="outline" size="sm" onClick={() => handleDownload(file)} className="flex-1">
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDelete(file)} title="Delete">
+                                <Button variant="outline" size="sm" onClick={() => handleDelete(file)}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
-                            </td>
-                          </tr>
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="md:hidden space-y-3">
-                    {userData.pdfs.map((file) => (
-                      <div key={file.id} className="p-4 border border-border/50 rounded-lg bg-background">
-                        <div className="space-y-2">
-                          <div>
-                            <h4 className="font-medium">{file.name}</h4>
-                            <p className="text-sm text-muted-foreground">{file.file_name}</p>
-                          </div>
-                          
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <p>Size: {(file.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                            <p>Date: {new Date(file.created_at).toLocaleDateString()}</p>
-                          </div>
-
-                          <div className="flex gap-2 pt-2">
-                            <Button variant="outline" size="sm" onClick={() => handlePreview(file)} className="flex-1">
-                              <Eye className="h-4 w-4 mr-2" />
-                              Preview
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDownload(file)} className="flex-1">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDelete(file)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -441,81 +471,89 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFiles.map((file) => (
-                    <tr key={file.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="p-4">{file.name}</td>
-                      <td className="p-4 text-muted-foreground">{file.file_name}</td>
-                      <td className="p-4 text-muted-foreground">
-                        {(file.file_size / 1024 / 1024).toFixed(2)} MB
-                      </td>
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium text-sm">
-                            {getUserDisplayName(file.profiles?.email || "", file.profiles?.full_name || null)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{file.profiles?.email}</p>
-                        </div>
-                      </td>
-                      <td className="p-4 text-muted-foreground">
-                        {new Date(file.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handlePreview(file)} title="Preview">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} title="Download">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(file)} title="Delete">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredFiles.map((file) => {
+                    const user = allUsers.find(u => u.userId === file.user_id);
+                    const userDisplayName = user?.displayName || "Unknown";
+                    const userEmail = user?.email || "Unknown";
+                    
+                    return (
+                      <tr key={file.id} className="border-b border-border hover:bg-muted/50">
+                        <td className="p-4">{file.name}</td>
+                        <td className="p-4 text-muted-foreground">{file.file_name}</td>
+                        <td className="p-4 text-muted-foreground">
+                          {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                        </td>
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium text-sm">{userDisplayName}</p>
+                            <p className="text-xs text-muted-foreground">{userEmail}</p>
+                          </div>
+                        </td>
+                        <td className="p-4 text-muted-foreground">
+                          {new Date(file.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handlePreview(file)} title="Preview">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDownload(file)} title="Download">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(file)} title="Delete">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             <div className="md:hidden space-y-4">
-              {filteredFiles.map((file) => (
-                <Card key={file.id} className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium">{file.name}</h3>
-                        <p className="text-sm text-muted-foreground">{file.file_name}</p>
+              {filteredFiles.map((file) => {
+                const user = allUsers.find(u => u.userId === file.user_id);
+                const userDisplayName = user?.displayName || "Unknown";
+                const userEmail = user?.email || "Unknown";
+                
+                return (
+                  <Card key={file.id} className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium">{file.name}</h3>
+                          <p className="text-sm text-muted-foreground">{file.file_name}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p>Size: {(file.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p>
+                          User: <span className="font-medium text-foreground">{userDisplayName}</span>
+                        </p>
+                        <p className="text-xs">{userEmail}</p>
+                        <p>Date: {new Date(file.created_at).toLocaleDateString()}</p>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <Button variant="outline" size="sm" onClick={() => handlePreview(file)} className="flex-1">
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDownload(file)} className="flex-1">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(file)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
-                    
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>Size: {(file.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                      <p>
-                        User: <span className="font-medium text-foreground">
-                          {getUserDisplayName(file.profiles?.email || "", file.profiles?.full_name || null)}
-                        </span>
-                      </p>
-                      <p className="text-xs">{file.profiles?.email}</p>
-                      <p>Date: {new Date(file.created_at).toLocaleDateString()}</p>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" onClick={() => handlePreview(file)} className="flex-1">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDownload(file)} className="flex-1">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(file)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           </>
         )}
