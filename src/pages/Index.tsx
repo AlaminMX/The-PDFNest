@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
-import { supabase } from "@/integrations/supabase/client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -70,6 +70,12 @@ type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
 export type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
 
+interface RecentFile {
+  id: string;
+  name: string;
+  lastAccessed: number;
+}
+
 function AppSidebar({ 
   categories, 
   selectedCategory, 
@@ -83,7 +89,9 @@ function AppSidebar({
   onSignOut,
   onOpenTutorial,
   storageUsed,
-  onOpenAIFeature
+  onOpenAIFeature,
+  recentFiles,
+  onOpenRecentFile
 }: {
   categories: any[];
   selectedCategory: string;
@@ -98,6 +106,8 @@ function AppSidebar({
   onOpenTutorial: () => void;
   storageUsed: number;
   onOpenAIFeature: (featureType: AIModalType) => void;
+  recentFiles: RecentFile[];
+  onOpenRecentFile: (fileId: string) => void;
 }) {
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
@@ -171,6 +181,30 @@ function AppSidebar({
                   {open && <span>💬 Chat with PDF</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Recent Files</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {recentFiles.length === 0 ? (
+                <SidebarMenuItem>
+                  <SidebarMenuButton disabled>
+                    <span className="text-xs text-muted-foreground">No recent files</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ) : (
+                recentFiles.map((file) => (
+                  <SidebarMenuItem key={file.id}>
+                    <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      <span className="truncate">{file.name}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -327,7 +361,7 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
-  const [storageUsed, setStorageUsed] = useState(0);
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [pendingAIFeature, setPendingAIFeature] = useState<AIModalType>(null);
 
@@ -342,20 +376,21 @@ export default function Index() {
     'bg-orange-100 text-orange-700'
   ];
 
-  // Load storage usage
-  useState(() => {
-    const loadStorage = async () => {
-      if (user?.id) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("total_storage_used")
-          .eq("id", user.id)
-          .single();
-        setStorageUsed(data?.total_storage_used || 0);
-      }
-    };
-    loadStorage();
-  });
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = localStorage.getItem(`recent-files-${user.id}`);
+      if (!stored) return;
+      const parsed: RecentFile[] = JSON.parse(stored);
+      const valid = parsed.filter((item) =>
+        files.some((file) => file.id === item.id)
+      );
+      valid.sort((a, b) => b.lastAccessed - a.lastAccessed);
+      setRecentFiles(valid.slice(0, 5));
+    } catch (error) {
+      console.error("Failed to load recent files:", error);
+    }
+  }, [user?.id, files]);
 
   if (authLoading) {
     return (
@@ -417,11 +452,20 @@ export default function Index() {
     setActiveAIModal(pendingAIFeature);
     setShowFilePicker(false);
     setPendingAIFeature(null);
+    trackRecentFile(fileId, fileName);
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
-    setCategoryToDelete(categoryId);
-    setDeleteDialogOpen(true);
+  const handleOpenPreview = (file: any) => {
+    if (!file.url) return;
+    setPreviewPdf({ url: file.url!, name: file.name });
+    trackRecentFile(file.id, file.name);
+  };
+
+  const handleOpenRecentFile = (fileId: string) => {
+    const file = files.find((f) => f.id === fileId);
+    if (file) {
+      handleOpenPreview(file);
+    }
   };
 
   const confirmDelete = async () => {
@@ -529,6 +573,8 @@ export default function Index() {
     }
   };
 
+  const storageUsed = files.reduce((total, file) => total + (file.file_size || 0), 0);
+
   const filteredFiles = selectedCategory === "all" 
     ? files 
     : selectedCategory === "favorites"
@@ -576,6 +622,8 @@ export default function Index() {
           onOpenTutorial={() => setShowTutorial(true)}
           storageUsed={storageUsed}
           onOpenAIFeature={handleOpenAIFeature}
+          recentFiles={recentFiles}
+          onOpenRecentFile={handleOpenRecentFile}
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
@@ -897,7 +945,7 @@ export default function Index() {
                             {file.url && (
                               <>
                                 <button
-                                  onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}
+                                  onClick={() => handleOpenPreview(file)}
                                   className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
                                   title="Preview PDF"
                                 >
@@ -929,36 +977,41 @@ export default function Index() {
                                  </button>
                                </DropdownMenuTrigger>
                                <DropdownMenuContent align="end" className="z-50 bg-popover">
-                                 <DropdownMenuItem onClick={() => {
-                                   setSelectedFileForAI({ id: file.id, name: file.name });
-                                   setActiveAIModal('summary');
-                                 }}>
-                                   📄 Summarize
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => {
-                                   setSelectedFileForAI({ id: file.id, name: file.name });
-                                   setActiveAIModal('study-guide');
-                                 }}>
-                                   📚 Study Guide
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => {
-                                   setSelectedFileForAI({ id: file.id, name: file.name });
-                                   setActiveAIModal('voice');
-                                 }}>
-                                   🔊 Voice Reader
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => {
-                                   setSelectedFileForAI({ id: file.id, name: file.name });
-                                   setActiveAIModal('translate');
-                                 }}>
-                                   🌐 Translate
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => {
-                                   setSelectedFileForAI({ id: file.id, name: file.name });
-                                   setActiveAIModal('chat');
-                                 }}>
-                                   💬 Chat with PDF
-                                 </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedFileForAI({ id: file.id, name: file.name });
+                                    setActiveAIModal('summary');
+                                    trackRecentFile(file.id, file.name);
+                                  }}>
+                                    📄 Summarize
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedFileForAI({ id: file.id, name: file.name });
+                                    setActiveAIModal('study-guide');
+                                    trackRecentFile(file.id, file.name);
+                                  }}>
+                                    📚 Study Guide
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedFileForAI({ id: file.id, name: file.name });
+                                    setActiveAIModal('voice');
+                                    trackRecentFile(file.id, file.name);
+                                  }}>
+                                    🔊 Voice Reader
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedFileForAI({ id: file.id, name: file.name });
+                                    setActiveAIModal('translate');
+                                    trackRecentFile(file.id, file.name);
+                                  }}>
+                                    🌐 Translate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedFileForAI({ id: file.id, name: file.name });
+                                    setActiveAIModal('chat');
+                                    trackRecentFile(file.id, file.name);
+                                  }}>
+                                    💬 Chat with PDF
+                                  </DropdownMenuItem>
                                </DropdownMenuContent>
                              </DropdownMenu>
                           </div>
@@ -999,9 +1052,9 @@ export default function Index() {
                                   ))}
                                 </DropdownMenuSubContent>
                               </DropdownMenuSub>
-                              {file.url && (
-                                <>
-                                  <DropdownMenuItem onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}>
+                                {file.url && (
+                                  <>
+                                  <DropdownMenuItem onClick={() => handleOpenPreview(file)}>
                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                       <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
                                     </svg>
@@ -1029,36 +1082,41 @@ export default function Index() {
                                    AI Features
                                  </DropdownMenuSubTrigger>
                                  <DropdownMenuSubContent className="z-50 bg-popover">
-                                   <DropdownMenuItem onClick={() => {
-                                     setSelectedFileForAI({ id: file.id, name: file.name });
-                                     setActiveAIModal('summary');
-                                   }}>
-                                     📄 Summarize
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => {
-                                     setSelectedFileForAI({ id: file.id, name: file.name });
-                                     setActiveAIModal('study-guide');
-                                   }}>
-                                     📚 Study Guide
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => {
-                                     setSelectedFileForAI({ id: file.id, name: file.name });
-                                     setActiveAIModal('voice');
-                                   }}>
-                                     🔊 Voice Reader
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => {
-                                     setSelectedFileForAI({ id: file.id, name: file.name });
-                                     setActiveAIModal('translate');
-                                   }}>
-                                     🌐 Translate
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => {
-                                     setSelectedFileForAI({ id: file.id, name: file.name });
-                                     setActiveAIModal('chat');
-                                   }}>
-                                     💬 Chat with PDF
-                                   </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedFileForAI({ id: file.id, name: file.name });
+                                      setActiveAIModal('summary');
+                                      trackRecentFile(file.id, file.name);
+                                    }}>
+                                      📄 Summarize
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedFileForAI({ id: file.id, name: file.name });
+                                      setActiveAIModal('study-guide');
+                                      trackRecentFile(file.id, file.name);
+                                    }}>
+                                      📚 Study Guide
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedFileForAI({ id: file.id, name: file.name });
+                                      setActiveAIModal('voice');
+                                      trackRecentFile(file.id, file.name);
+                                    }}>
+                                      🔊 Voice Reader
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedFileForAI({ id: file.id, name: file.name });
+                                      setActiveAIModal('translate');
+                                      trackRecentFile(file.id, file.name);
+                                    }}>
+                                      🌐 Translate
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedFileForAI({ id: file.id, name: file.name });
+                                      setActiveAIModal('chat');
+                                      trackRecentFile(file.id, file.name);
+                                    }}>
+                                      💬 Chat with PDF
+                                    </DropdownMenuItem>
                                  </DropdownMenuSubContent>
                                </DropdownMenuSub>
                             </DropdownMenuContent>
@@ -1121,7 +1179,7 @@ export default function Index() {
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => setPreviewPdf({ url: file.url!, name: file.name })}
+                            onClick={() => handleOpenPreview(file)}
                             className="h-8 w-8 p-0"
                           >
                             <FileText className="w-4 h-4" />
@@ -1223,30 +1281,35 @@ export default function Index() {
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedFileForAI({ id: file.id, name: file.name });
                                   setActiveAIModal('summary');
+                                  trackRecentFile(file.id, file.name);
                                 }}>
                                   📄 Summarize
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedFileForAI({ id: file.id, name: file.name });
                                   setActiveAIModal('study-guide');
+                                  trackRecentFile(file.id, file.name);
                                 }}>
                                   📚 Study Guide
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedFileForAI({ id: file.id, name: file.name });
                                   setActiveAIModal('voice');
+                                  trackRecentFile(file.id, file.name);
                                 }}>
                                   🔊 Voice Reader
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedFileForAI({ id: file.id, name: file.name });
                                   setActiveAIModal('translate');
+                                  trackRecentFile(file.id, file.name);
                                 }}>
                                   🌐 Translate
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                                   setSelectedFileForAI({ id: file.id, name: file.name });
                                   setActiveAIModal('chat');
+                                  trackRecentFile(file.id, file.name);
                                 }}>
                                   💬 Chat with PDF
                                 </DropdownMenuItem>
