@@ -59,9 +59,16 @@ serve(async (req) => {
       });
     }
 
-    // Extract text from PDF (limit to first 10 pages for translation)
     const arrayBuffer = await pdfData.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
+    const pdfModule: any = pdfjsLib as any;
+    const getDocument = pdfModule.getDocument || pdfModule.default?.getDocument;
+
+    if (!getDocument) {
+      console.error("PDF.js module shape:", Object.keys(pdfModule));
+      throw new Error('pdfjs getDocument is not available in this environment');
+    }
+
+    const pdf = await getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
     let fullText = '';
 
     for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {

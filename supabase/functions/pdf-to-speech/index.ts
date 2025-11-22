@@ -59,9 +59,16 @@ serve(async (req) => {
       });
     }
 
-    // Extract text from specific page
     const arrayBuffer = await pdfData.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
+    const pdfModule: any = pdfjsLib as any;
+    const getDocument = pdfModule.getDocument || pdfModule.default?.getDocument;
+
+    if (!getDocument) {
+      console.error("PDF.js module shape:", Object.keys(pdfModule));
+      throw new Error('pdfjs getDocument is not available in this environment');
+    }
+
+    const pdf = await getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
     
     if (page > pdf.numPages || page < 1) {
       return new Response(JSON.stringify({ error: 'Invalid page number', totalPages: pdf.numPages }), {
