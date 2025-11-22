@@ -117,7 +117,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -221,58 +221,60 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
         )}
 
         {(originalText || translatedText) && !loading && (
-          <div className="flex flex-col h-full px-6 pb-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">Original Text</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleCopy(originalText, "Original text")}
-                    className="h-8"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
+          <ScrollArea className="flex-1 px-6">
+            <div className="pb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Original Text</Label>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleCopy(originalText, "Original text")}
+                      className="h-8"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <Card className="bg-muted/30 border-muted">
+                    <ScrollArea className="h-[400px] p-4">
+                      <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                        {originalText}
+                      </div>
+                    </ScrollArea>
+                  </Card>
                 </div>
-                <Card className="bg-muted/30 border-muted">
-                  <ScrollArea className="h-[400px] p-4">
-                    <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                      {originalText}
-                    </div>
-                  </ScrollArea>
-                </Card>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">{targetLanguage} Translation</Label>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleCopy(translatedText, "Translation")}
+                      className="h-8"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <Card className="bg-muted/30 border-muted">
+                    <ScrollArea className="h-[400px] p-4">
+                      <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                        {translatedText}
+                      </div>
+                    </ScrollArea>
+                  </Card>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">{targetLanguage} Translation</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleCopy(translatedText, "Translation")}
-                    className="h-8"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Card className="bg-muted/30 border-muted">
-                  <ScrollArea className="h-[400px] p-4">
-                    <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                      {translatedText}
-                    </div>
-                  </ScrollArea>
-                </Card>
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                <Button variant="default" size="sm" onClick={handleDownload} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Download Translation
+                </Button>
               </div>
             </div>
-
-            <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
-              <Button variant="default" size="sm" onClick={handleDownload} className="gap-2">
-                <Download className="h-4 w-4" />
-                Download Translation
-              </Button>
-            </div>
-          </div>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>
