@@ -57,9 +57,16 @@ import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { ThumbnailGenerator } from "@/components/ThumbnailGenerator";
 import { LazyImage } from "@/components/LazyImage";
+import { StorageIndicator } from "@/components/StorageIndicator";
+import { PDFSummaryModal } from "@/components/PDFSummaryModal";
+import { StudyGuideModal } from "@/components/StudyGuideModal";
+import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
+import { TranslatorModal } from "@/components/TranslatorModal";
+import { PDFChatInterface } from "@/components/PDFChatInterface";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
+type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
 
 function AppSidebar({ 
   categories, 
