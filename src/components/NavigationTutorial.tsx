@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,47 +10,116 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const TUTORIAL_STEPS = [
+interface TutorialStep {
+  title: string;
+  description: string;
+  emoji: string;
+  highlight?: string | null;
+}
+
+const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    title: "Welcome to PDFNest!",
-    description: "Let's take a quick tour of the features to help you organize your PDF documents efficiently.",
-    emoji: "📚",
+    title: "Welcome to PDFNest! 📚",
+    description: "Let's explore all the powerful features to help you organize and work with your PDF documents.",
+    emoji: "👋",
+    highlight: null
   },
   {
-    title: "Upload PDFs",
-    description: "Drag and drop PDF files onto the upload area, or click the upload button to browse your files. You can upload multiple files at once.",
+    title: "Upload PDFs 📤",
+    description: "Drag and drop PDF files onto the upload area, or click the upload button. Upload multiple files at once with ease!",
     emoji: "📤",
+    highlight: "upload-area"
   },
   {
-    title: "Organize with Categories",
-    description: "Create custom categories to organize your files. Use the sidebar to add new categories, or click the + button. Each file can be assigned to one category.",
+    title: "Storage Limit 💾",
+    description: "Each account has 300MB of total storage space. Monitor your usage in the sidebar's storage indicator at the bottom.",
+    emoji: "💾",
+    highlight: "storage-indicator"
+  },
+  {
+    title: "Organize with Categories 📁",
+    description: "Create custom categories in the sidebar to organize your files. Assign each file to a category for better organization.",
     emoji: "📁",
+    highlight: null
   },
   {
-    title: "Search & Sort",
-    description: "Use the search bar to find files by name. Sort your files by name, date, or size using the sort dropdown. Toggle between ascending and descending order.",
+    title: "Search & Filter 🔍",
+    description: "Use the search bar to find files by name. Sort your files by name, date, or size using the sort dropdown.",
     emoji: "🔍",
+    highlight: "search-bar"
   },
   {
-    title: "Mark Favorites",
-    description: "Click the star icon on any file to mark it as a favorite. Access all your favorite files quickly from the Favorites category in the sidebar.",
+    title: "Mark Favorites ⭐",
+    description: "Click the star icon on any file to mark it as a favorite. Access all favorites quickly from the Favorites category.",
     emoji: "⭐",
+    highlight: null
   },
   {
-    title: "File Actions",
-    description: "Each file has multiple actions: rename, preview, download, change category, and delete. On mobile, tap the three dots menu to access all actions.",
+    title: "View Modes 👁️",
+    description: "Switch between List view and Grid view using the toggle buttons in the header. Choose what works best for you!",
+    emoji: "👁️",
+    highlight: "view-toggle"
+  },
+  {
+    title: "AI Summarization 📄",
+    description: "Get instant AI-powered summaries of your PDFs. Click any file's AI menu → Summarize to extract key points.",
+    emoji: "📄",
+    highlight: null
+  },
+  {
+    title: "Study Guide Generator 📚",
+    description: "Generate comprehensive study guides with key concepts, definitions, practice questions, and review points.",
+    emoji: "📚",
+    highlight: null
+  },
+  {
+    title: "Voice Reader 🔊",
+    description: "Listen to your PDFs with text-to-speech. Navigate page by page and control playback speed.",
+    emoji: "🔊",
+    highlight: null
+  },
+  {
+    title: "PDF Translator 🌐",
+    description: "Translate PDFs to 20+ languages including Spanish, French, German, Chinese, Japanese, and more!",
+    emoji: "🌐",
+    highlight: null
+  },
+  {
+    title: "Chat with PDF 💬",
+    description: "Ask questions about your PDF content. The AI will answer based on the document with relevant excerpts.",
+    emoji: "💬",
+    highlight: null
+  },
+  {
+    title: "File Actions ⚙️",
+    description: "Rename, preview, download, change category, or delete files. On mobile, tap the three dots menu for all actions.",
     emoji: "⚙️",
+    highlight: null
   },
   {
-    title: "Bulk Operations",
-    description: "Select multiple files using the checkboxes, then perform bulk actions like moving to a category or deleting multiple files at once.",
+    title: "Bulk Operations ✨",
+    description: "Select multiple files using checkboxes, then move them to categories or delete them all at once.",
     emoji: "✨",
+    highlight: null
   },
   {
-    title: "Sidebar Navigation",
-    description: "On mobile, tap the menu icon to open the sidebar. On desktop, you can collapse the sidebar to save space. All your categories and navigation options are here.",
-    emoji: "🧭",
+    title: "Dark Mode 🌙",
+    description: "Toggle between light and dark themes using the theme switcher in the header. Your preference is saved automatically.",
+    emoji: "🌙",
+    highlight: "theme-toggle"
   },
+  {
+    title: "Mobile Support 📱",
+    description: "PDFNest works great on mobile! Tap the menu icon to open the sidebar and access all features on the go.",
+    emoji: "📱",
+    highlight: null
+  },
+  {
+    title: "You're Ready! 🚀",
+    description: "You now know all of PDFNest's features. Start uploading PDFs and explore the AI-powered tools to boost your productivity!",
+    emoji: "🚀",
+    highlight: null
+  }
 ];
 
 interface NavigationTutorialProps {
@@ -75,6 +144,22 @@ export function NavigationTutorial({ open, onOpenChange }: NavigationTutorialPro
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
+
+  // Highlighting effect
+  useEffect(() => {
+    if (open && currentStepData.highlight) {
+      const element = document.getElementById(currentStepData.highlight);
+      if (element) {
+        element.classList.add('tutorial-highlight');
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    return () => {
+      document.querySelectorAll('.tutorial-highlight').forEach(el => {
+        el.classList.remove('tutorial-highlight');
+      });
+    };
+  }, [currentStep, open, currentStepData.highlight]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

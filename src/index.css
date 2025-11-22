@@ -103,3 +103,19 @@ All colors MUST be HSL.
     @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
   }
 }
+
+/* Tutorial highlighting */
+.tutorial-highlight {
+  position: relative;
+  z-index: 9999;
+  animation: pulse-highlight 2s infinite;
+}
+
+@keyframes pulse-highlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsla(var(--primary), 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 15px hsla(var(--primary), 0);
+  }
+}

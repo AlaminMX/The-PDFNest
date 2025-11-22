@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -79,7 +80,8 @@ function AppSidebar({
   onDeleteCategory,
   isAdmin,
   onSignOut,
-  onOpenTutorial
+  onOpenTutorial,
+  storageUsed
 }: {
   categories: any[];
   selectedCategory: string;
@@ -92,6 +94,7 @@ function AppSidebar({
   isAdmin: boolean;
   onSignOut: () => void;
   onOpenTutorial: () => void;
+  storageUsed: number;
 }) {
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
@@ -217,6 +220,9 @@ function AppSidebar({
       </SidebarContent>
       
       <SidebarFooter>
+        <div id="storage-indicator">
+          <StorageIndicator storageUsed={storageUsed} />
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onOpenTutorial}>
@@ -271,6 +277,9 @@ export default function Index() {
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
+  const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
+  const [storageUsed, setStorageUsed] = useState(0);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -282,6 +291,21 @@ export default function Index() {
     'bg-indigo-100 text-indigo-700',
     'bg-orange-100 text-orange-700'
   ];
+
+  // Load storage usage
+  useState(() => {
+    const loadStorage = async () => {
+      if (user?.id) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("total_storage_used")
+          .eq("id", user.id)
+          .single();
+        setStorageUsed(data?.total_storage_used || 0);
+      }
+    };
+    loadStorage();
+  });
 
   if (authLoading) {
     return (
@@ -484,6 +508,7 @@ export default function Index() {
           isAdmin={isAdmin}
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
+          storageUsed={storageUsed}
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
@@ -493,7 +518,7 @@ export default function Index() {
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <div className="ml-auto flex items-center gap-2">
                 {isAdmin && <ThumbnailGenerator onComplete={refreshFiles} />}
-                <div className="flex items-center border rounded-md">
+                <div id="view-toggle" className="flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
@@ -512,7 +537,9 @@ export default function Index() {
                   </Button>
                 </div>
                 <InstallPWA />
-                <ThemeToggle />
+                <div id="theme-toggle">
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
           </header>
@@ -533,6 +560,7 @@ export default function Index() {
             </div>
 
             <div 
+              id="upload-area"
               className={`bg-card rounded-xl shadow-sm border-2 border-dashed transition-colors p-8 mb-6 ${
                 isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
               }`}
@@ -638,6 +666,7 @@ export default function Index() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                   <Input
+                    id="search-bar"
                     type="text"
                     placeholder="Search PDFs..."
                     value={searchQuery}
@@ -807,20 +836,64 @@ export default function Index() {
                                 >
                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
-                                  </svg>
-                                </button>
-                                <a
-                                  href={file.url}
-                                  download={file.name}
-                                  className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
-                                  title="Download file"
-                                >
-                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                  </svg>
-                                </a>
-                              </>
-                            )}
+                                   </svg>
+                                 </button>
+                                 <a
+                                   href={file.url}
+                                   download={file.name}
+                                   className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
+                                   title="Download file"
+                                 >
+                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                     <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                   </svg>
+                                 </a>
+                               </>
+                             )}
+                             <DropdownMenu>
+                               <DropdownMenuTrigger asChild>
+                                 <button
+                                   className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
+                                   title="AI Features"
+                                 >
+                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                     <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,17V16H9V14H13V13H10A1,1 0 0,1 9,12V9A1,1 0 0,1 10,8H14V9H12V11H15V14H11V17Z" />
+                                   </svg>
+                                 </button>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end" className="z-50 bg-popover">
+                                 <DropdownMenuItem onClick={() => {
+                                   setSelectedFileForAI({ id: file.id, name: file.name });
+                                   setActiveAIModal('summary');
+                                 }}>
+                                   📄 Summarize
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => {
+                                   setSelectedFileForAI({ id: file.id, name: file.name });
+                                   setActiveAIModal('study-guide');
+                                 }}>
+                                   📚 Study Guide
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => {
+                                   setSelectedFileForAI({ id: file.id, name: file.name });
+                                   setActiveAIModal('voice');
+                                 }}>
+                                   🔊 Voice Reader
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => {
+                                   setSelectedFileForAI({ id: file.id, name: file.name });
+                                   setActiveAIModal('translate');
+                                 }}>
+                                   🌐 Translate
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => {
+                                   setSelectedFileForAI({ id: file.id, name: file.name });
+                                   setActiveAIModal('chat');
+                                 }}>
+                                   💬 Chat with PDF
+                                 </DropdownMenuItem>
+                               </DropdownMenuContent>
+                             </DropdownMenu>
                           </div>
 
                           <DropdownMenu>
@@ -876,10 +949,51 @@ export default function Index() {
                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                       <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
                                     </svg>
-                                    Download
-                                  </DropdownMenuItem>
-                                </>
-                              )}
+                                     Download
+                                   </DropdownMenuItem>
+                                 </>
+                               )}
+                               <DropdownMenuSeparator />
+                               <DropdownMenuSub>
+                                 <DropdownMenuSubTrigger>
+                                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                     <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" />
+                                   </svg>
+                                   AI Features
+                                 </DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent className="z-50 bg-popover">
+                                   <DropdownMenuItem onClick={() => {
+                                     setSelectedFileForAI({ id: file.id, name: file.name });
+                                     setActiveAIModal('summary');
+                                   }}>
+                                     📄 Summarize
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => {
+                                     setSelectedFileForAI({ id: file.id, name: file.name });
+                                     setActiveAIModal('study-guide');
+                                   }}>
+                                     📚 Study Guide
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => {
+                                     setSelectedFileForAI({ id: file.id, name: file.name });
+                                     setActiveAIModal('voice');
+                                   }}>
+                                     🔊 Voice Reader
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => {
+                                     setSelectedFileForAI({ id: file.id, name: file.name });
+                                     setActiveAIModal('translate');
+                                   }}>
+                                     🌐 Translate
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => {
+                                     setSelectedFileForAI({ id: file.id, name: file.name });
+                                     setActiveAIModal('chat');
+                                   }}>
+                                     💬 Chat with PDF
+                                   </DropdownMenuItem>
+                                 </DropdownMenuSubContent>
+                               </DropdownMenuSub>
                             </DropdownMenuContent>
                           </DropdownMenu>
 
@@ -1029,6 +1143,47 @@ export default function Index() {
                                   </DropdownMenuItem>
                                 ))}
                               </DropdownMenuSubContent>
+                             </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" />
+                                </svg>
+                                AI Features
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="z-50 bg-popover">
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedFileForAI({ id: file.id, name: file.name });
+                                  setActiveAIModal('summary');
+                                }}>
+                                  📄 Summarize
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedFileForAI({ id: file.id, name: file.name });
+                                  setActiveAIModal('study-guide');
+                                }}>
+                                  📚 Study Guide
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedFileForAI({ id: file.id, name: file.name });
+                                  setActiveAIModal('voice');
+                                }}>
+                                  🔊 Voice Reader
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedFileForAI({ id: file.id, name: file.name });
+                                  setActiveAIModal('translate');
+                                }}>
+                                  🌐 Translate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedFileForAI({ id: file.id, name: file.name });
+                                  setActiveAIModal('chat');
+                                }}>
+                                  💬 Chat with PDF
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
                             </DropdownMenuSub>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => deleteFile(file.id, file.storage_path)} className="text-destructive">
@@ -1109,6 +1264,42 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Feature Modals */}
+      <PDFSummaryModal
+        open={activeAIModal === 'summary'}
+        onOpenChange={(open) => !open && setActiveAIModal(null)}
+        fileId={selectedFileForAI?.id || ''}
+        fileName={selectedFileForAI?.name || ''}
+      />
+
+      <StudyGuideModal
+        open={activeAIModal === 'study-guide'}
+        onOpenChange={(open) => !open && setActiveAIModal(null)}
+        fileId={selectedFileForAI?.id || ''}
+        fileName={selectedFileForAI?.name || ''}
+      />
+
+      <PDFAudioPlayer
+        open={activeAIModal === 'voice'}
+        onOpenChange={(open) => !open && setActiveAIModal(null)}
+        fileId={selectedFileForAI?.id || ''}
+        fileName={selectedFileForAI?.name || ''}
+      />
+
+      <TranslatorModal
+        open={activeAIModal === 'translate'}
+        onOpenChange={(open) => !open && setActiveAIModal(null)}
+        fileId={selectedFileForAI?.id || ''}
+        fileName={selectedFileForAI?.name || ''}
+      />
+
+      <PDFChatInterface
+        open={activeAIModal === 'chat'}
+        onOpenChange={(open) => !open && setActiveAIModal(null)}
+        fileId={selectedFileForAI?.id || ''}
+        fileName={selectedFileForAI?.name || ''}
+      />
 
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 py-2 text-center">
