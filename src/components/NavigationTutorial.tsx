@@ -61,6 +61,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlight: "view-toggle"
   },
   {
+    title: "Quick AI Access 🤖",
+    description: "Access all AI features directly from the sidebar! Click any AI tool, then select which PDF to apply it to.",
+    emoji: "🤖",
+    highlight: "ai-features-section"
+  },
+  {
     title: "AI Summarization 📄",
     description: "Get instant AI-powered summaries of your PDFs. Click any file's AI menu → Summarize to extract key points.",
     emoji: "📄",
