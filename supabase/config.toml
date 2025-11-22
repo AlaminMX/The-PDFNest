@@ -2,3 +2,18 @@ project_id = "xanbbjxvxktiupefvkha"
 
 [functions.get-pdfs-without-thumbnails]
 verify_jwt = true
+
+[functions.summarize-pdf]
+verify_jwt = true
+
+[functions.generate-study-guide]
+verify_jwt = true
+
+[functions.pdf-to-speech]
+verify_jwt = true
+
+[functions.translate-pdf]
+verify_jwt = true
+
+[functions.chat-with-pdf]
+verify_jwt = true

@@ -46,6 +46,45 @@ export type Database = {
           },
         ]
       }
+      pdf_conversations: {
+        Row: {
+          id: string
+          messages: Json
+          pdf_file_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          messages?: Json
+          pdf_file_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          messages?: Json
+          pdf_file_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_conversations_pdf_file_id_fkey"
+            columns: ["pdf_file_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdf_files: {
         Row: {
           category_id: string | null
@@ -100,6 +139,45 @@ export type Database = {
           },
         ]
       }
+      pdf_summaries: {
+        Row: {
+          created_at: string | null
+          id: string
+          pdf_file_id: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          pdf_file_id: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          pdf_file_id?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_summaries_pdf_file_id_fkey"
+            columns: ["pdf_file_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_summaries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -111,6 +189,7 @@ export type Database = {
           id: string
           terms_accepted: boolean | null
           terms_accepted_at: string | null
+          total_storage_used: number | null
         }
         Insert: {
           created_at?: string | null
@@ -122,6 +201,7 @@ export type Database = {
           id: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
+          total_storage_used?: number | null
         }
         Update: {
           created_at?: string | null
@@ -133,6 +213,7 @@ export type Database = {
           id?: string
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
+          total_storage_used?: number | null
         }
         Relationships: [
           {
@@ -140,6 +221,45 @@ export type Database = {
             columns: ["default_category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_guides: {
+        Row: {
+          content: Json
+          created_at: string | null
+          id: string
+          pdf_file_id: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string | null
+          id?: string
+          pdf_file_id: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          pdf_file_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_guides_pdf_file_id_fkey"
+            columns: ["pdf_file_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_guides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -176,6 +296,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_user_storage: {
+        Args: { p_size_delta: number; p_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

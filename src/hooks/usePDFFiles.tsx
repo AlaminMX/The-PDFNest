@@ -93,6 +93,21 @@ export function usePDFFiles(userId: string | undefined) {
       return;
     }
 
+    // Check storage limit (300MB)
+    const STORAGE_LIMIT = 300 * 1024 * 1024;
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("total_storage_used")
+      .eq("id", userId)
+      .single();
+
+    const currentUsage = profileData?.total_storage_used || 0;
+    if (currentUsage + file.size > STORAGE_LIMIT) {
+      const remainingMB = Math.max(0, (STORAGE_LIMIT - currentUsage) / (1024 * 1024)).toFixed(1);
+      toast.error(`Storage limit exceeded. You have ${remainingMB}MB remaining.`);
+      return;
+    }
+
     // Sanitize filename
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const uploadId = `${Date.now()}-${sanitizedFileName}`;
@@ -198,6 +213,12 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (dbError) throw dbError;
 
+      // Update storage usage
+      await supabase.rpc('update_user_storage', {
+        p_user_id: userId,
+        p_size_delta: file.size
+      });
+
       // Complete upload
       setUploadProgress(prev => {
         const newProgress = new Map(prev);
@@ -286,10 +307,10 @@ export function usePDFFiles(userId: string | undefined) {
     if (!userId) return;
 
     try {
-      // Get the file record to find thumbnail path
+      // Get the file record to find thumbnail path and size
       const { data: fileData } = await supabase
         .from("pdf_files")
-        .select("thumbnail_url")
+        .select("thumbnail_url, file_size")
         .eq("id", fileId)
         .single();
 
@@ -314,6 +335,14 @@ export function usePDFFiles(userId: string | undefined) {
         .eq("id", fileId);
 
       if (dbError) throw dbError;
+
+      // Update storage usage
+      if (fileData?.file_size) {
+        await supabase.rpc('update_user_storage', {
+          p_user_id: userId,
+          p_size_delta: -fileData.file_size
+        });
+      }
 
       await loadFiles();
       toast.success("File deleted");
