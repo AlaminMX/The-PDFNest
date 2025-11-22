@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { fileId, voice = 'alloy', page = 1 } = await req.json();
-    console.log("Converting PDF to speech:", fileId, "voice:", voice, "page:", page);
+    const { fileId, startPage = 1, endPage = 10 } = await req.json();
+    console.log("Converting PDF to speech:", fileId, "pages:", startPage, "-", endPage);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -67,33 +67,44 @@ serve(async (req) => {
       useSystemFonts: true,
     }).promise;
     
-    if (page > pdf.numPages || page < 1) {
-      return new Response(JSON.stringify({ error: 'Invalid page number', totalPages: pdf.numPages }), {
+    // Validate page range
+    if (startPage < 1 || endPage < startPage || startPage > pdf.numPages) {
+      return new Response(JSON.stringify({ error: 'Invalid page range', totalPages: pdf.numPages }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const pdfPage = await pdf.getPage(page);
-    const textContent = await pdfPage.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    const actualEndPage = Math.min(endPage, pdf.numPages);
+    const pagesExtracted = actualEndPage - startPage + 1;
 
-    if (pageText.length < 10) {
-      return new Response(JSON.stringify({ error: 'Page appears to be empty or unreadable' }), {
+    // Extract text from page range
+    let fullText = '';
+    for (let pageNum = startPage; pageNum <= actualEndPage; pageNum++) {
+      const pdfPage = await pdf.getPage(pageNum);
+      const textContent = await pdfPage.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      fullText += `[Page ${pageNum}]\n${pageText}\n\n`;
+    }
+
+    if (fullText.length < 10) {
+      return new Response(JSON.stringify({ error: 'Pages appear to be empty or unreadable' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // For demo purposes, return text that should be read
-    // In production, you would integrate with OpenAI TTS API here
-    // Note: This requires OPENAI_API_KEY to be set by user
+    // Prepare note
+    let note = `Extracted ${pagesExtracted} page(s) (${startPage}-${actualEndPage}).`;
+    if (actualEndPage < endPage) {
+      note += ` PDF has only ${pdf.numPages} pages.`;
+    }
     
     return new Response(JSON.stringify({ 
-      text: pageText.substring(0, 4000), // TTS usually has character limits
+      text: fullText.substring(0, 50000), // Limit for browser TTS
       totalPages: pdf.numPages,
-      currentPage: page,
-      message: 'Text extracted successfully. Voice synthesis requires OpenAI API key configuration.'
+      pagesExtracted,
+      note
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
