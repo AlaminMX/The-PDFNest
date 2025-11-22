@@ -83,6 +83,11 @@ serve(async (req) => {
       throw new Error('pdfjs getDocument is not available in this environment');
     }
 
+    if (pdfModule.GlobalWorkerOptions) {
+      // Ensure workers are fully disabled in this environment
+      pdfModule.GlobalWorkerOptions.disableWorker = true;
+    }
+
     const pdf = await getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
     let fullText = '';
 
