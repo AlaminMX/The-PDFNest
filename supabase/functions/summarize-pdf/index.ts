@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import pdfjsLib from "https://esm.sh/pdfjs-dist@3.11.174/legacy/build/pdf.js";
+import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,12 +76,11 @@ serve(async (req) => {
 
     const arrayBuffer = await pdfData.arrayBuffer();
     
-    // Use legacy build which doesn't require workers
-    const pdf = await pdfjsLib.getDocument({ 
-      data: arrayBuffer,
-      disableWorker: true,
-      isEvalSupported: false,
-    } as any).promise;
+    // Use pdfjs-serverless which works perfectly in Deno
+    const pdf = await getDocument({
+      data: new Uint8Array(arrayBuffer),
+      useSystemFonts: true,
+    }).promise;
     let fullText = '';
 
     for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
