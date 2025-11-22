@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -51,13 +52,22 @@ export function StudyGuideModal({ open, onOpenChange, fileId, fileName }: StudyG
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>AI Study Guide</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>AI Study Guide</DialogTitle>
+            {loading && (
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Generating
+              </Badge>
+            )}
+          </div>
           <DialogDescription>{fileName}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground animate-pulse">Creating comprehensive study guide...</p>
           </div>
         ) : studyGuide ? (
           <Tabs defaultValue="concepts" className="w-full">

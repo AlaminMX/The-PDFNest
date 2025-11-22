@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Volume2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Volume2, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -68,7 +69,15 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Voice Reader</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>Voice Reader</DialogTitle>
+            {loading && (
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Extracting
+              </Badge>
+            )}
+          </div>
           <DialogDescription>{fileName} - Page {currentPage} of {totalPages}</DialogDescription>
         </DialogHeader>
 
@@ -80,8 +89,9 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
         </Alert>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground animate-pulse">Extracting text from page {currentPage}...</p>
           </div>
         ) : (
           <>

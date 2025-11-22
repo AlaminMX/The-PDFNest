@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Copy, Download, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Download, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,13 +63,22 @@ export function PDFSummaryModal({ open, onOpenChange, fileId, fileName }: PDFSum
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>AI Summary</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>AI Summary</DialogTitle>
+            {loading && (
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Processing
+              </Badge>
+            )}
+          </div>
           <DialogDescription>{fileName}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground animate-pulse">Analyzing PDF content with AI...</p>
           </div>
         ) : (
           <>
