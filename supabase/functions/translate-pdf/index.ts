@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { fileId, targetLanguage = 'Spanish' } = await req.json();
-    console.log("Translating PDF:", fileId, "to", targetLanguage);
+    const { fileId, targetLanguage = 'Spanish', startPage = 1, endPage = 10 } = await req.json();
+    console.log("Translating PDF:", fileId, "to", targetLanguage, "pages", startPage, "-", endPage);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -66,13 +66,25 @@ serve(async (req) => {
       data: new Uint8Array(arrayBuffer),
       useSystemFonts: true,
     }).promise;
+    
+    const totalPages = pdf.numPages;
+    const start = Math.max(1, startPage);
+    const end = Math.min(endPage, totalPages);
+    
+    if (start > totalPages) {
+      return new Response(JSON.stringify({ error: `Start page ${start} exceeds total pages ${totalPages}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     let fullText = '';
 
-    for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+    for (let i = start; i <= end; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + '\n\n';
+      fullText += `[Page ${i}]\n${pageText}\n\n`;
     }
 
     if (fullText.length < 100) {
@@ -120,7 +132,9 @@ serve(async (req) => {
       originalText: fullText.substring(0, 5000),
       translatedText,
       targetLanguage,
-      note: pdf.numPages > 10 ? `Only first 10 pages translated (PDF has ${pdf.numPages} pages)` : undefined
+      totalPages,
+      pagesTranslated: `${start}-${end}`,
+      note: end < totalPages ? `Translated pages ${start}-${end} of ${totalPages} total pages` : `Translated all ${totalPages} pages`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
