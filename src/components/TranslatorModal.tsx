@@ -117,8 +117,8 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -138,7 +138,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-4 bg-muted/20 border-b space-y-4">
+        <div className="px-6 py-4 bg-muted/20 border-b space-y-4 flex-shrink-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="language">Target Language</Label>
@@ -208,7 +208,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 flex-1 overflow-hidden">
             <div className="relative">
               <Loader2 className="h-14 w-14 animate-spin text-primary" />
               <Sparkles className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse" />
@@ -221,7 +221,8 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
         )}
 
         {(originalText || translatedText) && !loading && (
-          <ScrollArea className="flex-1 px-6">
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <ScrollArea className="flex-1 px-6">
             <div className="pb-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
@@ -273,8 +274,9 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
                   Download Translation
                 </Button>
               </div>
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </div>
         )}
       </DialogContent>
     </Dialog>
