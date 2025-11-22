@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, Send, Trash2, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -110,9 +111,17 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Chat with PDF</DialogTitle>
-              <DialogDescription>{fileName}</DialogDescription>
+            <div className="flex items-center gap-2">
+              <div>
+                <DialogTitle>Chat with PDF</DialogTitle>
+                <DialogDescription>{fileName}</DialogDescription>
+              </div>
+              {loading && (
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="h-3 w-3 animate-pulse" />
+                  Thinking
+                </Badge>
+              )}
             </div>
             {messages.length > 0 && (
               <Button variant="ghost" size="sm" onClick={handleClearConversation}>
@@ -149,8 +158,9 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
             )}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="bg-muted rounded-lg px-4 py-3 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground animate-pulse">AI is analyzing the PDF...</span>
                 </div>
               </div>
             )}

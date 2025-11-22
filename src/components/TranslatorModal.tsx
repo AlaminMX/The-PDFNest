@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2, Copy, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -60,7 +61,15 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>AI Translator</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle>AI Translator</DialogTitle>
+            {loading && (
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Translating
+              </Badge>
+            )}
+          </div>
           <DialogDescription>{fileName}</DialogDescription>
         </DialogHeader>
 
@@ -83,11 +92,18 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
           </Button>
         </div>
 
-        {note && (
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-8 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground animate-pulse">Translating to {targetLanguage}...</p>
+          </div>
+        )}
+
+        {note && !loading && (
           <p className="text-sm text-muted-foreground">{note}</p>
         )}
 
-        {(originalText || translatedText) && (
+        {(originalText || translatedText) && !loading && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-2">
