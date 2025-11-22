@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as pdfjsLib from "https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs";
+import pdfjsLib from "https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,7 +76,7 @@ serve(async (req) => {
 
     // Extract text from PDF
     const arrayBuffer = await pdfData.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
     let fullText = '';
 
     for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
