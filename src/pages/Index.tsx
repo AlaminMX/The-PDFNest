@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -64,10 +64,11 @@ import { StudyGuideModal } from "@/components/StudyGuideModal";
 import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
+import { FilePicker } from "@/components/FilePicker";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
-type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
+export type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
 
 function AppSidebar({ 
   categories, 
@@ -81,7 +82,8 @@ function AppSidebar({
   isAdmin,
   onSignOut,
   onOpenTutorial,
-  storageUsed
+  storageUsed,
+  onOpenAIFeature
 }: {
   categories: any[];
   selectedCategory: string;
@@ -95,6 +97,7 @@ function AppSidebar({
   onSignOut: () => void;
   onOpenTutorial: () => void;
   storageUsed: number;
+  onOpenAIFeature: (featureType: AIModalType) => void;
 }) {
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
@@ -127,6 +130,51 @@ function AppSidebar({
       </SidebarHeader>
       
       <SidebarContent>
+        <SidebarGroup id="ai-features-section">
+          <SidebarGroupLabel>
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Features
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => onOpenAIFeature('summary')}>
+                  <FileText className="w-4 h-4" />
+                  {open && <span>📄 Summarize PDF</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => onOpenAIFeature('study-guide')}>
+                  <BookOpen className="w-4 h-4" />
+                  {open && <span>📚 Study Guide</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => onOpenAIFeature('voice')}>
+                  <Volume2 className="w-4 h-4" />
+                  {open && <span>🔊 Voice Reader</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => onOpenAIFeature('translate')}>
+                  <Languages className="w-4 h-4" />
+                  {open && <span>🌐 Translate</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => onOpenAIFeature('chat')}>
+                  <MessageSquare className="w-4 h-4" />
+                  {open && <span>💬 Chat with PDF</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Files</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -280,6 +328,8 @@ export default function Index() {
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
   const [storageUsed, setStorageUsed] = useState(0);
+  const [showFilePicker, setShowFilePicker] = useState(false);
+  const [pendingAIFeature, setPendingAIFeature] = useState<AIModalType>(null);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -351,6 +401,22 @@ export default function Index() {
     const randomColor = categoryColors[Math.floor(Math.random() * categoryColors.length)];
     await addCategory(newCategoryName.trim(), randomColor);
     setNewCategoryName("");
+  };
+
+  const handleOpenAIFeature = (featureType: AIModalType) => {
+    if (files.length === 0) {
+      toast.error("Please upload a PDF file first");
+      return;
+    }
+    setPendingAIFeature(featureType);
+    setShowFilePicker(true);
+  };
+
+  const handleFileSelected = (fileId: string, fileName: string) => {
+    setSelectedFileForAI({ id: fileId, name: fileName });
+    setActiveAIModal(pendingAIFeature);
+    setShowFilePicker(false);
+    setPendingAIFeature(null);
   };
 
   const handleDeleteCategory = (categoryId: string) => {
@@ -509,6 +575,7 @@ export default function Index() {
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
           storageUsed={storageUsed}
+          onOpenAIFeature={handleOpenAIFeature}
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
@@ -1265,13 +1332,22 @@ export default function Index() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AI Feature Modals */}
-      <PDFSummaryModal
-        open={activeAIModal === 'summary'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''}
-      />
+        {/* File Picker Modal */}
+        <FilePicker
+          open={showFilePicker}
+          onOpenChange={setShowFilePicker}
+          files={filteredFiles}
+          onSelectFile={handleFileSelected}
+          featureType={pendingAIFeature}
+        />
+
+        {/* AI Feature Modals */}
+        <PDFSummaryModal
+          open={activeAIModal === 'summary'}
+          onOpenChange={(open) => !open && setActiveAIModal(null)}
+          fileId={selectedFileForAI?.id || ''}
+          fileName={selectedFileForAI?.name || ''}
+        />
 
       <StudyGuideModal
         open={activeAIModal === 'study-guide'}
