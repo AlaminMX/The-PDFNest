@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as pdfjsLib from "https://esm.sh/pdfjs-dist@3.11.174/build/pdf.mjs";
+import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,20 +72,10 @@ serve(async (req) => {
     }
 
     const arrayBuffer = await pdfData.arrayBuffer();
-    const pdfModule: any = pdfjsLib as any;
-    const getDocument = pdfModule.getDocument || pdfModule.default?.getDocument;
-
-    if (!getDocument) {
-      console.error("PDF.js module shape:", Object.keys(pdfModule));
-      throw new Error('pdfjs getDocument is not available in this environment');
-    }
-
-    if (pdfModule.GlobalWorkerOptions) {
-      // Ensure workers are fully disabled in this environment
-      pdfModule.GlobalWorkerOptions.disableWorker = true;
-    }
-
-    const pdf = await getDocument({ data: arrayBuffer, disableWorker: true } as any).promise;
+    const pdf = await getDocument({
+      data: new Uint8Array(arrayBuffer),
+      useSystemFonts: true,
+    }).promise;
     let fullText = '';
 
     for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
