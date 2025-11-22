@@ -447,6 +447,19 @@ export default function Index() {
     setShowFilePicker(true);
   };
 
+  const trackRecentFile = (fileId: string, fileName: string) => {
+    if (!user?.id) return;
+    setRecentFiles((prev) => {
+      const now = Date.now();
+      const existing = prev.filter((item) => item.id !== fileId);
+      const updated = [{ id: fileId, name: fileName, lastAccessed: now }, ...existing];
+      updated.sort((a, b) => b.lastAccessed - a.lastAccessed);
+      const sliced = updated.slice(0, 5);
+      localStorage.setItem(`recent-files-${user.id}`, JSON.stringify(sliced));
+      return sliced;
+    });
+  };
+
   const handleFileSelected = (fileId: string, fileName: string) => {
     setSelectedFileForAI({ id: fileId, name: fileName });
     setActiveAIModal(pendingAIFeature);
@@ -466,6 +479,11 @@ export default function Index() {
     if (file) {
       handleOpenPreview(file);
     }
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategoryToDelete(categoryId);
+    setDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
