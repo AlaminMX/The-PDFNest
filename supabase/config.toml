@@ -17,3 +17,9 @@ verify_jwt = true
 
 [functions.chat-with-pdf]
 verify_jwt = true
+
+[functions.upload-lecture-note]
+verify_jwt = true
+
+[functions.get-rep-stats]
+verify_jwt = false
