@@ -46,113 +46,6 @@ export type Database = {
           },
         ]
       }
-      courses: {
-        Row: {
-          code: string
-          created_at: string | null
-          department_id: string
-          id: string
-          level: number
-          name: string
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          department_id: string
-          id?: string
-          level?: number
-          name: string
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          department_id?: string
-          id?: string
-          level?: number
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "courses_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      departments: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-          slug: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          slug?: string
-        }
-        Relationships: []
-      }
-      lecture_notes: {
-        Row: {
-          course_id: string
-          created_at: string | null
-          file_path: string
-          file_size: number
-          id: string
-          title: string
-          uploaded_by: string
-          uploaded_by_display: string
-          views: number | null
-        }
-        Insert: {
-          course_id: string
-          created_at?: string | null
-          file_path: string
-          file_size: number
-          id?: string
-          title: string
-          uploaded_by: string
-          uploaded_by_display: string
-          views?: number | null
-        }
-        Update: {
-          course_id?: string
-          created_at?: string | null
-          file_path?: string
-          file_size?: number
-          id?: string
-          title?: string
-          uploaded_by?: string
-          uploaded_by_display?: string
-          views?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lecture_notes_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lecture_notes_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pdf_conversations: {
         Row: {
           id: string
@@ -290,13 +183,10 @@ export type Database = {
           created_at: string | null
           default_category_id: string | null
           default_sort_order: string | null
-          department_id: string | null
-          display_name: string | null
           email: string | null
           email_notifications_enabled: boolean | null
           full_name: string | null
           id: string
-          is_insider: boolean | null
           terms_accepted: boolean | null
           terms_accepted_at: string | null
           total_storage_used: number | null
@@ -305,13 +195,10 @@ export type Database = {
           created_at?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
-          department_id?: string | null
-          display_name?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
           full_name?: string | null
           id: string
-          is_insider?: boolean | null
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
           total_storage_used?: number | null
@@ -320,13 +207,10 @@ export type Database = {
           created_at?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
-          department_id?: string | null
-          display_name?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
           full_name?: string | null
           id?: string
-          is_insider?: boolean | null
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
           total_storage_used?: number | null
@@ -337,13 +221,6 @@ export type Database = {
             columns: ["default_category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
@@ -426,7 +303,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "rep"
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -554,7 +431,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "rep"],
+      app_role: ["admin", "user"],
     },
   },
 } as const

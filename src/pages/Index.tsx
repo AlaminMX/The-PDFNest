@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 
@@ -11,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -87,7 +86,6 @@ function AppSidebar({
   onAddCategory,
   onDeleteCategory,
   isAdmin,
-  isRep,
   onSignOut,
   onOpenTutorial,
   storageUsed,
@@ -104,7 +102,6 @@ function AppSidebar({
   onAddCategory: () => void;
   onDeleteCategory: (id: string) => void;
   isAdmin: boolean;
-  isRep: boolean;
   onSignOut: () => void;
   onOpenTutorial: () => void;
   storageUsed: number;
@@ -327,17 +324,6 @@ function AppSidebar({
             </SidebarMenuItem>
           )}
           
-          {isRep && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link to="/rep-dashboard">
-                  <GraduationCap className="w-4 h-4" />
-                  {open && <span>Rep Dashboard</span>}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          
           <SidebarMenuItem>
             <SidebarMenuButton onClick={onSignOut}>
               <LogOut className="w-4 h-4" />
@@ -353,7 +339,6 @@ function AppSidebar({
 export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdminStatus();
-  const { isRep } = useRepStatus();
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
@@ -651,7 +636,6 @@ export default function Index() {
           onAddCategory={handleAddCategory}
           onDeleteCategory={handleDeleteCategory}
           isAdmin={isAdmin}
-          isRep={isRep}
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
           storageUsed={storageUsed}

@@ -9,8 +9,6 @@ import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
-import RepDashboard from "./pages/RepDashboard";
-import RepUpload from "./pages/RepUpload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,8 +26,6 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/rep-dashboard" element={<RepDashboard />} />
-            <Route path="/rep/upload" element={<RepUpload />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
