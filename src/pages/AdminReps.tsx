@@ -20,6 +20,10 @@ interface RepProfile {
   last_upload: string | null;
 }
 
+import { PageHeader } from "@/components/PageHeader";
+import { LoadingState, LoadingSpinner } from "@/components/LoadingState";
+import { EmptyState } from "@/components/EmptyState";
+
 export default function AdminReps() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -118,83 +122,56 @@ export default function AdminReps() {
   };
 
   if (authLoading || adminLoading || !isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Verifying access..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
-      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Users className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">Course Reps Profile</h1>
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
+      <PageHeader
+        title="Course Reps Profile"
+        subtitle="View and manage all course representatives"
+        showBack
+        icon={<Users className="h-6 w-6 text-primary" />}
+      />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">All Course Representatives</h2>
-          <p className="text-muted-foreground">
-            Click on any rep to view their full profile and uploads
-          </p>
-        </div>
-
+      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
+          <LoadingSpinner className="py-12" />
         ) : reps.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No course reps found</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={<Users className="h-8 w-8 text-muted-foreground" />}
+            title="No course reps found"
+            description="There are no course representatives in the system yet."
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {reps.map((rep) => (
               <Card
                 key={rep.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+                className="cursor-pointer hover:shadow-lg transition-all duration-200"
                 onClick={() => navigate(`/rep/${rep.id}`)}
               >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    {rep.display_name || "Unnamed Rep"}
+                <CardHeader className="space-y-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="h-5 w-5 text-primary flex-shrink-0" />
+                    <span className="truncate">{rep.display_name || "Unnamed Rep"}</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="truncate">
                     {rep.departments?.name || "No Department Assigned"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {rep.lecture_notes_count} {rep.lecture_notes_count === 1 ? "upload" : "uploads"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Last upload: {formatDate(rep.last_upload)}
-                      </span>
-                    </div>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">
+                      {rep.lecture_notes_count} {rep.lecture_notes_count === 1 ? "upload" : "uploads"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground truncate">
+                      Last: {formatDate(rep.last_upload)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -203,7 +180,7 @@ export default function AdminReps() {
         )}
       </main>
 
-      <footer className="mt-12 py-6 border-t border-border/40">
+      <footer className="mt-auto py-6 border-t border-border/40">
         <div className="container mx-auto px-4 text-center">
           <p className="text-xs text-muted-foreground/60">
             Made with love ❤️ by Nexel

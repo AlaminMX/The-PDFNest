@@ -14,6 +14,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
 
+import { PageHeader } from "@/components/PageHeader";
+import { LoadingState } from "@/components/LoadingState";
+
 export default function RepUpload() {
   const navigate = useNavigate();
   const { isRep, departmentId, departmentName, displayName, loading: repLoading } = useRepStatus();
@@ -97,14 +100,7 @@ export default function RepUpload() {
   };
 
   if (repLoading || coursesLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
@@ -118,28 +114,16 @@ export default function RepUpload() {
       />
       
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
-        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/")}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Upload Lecture Notes</h1>
-                <p className="text-sm text-muted-foreground">{departmentName}</p>
-              </div>
-            </div>
-            <ThemeToggle />
-          </div>
-        </header>
+        <PageHeader
+          title="Upload Lecture Notes"
+          subtitle={departmentName || ""}
+          showBack
+          backTo="/"
+        />
 
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <main className="container mx-auto px-4 py-6 md:py-8 max-w-2xl space-y-6">
           {uploadSuccess && (
-            <Alert className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+            <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-600">
                 Lecture note uploaded successfully! Students can now access it.
@@ -197,6 +181,7 @@ export default function RepUpload() {
                   accept="application/pdf"
                   onChange={handleFileChange}
                   disabled={uploading}
+                  className="cursor-pointer"
                 />
                 {selectedFile && (
                   <p className="text-sm text-muted-foreground">
