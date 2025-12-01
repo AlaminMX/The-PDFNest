@@ -23,6 +23,8 @@ const resetPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+import { PageHeader } from "@/components/PageHeader";
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -72,27 +74,30 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="fixed top-4 right-4">
+      <div className="fixed top-4 right-4 z-10">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
+        <div className="text-center mb-8 space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl">
             <svg
               className="w-8 h-8 text-primary"
               fill="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">PDF Organizer</h1>
-          <p className="text-muted-foreground mt-2">
-            Create your new password
-          </p>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
+              Create your new password
+            </p>
+          </div>
         </div>
 
-        <div className="bg-card rounded-xl shadow-lg p-8 border border-border/50">
+        <div className="bg-card rounded-xl shadow-lg p-6 md:p-8 border border-border/50">
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
