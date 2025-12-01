@@ -9,6 +9,11 @@ import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
+import AFITPDFs from "./pages/AFITPDFs";
+import DepartmentCourses from "./pages/DepartmentCourses";
+import CourseLectureNotes from "./pages/CourseLectureNotes";
+import RepUpload from "./pages/RepUpload";
+import RepProfile from "./pages/RepProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +31,11 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/afit-pdfs" element={<AFITPDFs />} />
+            <Route path="/afit-pdfs/:deptSlug" element={<DepartmentCourses />} />
+            <Route path="/afit-pdfs/:deptSlug/:courseCode" element={<CourseLectureNotes />} />
+            <Route path="/rep/upload" element={<RepUpload />} />
+            <Route path="/rep/:userId" element={<RepProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
