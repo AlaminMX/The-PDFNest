@@ -1,5 +1,8 @@
 project_id = "xanbbjxvxktiupefvkha"
 
+[functions.setup-rep-accounts]
+verify_jwt = false
+
 [functions.get-pdfs-without-thumbnails]
 verify_jwt = true
 
