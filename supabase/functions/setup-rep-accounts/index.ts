@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const reps = [
       {
         email: 'repcs001@pdfnest.local',
-        password: 'CS001',
+        password: 'CS0001',
         display_name: 'RepCS001',
         full_name: 'CS Course Rep',
         department_id: '432e7adb-d261-445a-a7a9-4ee2f6f1b168' // Computer Science
