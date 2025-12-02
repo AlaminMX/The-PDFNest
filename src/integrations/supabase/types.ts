@@ -287,6 +287,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           default_category_id: string | null
           default_sort_order: string | null
@@ -302,6 +303,7 @@ export type Database = {
           total_storage_used: number | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
@@ -317,6 +319,7 @@ export type Database = {
           total_storage_used?: number | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null

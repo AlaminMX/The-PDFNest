@@ -26,13 +26,23 @@ export function useLectureNotes(courseId?: string) {
 
       const { data, error: fetchError } = await supabase
         .from("lecture_notes")
-        .select("*")
+        .select(`
+          *,
+          profiles!lecture_notes_uploaded_by_fkey (
+            avatar_url
+          )
+        `)
         .eq("course_id", courseId)
         .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      setNotes(data || []);
+      const formattedNotes = (data || []).map((note) => ({
+        ...note,
+        uploader_avatar: (note.profiles as any)?.avatar_url || null,
+      }));
+
+      setNotes(formattedNotes as any);
     } catch (err) {
       console.error("Error fetching lecture notes:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch lecture notes");

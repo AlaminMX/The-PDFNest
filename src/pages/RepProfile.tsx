@@ -1,17 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Calendar, Award } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, FileText, Calendar, Award, Edit2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { RepBottomNav } from "@/components/RepBottomNav";
+import { EditProfileModal } from "@/components/EditProfileModal";
 import { format } from "date-fns";
 
 interface RepProfile {
   displayName: string;
   departmentName: string;
   isInsider: boolean;
+  avatarUrl: string | null;
 }
 
 interface LectureNote {
@@ -28,10 +33,14 @@ import { LoadingState } from "@/components/LoadingState";
 
 export default function RepProfile() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<RepProfile | null>(null);
   const [notes, setNotes] = useState<LectureNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  const isOwnProfile = user?.id === userId;
 
   useEffect(() => {
     if (userId) {
@@ -49,6 +58,7 @@ export default function RepProfile() {
         .select(`
           display_name,
           is_insider,
+          avatar_url,
           departments (
             name
           )
@@ -61,6 +71,7 @@ export default function RepProfile() {
           displayName: profileData.display_name || "Course Rep",
           departmentName: (profileData.departments as any)?.name || "Unknown Department",
           isInsider: profileData.is_insider || false,
+          avatarUrl: profileData.avatar_url,
         });
       }
 
@@ -116,31 +127,77 @@ export default function RepProfile() {
 
   const totalViews = notes.reduce((sum, note) => sum + note.views, 0);
   const lastUpload = notes.length > 0 ? notes[0].created_at : null;
+  
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
-      <PageHeader
-        title={profile.displayName}
-        subtitle="Course Representative"
-        showBack
+    <>
+      <EditProfileModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        userId={userId!}
+        currentDisplayName={profile?.displayName || ""}
+        currentAvatarUrl={profile?.avatarUrl}
+        onUpdateComplete={fetchRepProfile}
       />
+      
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-20 md:pb-0">
+        <PageHeader
+          title={profile.displayName}
+          subtitle="Course Representative"
+          showBack
+        />
 
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="space-y-2">
-                <CardTitle className="text-xl md:text-2xl break-words">{profile.displayName}</CardTitle>
-                <CardDescription className="text-base">{profile.departmentName}</CardDescription>
+        <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
+                <Avatar className="w-24 h-24 md:w-32 md:h-32">
+                  <AvatarImage src={profile.avatarUrl || undefined} />
+                  <AvatarFallback className="text-3xl md:text-4xl">
+                    {getInitials(profile.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 text-center md:text-left space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
+                      <CardTitle className="text-xl md:text-2xl break-words">
+                        {profile.displayName}
+                      </CardTitle>
+                      {profile.isInsider && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary">
+                          <Award className="w-3 h-3 mr-1" />
+                          Insider
+                        </Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-base">
+                      {profile.departmentName} • 100L
+                    </CardDescription>
+                  </div>
+                  
+                  {isOwnProfile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEditModal(true)}
+                      className="w-full md:w-auto"
+                    >
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  )}
+                </div>
               </div>
-              {profile.isInsider && (
-                <Badge variant="secondary" className="bg-primary/10 text-primary w-fit">
-                  <Award className="w-3 h-3 mr-1" />
-                  Insider
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
@@ -204,7 +261,10 @@ export default function RepProfile() {
             </div>
           )}
         </div>
+        
+        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
       </main>
     </div>
+    </>
   );
 }

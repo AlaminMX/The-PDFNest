@@ -7,6 +7,7 @@ interface RepStatus {
   departmentName: string | null;
   displayName: string | null;
   isInsider: boolean;
+  avatarUrl: string | null;
 }
 
 export function useRepStatus() {
@@ -16,6 +17,7 @@ export function useRepStatus() {
     departmentName: null,
     displayName: null,
     isInsider: false,
+    avatarUrl: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +37,7 @@ export function useRepStatus() {
           departmentName: null,
           displayName: null,
           isInsider: false,
+          avatarUrl: null,
         });
         setLoading(false);
         return;
@@ -55,6 +58,7 @@ export function useRepStatus() {
           departmentName: null,
           displayName: null,
           isInsider: false,
+          avatarUrl: null,
         });
         setLoading(false);
         return;
@@ -67,6 +71,7 @@ export function useRepStatus() {
           department_id,
           display_name,
           is_insider,
+          avatar_url,
           departments (
             name
           )
@@ -81,6 +86,7 @@ export function useRepStatus() {
           departmentName: (profile.departments as any)?.name || null,
           displayName: profile.display_name,
           isInsider: profile.is_insider || false,
+          avatarUrl: profile.avatar_url,
         });
       }
     } catch (err) {

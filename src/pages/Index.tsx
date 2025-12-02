@@ -4,6 +4,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { FilePicker } from "@/components/FilePicker";
+import { RepBottomNav } from "@/components/RepBottomNav";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -397,9 +399,10 @@ function AppSidebar({
 }
 
 export default function Index() {
+  const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdminStatus();
-  const { isRep } = useRepStatus();
+  const { isRep, loading: repLoading } = useRepStatus();
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   
@@ -452,6 +455,17 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // Redirect reps to their profile page on first visit
+  useEffect(() => {
+    if (!authLoading && !repLoading && isRep && user?.id) {
+      const hasVisited = localStorage.getItem(`rep-visited-${user.id}`);
+      if (!hasVisited) {
+        localStorage.setItem(`rep-visited-${user.id}`, 'true');
+        navigate(`/rep/${user.id}`);
+      }
+    }
+  }, [authLoading, repLoading, isRep, user?.id, navigate]);
 
   if (authLoading) {
     return (
@@ -1522,7 +1536,9 @@ export default function Index() {
       />
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 py-2 text-center">
+      {isRep && user && <RepBottomNav repUserId={user.id} />}
+      
+      <footer className="fixed bottom-0 left-0 right-0 py-2 text-center md:block hidden">
         <p className="text-xs text-muted-foreground/60">
           Made with love ❤️ by Nexel
         </p>
