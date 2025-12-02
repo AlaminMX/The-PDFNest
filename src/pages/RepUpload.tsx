@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRepStatus } from "@/hooks/useRepStatus";
 import { useCourses } from "@/hooks/useCourses";
 import { useLectureNotes } from "@/hooks/useLectureNotes";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +14,14 @@ import { ArrowLeft, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
+import { RepBottomNav } from "@/components/RepBottomNav";
 
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 
 export default function RepUpload() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { isRep, departmentId, departmentName, displayName, loading: repLoading } = useRepStatus();
   const { courses, loading: coursesLoading } = useCourses(departmentId || undefined);
   const { uploading, uploadNote } = useLectureNotes();
@@ -222,6 +225,8 @@ export default function RepUpload() {
             </CardContent>
           </Card>
         </main>
+        
+        {user && <RepBottomNav repUserId={user.id} />}
       </div>
     </>
   );

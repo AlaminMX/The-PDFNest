@@ -6,6 +6,7 @@ import { useLectureNotes } from "@/hooks/useLectureNotes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Download, Eye, Calendar, User, Share2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
@@ -133,15 +134,23 @@ export default function CourseLectureNotes() {
                   <div className="flex-1">
                     <CardTitle className="text-lg mb-2">{note.title}</CardTitle>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        <button
-                          onClick={() => navigate(`/rep/${note.uploaded_by}`)}
-                          className="hover:text-primary hover:underline"
-                        >
-                          {note.uploaded_by_display}
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => navigate(`/rep/${note.uploaded_by}`)}
+                        className="flex items-center gap-2 hover:text-primary transition-colors"
+                      >
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={(note as any).uploader_avatar || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {note.uploaded_by_display
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="hover:underline">{note.uploaded_by_display}</span>
+                      </button>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {format(new Date(note.created_at!), "MMM dd, yyyy")}
