@@ -102,11 +102,21 @@ export default function RepUpload() {
 
     setShowConversionDialog(false);
     
-    const convertedFile = await convertToPdf(pendingFile);
-    
-    if (convertedFile) {
-      setSelectedFile(convertedFile);
-      toast.success("File converted to PDF successfully!");
+    try {
+      const convertedFile = await convertToPdf(pendingFile);
+      
+      if (convertedFile) {
+        setSelectedFile(convertedFile);
+        toast.success("File converted to PDF successfully!");
+      } else {
+        // Reset file input on failure
+        const fileInput = document.getElementById('file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      }
+    } catch (error) {
+      console.error("Conversion error:", error);
+      const fileInput = document.getElementById('file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
     }
     
     setPendingFile(null);

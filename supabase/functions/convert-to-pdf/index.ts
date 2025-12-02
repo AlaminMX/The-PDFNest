@@ -12,15 +12,20 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Convert-to-PDF: Starting conversion");
+    
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
+      console.log("Convert-to-PDF: No file provided");
       return new Response(
         JSON.stringify({ error: 'No file provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Convert-to-PDF: Processing ${file.name}, type: ${file.type}, size: ${file.size}`);
 
     const fileName = file.name.toLowerCase();
     const fileType = file.type;
@@ -31,34 +36,37 @@ serve(async (req) => {
 
     // Handle different file types
     if (fileType.startsWith('image/')) {
-      // Convert image to PDF
+      console.log("Convert-to-PDF: Converting image");
       pdfBytes = await convertImageToPdf(uint8Array, fileType);
     } else if (fileName.endsWith('.txt') || fileType === 'text/plain') {
-      // Convert text file to PDF
+      console.log("Convert-to-PDF: Converting text file");
       const text = new TextDecoder().decode(uint8Array);
       pdfBytes = await convertTextToPdf(text, file.name);
     } else if (
       fileName.endsWith('.docx') || 
       fileName.endsWith('.doc') ||
-      fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileType.includes('wordprocessingml') ||
       fileType === 'application/msword'
     ) {
-      // For Word documents, extract basic text and convert
-      pdfBytes = await convertDocxToPdf(uint8Array, file.name);
+      console.log("Convert-to-PDF: Creating placeholder for Word doc");
+      pdfBytes = await createPlaceholderPdf(file.name, 'Word Document');
     } else if (
       fileName.endsWith('.pptx') || 
       fileName.endsWith('.ppt') ||
-      fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+      fileType.includes('presentationml') ||
       fileType === 'application/vnd.ms-powerpoint'
     ) {
-      // For PowerPoint, create a placeholder PDF
+      console.log("Convert-to-PDF: Creating placeholder for PowerPoint");
       pdfBytes = await createPlaceholderPdf(file.name, 'PowerPoint');
     } else {
+      console.log(`Convert-to-PDF: Unsupported type: ${fileType}`);
       return new Response(
-        JSON.stringify({ error: 'Unsupported file type. Supported: Images (PNG, JPG, JPEG), TXT, DOCX, DOC, PPTX, PPT' }),
+        JSON.stringify({ error: 'Unsupported file type. Supported: Images (PNG, JPG), TXT, DOCX, DOC, PPTX, PPT' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Convert-to-PDF: Success, PDF size: ${pdfBytes.length}`);
 
     // Return the PDF as base64
     const base64Pdf = btoa(String.fromCharCode(...pdfBytes));
@@ -73,10 +81,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Conversion error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to convert file';
+    console.error('Convert-to-PDF: Error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to convert file' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -212,21 +219,7 @@ async function convertTextToPdf(text: string, fileName: string): Promise<Uint8Ar
   return await pdfDoc.save();
 }
 
-async function convertDocxToPdf(docxBytes: Uint8Array, fileName: string): Promise<Uint8Array> {
-  // Extract text from DOCX (simplified approach - DOCX is a zip file with XML)
-  try {
-    // DOCX files are ZIP archives containing XML
-    // We'll try to extract the main document.xml and parse basic text
-    const { decompress } = await import("https://deno.land/x/zip@v1.2.5/mod.ts");
-    
-    // For simplicity, we'll create a placeholder PDF with file info
-    // Full DOCX parsing would require more complex XML handling
-    return await createPlaceholderPdf(fileName, 'Word Document');
-  } catch (error) {
-    console.error('DOCX conversion error:', error);
-    return await createPlaceholderPdf(fileName, 'Word Document');
-  }
-}
+// Removed convertDocxToPdf - now handled directly in main handler
 
 async function createPlaceholderPdf(fileName: string, fileType: string): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();

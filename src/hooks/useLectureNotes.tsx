@@ -64,6 +64,10 @@ export function useLectureNotes(courseId?: string) {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Add timeout for conversion request (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-to-pdf`,
         {
@@ -72,11 +76,14 @@ export function useLectureNotes(courseId?: string) {
             'Authorization': `Bearer ${session.access_token}`,
           },
           body: formData,
+          signal: controller.signal,
         }
       );
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Conversion failed');
       }
 
@@ -95,8 +102,12 @@ export function useLectureNotes(courseId?: string) {
       return pdfFile;
     } catch (err) {
       console.error("Error converting file:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to convert file";
-      toast.error(errorMessage);
+      if (err instanceof Error && err.name === 'AbortError') {
+        toast.error("Conversion timed out. Please try a smaller file or upload a PDF directly.");
+      } else {
+        const errorMessage = err instanceof Error ? err.message : "Failed to convert file";
+        toast.error(errorMessage);
+      }
       return null;
     } finally {
       setConverting(false);
