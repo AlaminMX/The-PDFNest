@@ -10,6 +10,7 @@ export function useLectureNotes(courseId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     if (courseId) {
@@ -48,6 +49,57 @@ export function useLectureNotes(courseId?: string) {
       setError(err instanceof Error ? err.message : "Failed to fetch lecture notes");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const convertToPdf = async (file: File): Promise<File | null> => {
+    try {
+      setConverting(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Not authenticated");
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-to-pdf`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Conversion failed');
+      }
+
+      const data = await response.json();
+      
+      // Convert base64 to File
+      const binaryString = atob(data.pdf);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+      const pdfFile = new File([pdfBlob], data.convertedName, { type: 'application/pdf' });
+      
+      return pdfFile;
+    } catch (err) {
+      console.error("Error converting file:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to convert file";
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -174,7 +226,9 @@ export function useLectureNotes(courseId?: string) {
     loading,
     error,
     uploading,
+    converting,
     uploadNote,
+    convertToPdf,
     incrementViews,
     getSignedUrl,
     refresh: fetchNotes,
