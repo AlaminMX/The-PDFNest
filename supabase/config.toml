@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.chat-with-pdf]
 verify_jwt = true
+
+[functions.convert-to-pdf]
+verify_jwt = true
