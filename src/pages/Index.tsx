@@ -88,6 +88,7 @@ function AppSidebar({
   onDeleteCategory,
   isAdmin,
   isRep,
+  repUserId,
   onSignOut,
   onOpenTutorial,
   storageUsed,
@@ -105,6 +106,7 @@ function AppSidebar({
   onDeleteCategory: (id: string) => void;
   isAdmin: boolean;
   isRep: boolean;
+  repUserId: string | undefined;
   onSignOut: () => void;
   onOpenTutorial: () => void;
   storageUsed: number;
@@ -344,14 +346,24 @@ function AppSidebar({
         </div>
         <SidebarMenu>
           {isRep && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link to="/rep/upload">
-                  <Upload className="w-4 h-4" />
-                  {open && <span>Upload Lecture Notes</span>}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/rep/upload">
+                    <Upload className="w-4 h-4" />
+                    {open && <span>Upload Lecture Notes</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to={`/rep/${repUserId}`}>
+                    <Users className="w-4 h-4" />
+                    {open && <span>My Profile</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
           )}
           
           <SidebarMenuItem>
@@ -686,6 +698,7 @@ export default function Index() {
           onDeleteCategory={handleDeleteCategory}
           isAdmin={isAdmin}
           isRep={isRep}
+          repUserId={user?.id}
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
           storageUsed={storageUsed}
