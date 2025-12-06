@@ -44,6 +44,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       courses: {
@@ -151,6 +158,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lecture_notes_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pdf_conversations: {
@@ -188,6 +202,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -244,6 +265,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pdf_files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pdf_summaries: {
@@ -281,6 +309,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_summaries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -388,6 +423,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "study_guides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_rep_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -413,9 +455,52 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_rep_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          department_id: string | null
+          display_name: string | null
+          id: string | null
+          is_insider: boolean | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_insider?: boolean | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_insider?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      get_rep_public_info: {
+        Args: { rep_user_id: string }
+        Returns: {
+          avatar_url: string
+          department_id: string
+          display_name: string
+          id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
