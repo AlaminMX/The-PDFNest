@@ -8,6 +8,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Sanitize text to only include WinAnsi-compatible characters
+// PDF-lib's standard fonts use WinAnsi encoding which doesn't support many Unicode chars
+function sanitizeTextForPdf(text: string): string {
+  return text
+    // Replace tabs with spaces
+    .replace(/\t/g, '    ')
+    // Replace common Unicode arrows with ASCII alternatives
+    .replace(/→/g, '->')
+    .replace(/←/g, '<-')
+    .replace(/↑/g, '^')
+    .replace(/↓/g, 'v')
+    .replace(/↔/g, '<->')
+    // Replace bullet points
+    .replace(/•/g, '*')
+    .replace(/◦/g, 'o')
+    .replace(/▪/g, '-')
+    .replace(/▸/g, '>')
+    .replace(/►/g, '>')
+    // Replace quotation marks
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    // Replace dashes
+    .replace(/[–—]/g, '-')
+    // Replace ellipsis
+    .replace(/…/g, '...')
+    // Replace other common symbols
+    .replace(/©/g, '(c)')
+    .replace(/®/g, '(R)')
+    .replace(/™/g, '(TM)')
+    .replace(/°/g, ' deg')
+    .replace(/±/g, '+/-')
+    .replace(/×/g, 'x')
+    .replace(/÷/g, '/')
+    .replace(/≤/g, '<=')
+    .replace(/≥/g, '>=')
+    .replace(/≠/g, '!=')
+    .replace(/≈/g, '~')
+    .replace(/∞/g, 'inf')
+    // Remove any remaining non-WinAnsi characters (keep basic Latin + extended Latin-1)
+    .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, ' ')
+    // Clean up multiple spaces
+    .replace(/  +/g, ' ')
+    .trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -162,8 +207,11 @@ async function convertTextToPdf(text: string, fileName: string): Promise<Uint8Ar
   const pageHeight = 842;
   const maxLineWidth = pageWidth - (margin * 2);
 
+  // Sanitize text to remove non-WinAnsi characters
+  const sanitizedText = sanitizeTextForPdf(text);
+  
   // Split text into lines
-  const lines = text.split('\n');
+  const lines = sanitizedText.split('\n');
   const wrappedLines: string[] = [];
   
   for (const line of lines) {
@@ -295,6 +343,9 @@ async function extractTextFromDocxZip(arrayBuffer: ArrayBuffer): Promise<string>
     .replace(/\n\s*\n/g, '\n\n')
     .trim();
   
+  // Sanitize text for PDF encoding
+  text = sanitizeTextForPdf(text);
+  
   console.log(`Extracted ${text.length} characters via XML parsing`);
   return text;
 }
@@ -358,7 +409,7 @@ async function convertPptxToPdf(arrayBuffer: ArrayBuffer, fileName: string): Pro
         const xmlContent = await slideFile.async("text");
         
         // Extract text from <a:t> tags (PowerPoint text elements)
-        const slideText = xmlContent
+        let slideText = xmlContent
           .replace(/<a:t>([^<]*)<\/a:t>/g, '$1 ')
           .replace(/<\/a:p>/g, '\n')
           .replace(/<[^>]+>/g, '')
@@ -367,6 +418,9 @@ async function convertPptxToPdf(arrayBuffer: ArrayBuffer, fileName: string): Pro
           .replace(/&gt;/g, '>')
           .replace(/\s+/g, ' ')
           .trim();
+        
+        // Sanitize text for PDF encoding
+        slideText = sanitizeTextForPdf(slideText);
         
         if (slideText) {
           slides.push(slideText);
