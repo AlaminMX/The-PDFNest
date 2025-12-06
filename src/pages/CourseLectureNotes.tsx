@@ -3,24 +3,39 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useCourses } from "@/hooks/useCourses";
 import { useLectureNotes } from "@/hooks/useLectureNotes";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Download, Eye, Calendar, User, Share2 } from "lucide-react";
+import { ArrowLeft, Download, Eye, Calendar, User, Share2, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 export default function CourseLectureNotes() {
   const navigate = useNavigate();
   const { deptSlug, courseCode } = useParams<{ deptSlug: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
+  const { user } = useAuth();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
   const { courses, loading: coursesLoading } = useCourses(currentDept?.id);
   const currentCourse = courses.find(c => c.code === courseCode);
-  const { notes, loading: notesLoading, incrementViews, getSignedUrl } = useLectureNotes(currentCourse?.id);
+  const { notes, loading: notesLoading, incrementViews, getSignedUrl, deleteNote } = useLectureNotes(currentCourse?.id);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<{ id: string; title: string; filePath: string; fileSize: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loading = deptLoading || coursesLoading || notesLoading;
 
@@ -68,6 +83,29 @@ export default function CourseLectureNotes() {
     } else {
       navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard");
+    }
+  };
+
+  const handleDeleteClick = (note: { id: string; title: string; file_path: string; file_size: number }) => {
+    setNoteToDelete({
+      id: note.id,
+      title: note.title,
+      filePath: note.file_path,
+      fileSize: note.file_size,
+    });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!noteToDelete) return;
+    
+    setDeleting(true);
+    const success = await deleteNote(noteToDelete.id, noteToDelete.filePath, noteToDelete.fileSize);
+    setDeleting(false);
+    
+    if (success) {
+      setDeleteDialogOpen(false);
+      setNoteToDelete(null);
     }
   };
 
@@ -169,7 +207,7 @@ export default function CourseLectureNotes() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="default"
                     size="sm"
@@ -194,6 +232,17 @@ export default function CourseLectureNotes() {
                     <Share2 className="w-4 h-4 mr-2" />
                     Share
                   </Button>
+                  {user?.id === note.uploaded_by && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteClick(note)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -206,6 +255,27 @@ export default function CourseLectureNotes() {
           </div>
         )}
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lecture Note</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{noteToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
