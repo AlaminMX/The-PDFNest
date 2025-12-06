@@ -232,6 +232,47 @@ export function useLectureNotes(courseId?: string) {
     }
   };
 
+  const deleteNote = async (noteId: string, filePath: string, fileSize: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from("school_pdfs")
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error("Storage delete error:", storageError);
+        // Continue anyway to delete database record
+      }
+
+      // Delete from database
+      const { error: deleteError } = await supabase
+        .from("lecture_notes")
+        .delete()
+        .eq("id", noteId);
+
+      if (deleteError) throw deleteError;
+
+      // Update user storage (subtract file size)
+      await supabase.rpc("update_user_storage", {
+        p_user_id: user.id,
+        p_size_delta: -fileSize,
+      });
+
+      toast.success("Lecture note deleted successfully!");
+      await fetchNotes();
+      
+      return true;
+    } catch (err) {
+      console.error("Error deleting lecture note:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete lecture note";
+      toast.error(errorMessage);
+      return false;
+    }
+  };
+
   return {
     notes,
     loading,
@@ -242,6 +283,7 @@ export function useLectureNotes(courseId?: string) {
     convertToPdf,
     incrementViews,
     getSignedUrl,
+    deleteNote,
     refresh: fetchNotes,
   };
 }
