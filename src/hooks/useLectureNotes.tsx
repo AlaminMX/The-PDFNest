@@ -273,6 +273,36 @@ export function useLectureNotes(courseId?: string) {
     }
   };
 
+  const renameNote = async (noteId: string, newTitle: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      if (!newTitle.trim()) {
+        toast.error("Title cannot be empty");
+        return false;
+      }
+
+      const { error: updateError } = await supabase
+        .from("lecture_notes")
+        .update({ title: newTitle.trim() })
+        .eq("id", noteId)
+        .eq("uploaded_by", user.id); // Ensure user owns the note
+
+      if (updateError) throw updateError;
+
+      toast.success("Title updated successfully!");
+      await fetchNotes();
+      
+      return true;
+    } catch (err) {
+      console.error("Error renaming lecture note:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to rename lecture note";
+      toast.error(errorMessage);
+      return false;
+    }
+  };
+
   return {
     notes,
     loading,
@@ -284,6 +314,7 @@ export function useLectureNotes(courseId?: string) {
     incrementViews,
     getSignedUrl,
     deleteNote,
+    renameNote,
     refresh: fetchNotes,
   };
 }
