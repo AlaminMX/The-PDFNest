@@ -25,22 +25,43 @@ export function useLectureNotes(courseId?: string) {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      // First fetch lecture notes
+      const { data: notesData, error: fetchError } = await supabase
         .from("lecture_notes")
-        .select(`
-          *,
-          profiles!lecture_notes_uploaded_by_fkey (
-            avatar_url
-          )
-        `)
+        .select("*")
         .eq("course_id", courseId)
         .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      const formattedNotes = (data || []).map((note) => ({
+      // Get unique uploader IDs
+      const uploaderIds = [...new Set((notesData || []).map(note => note.uploaded_by))];
+      
+      // Fetch rep profiles for these uploaders
+      let profilesMap: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
+      
+      if (uploaderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("public_rep_profiles")
+          .select("id, display_name, avatar_url")
+          .in("id", uploaderIds);
+        
+        if (profiles) {
+          profiles.forEach(profile => {
+            if (profile.id) {
+              profilesMap[profile.id] = {
+                display_name: profile.display_name,
+                avatar_url: profile.avatar_url,
+              };
+            }
+          });
+        }
+      }
+
+      const formattedNotes = (notesData || []).map((note) => ({
         ...note,
-        uploader_avatar: (note.profiles as any)?.avatar_url || null,
+        uploader_avatar: profilesMap[note.uploaded_by]?.avatar_url || null,
+        uploader_display_name: profilesMap[note.uploaded_by]?.display_name || note.uploaded_by_display,
       }));
 
       setNotes(formattedNotes as any);

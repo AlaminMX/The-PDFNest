@@ -1,13 +1,14 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useCourses } from "@/hooks/useCourses";
+import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileText } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-export default function DepartmentCourses() {
+function DepartmentCoursesContent() {
   const navigate = useNavigate();
   const { deptSlug } = useParams<{ deptSlug: string }>();
   const { departments, loading: deptLoading } = useDepartments();
@@ -104,5 +105,13 @@ export default function DepartmentCourses() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function DepartmentCourses() {
+  return (
+    <AuthGate>
+      <DepartmentCoursesContent />
+    </AuthGate>
   );
 }
