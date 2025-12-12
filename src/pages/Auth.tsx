@@ -50,10 +50,20 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const handleRedirect = () => {
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate("/");
+      }
+    };
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/");
+        handleRedirect();
       }
     });
 
@@ -62,7 +72,7 @@ export default function Auth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/");
+        handleRedirect();
       }
     });
 

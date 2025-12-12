@@ -4,6 +4,7 @@ import { useDepartments } from "@/hooks/useDepartments";
 import { useCourses } from "@/hooks/useCourses";
 import { useLectureNotes } from "@/hooks/useLectureNotes";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 
-export default function CourseLectureNotes() {
+function CourseLectureNotesContent() {
   const navigate = useNavigate();
   const { deptSlug, courseCode } = useParams<{ deptSlug: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
@@ -95,20 +96,32 @@ export default function CourseLectureNotes() {
   };
 
   const handleDownload = async (filePath: string, title: string) => {
+    const toastId = toast.loading("Preparing download...");
     try {
       const url = await getSignedUrl(filePath);
       if (url) {
+        // Fetch as blob to force download instead of opening
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
         const link = document.createElement("a");
-        link.href = url;
+        link.href = blobUrl;
         link.download = `${title}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up blob URL
+        window.URL.revokeObjectURL(blobUrl);
+        toast.dismiss(toastId);
         toast.success("Download started");
       } else {
+        toast.dismiss(toastId);
         toast.error("Failed to download PDF");
       }
     } catch (err) {
+      toast.dismiss(toastId);
       toast.error("Failed to download PDF");
     }
   };
@@ -260,16 +273,16 @@ export default function CourseLectureNotes() {
                       >
                         <Avatar className="w-6 h-6">
                           <AvatarImage src={(note as any).uploader_avatar || undefined} />
-                          <AvatarFallback className="text-xs">
-                            {note.uploaded_by_display
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {((note as any).uploader_display_name || note.uploaded_by_display)
                               .split(" ")
-                              .map((n) => n[0])
+                              .map((n: string) => n[0])
                               .join("")
                               .toUpperCase()
                               .slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="hover:underline">{note.uploaded_by_display}</span>
+                        <span className="hover:underline">{(note as any).uploader_display_name || note.uploaded_by_display}</span>
                       </button>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
@@ -548,5 +561,13 @@ export default function CourseLectureNotes() {
         </>
       )}
     </div>
+  );
+}
+
+export default function CourseLectureNotes() {
+  return (
+    <AuthGate>
+      <CourseLectureNotesContent />
+    </AuthGate>
   );
 }

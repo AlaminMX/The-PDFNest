@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
+import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-export default function AFITPDFs() {
+function AFITPDFsContent() {
   const navigate = useNavigate();
   const { departments, loading } = useDepartments();
 
@@ -91,5 +92,13 @@ export default function AFITPDFs() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AFITPDFs() {
+  return (
+    <AuthGate>
+      <AFITPDFsContent />
+    </AuthGate>
   );
 }
