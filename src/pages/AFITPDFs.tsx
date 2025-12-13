@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BottomNav } from "@/components/BottomNav";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { useSession } from "@/hooks/useSession";
 
 function AFITPDFsContent() {
   const navigate = useNavigate();
   const { departments, loading } = useDepartments();
+  const { session, user } = useSession();
 
   if (loading) {
     return (
@@ -26,7 +30,7 @@ function AFITPDFsContent() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-20 md:pb-8">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -91,6 +95,15 @@ function AFITPDFsContent() {
           </div>
         )}
       </main>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        onUpload={() => navigate("/")}
+        onAIFeatures={() => navigate("/ai-features")}
+      />
+
+      {/* Bottom Navigation */}
+      <BottomNav isLoggedIn={!!session} userId={user?.id} />
     </div>
   );
 }

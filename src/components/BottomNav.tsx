@@ -12,13 +12,13 @@ export function BottomNav({ isLoggedIn, userId }: BottomNavProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // For guests: only show Home and AI Features
-  // For logged-in users: show Home, AI Features, and Profile
+  // For guests: show Home and AI Features (AI features will prompt login)
+  // For logged-in users: show Home, AI Features, and Profile (goes to /profile for their own profile)
   const tabs = [
     { icon: Home, label: "Home", path: "/" },
     { icon: Sparkles, label: "AI Features", path: "/ai-features" },
     ...(isLoggedIn && userId
-      ? [{ icon: User, label: "Profile", path: `/rep/${userId}` }]
+      ? [{ icon: User, label: "Profile", path: "/profile" }]
       : []),
   ];
 

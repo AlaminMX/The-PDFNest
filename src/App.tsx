@@ -15,6 +15,7 @@ import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
 import RepProfile from "./pages/RepProfile";
+import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/afit-pdfs/:deptSlug/:courseCode" element={<CourseLectureNotes />} />
             <Route path="/rep/upload" element={<RepUpload />} />
             <Route path="/rep/:userId" element={<RepProfile />} />
+            <Route path="/profile" element={<UserProfile />} />
             <Route path="/ai-features" element={<AIFeatures />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
