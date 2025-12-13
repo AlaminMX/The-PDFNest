@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { z } from "zod";
+import { motion } from "framer-motion";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
@@ -172,13 +173,57 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{ 
+            x: [0, 100, 0],
+            y: [0, -50, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, -80, 0],
+            y: [0, 80, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/30 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, 50, 0],
+            y: [0, -30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/2 left-1/4 w-64 h-64 bg-secondary/40 rounded-full blur-3xl"
+        />
+      </div>
+
       <div className="fixed top-4 right-4 z-10">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8 space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl">
+      
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-center mb-8 space-y-4"
+        >
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl"
+          >
             <svg
               className="w-8 h-8 text-primary"
               fill="currentColor"
@@ -187,16 +232,21 @@ export default function Auth() {
             >
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
             </svg>
-          </div>
+          </motion.div>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-2">
               {isForgotPassword ? "Reset your password" : isLogin ? "Welcome back" : "Create your account"}
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-card rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6"
+        >
           {isForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
@@ -347,8 +397,8 @@ export default function Auth() {
               </button>
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

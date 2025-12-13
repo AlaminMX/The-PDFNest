@@ -182,11 +182,12 @@
   }
 
   .card-shadow-hover {
-    transition: box-shadow var(--transition-base);
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
   .card-shadow-hover:hover {
     box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
   }
 
   .transition-smooth {
@@ -195,6 +196,61 @@
 
   .transition-colors-smooth {
     transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+  }
+
+  /* Button hover effects */
+  .btn-hover-scale {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .btn-hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  .btn-hover-scale:active {
+    transform: scale(0.98);
+  }
+
+  /* Card hover glow effect */
+  .card-glow-hover {
+    transition: box-shadow var(--transition-base);
+  }
+
+  .card-glow-hover:hover {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.15), var(--shadow-lg);
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Safe area for mobile bottom nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* File card thumbnail effect */
+  .thumbnail-hover {
+    transition: transform var(--transition-base), filter var(--transition-base);
+  }
+
+  .thumbnail-hover:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+  }
+
+  /* Ripple effect container */
+  .ripple-container {
+    position: relative;
+    overflow: hidden;
   }
 }
 
