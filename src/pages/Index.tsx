@@ -822,7 +822,11 @@ export default function Index() {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <div className="ml-auto flex items-center gap-2">
-                {isAdmin && <ThumbnailGenerator onComplete={refreshFiles} />}
+                <ThumbnailGenerator 
+                  onComplete={refreshFiles} 
+                  files={files.map(f => ({ id: f.id, file_name: f.file_name, storage_path: f.storage_path, thumbnail_url: f.thumbnail_url }))}
+                  autoGenerate={true}
+                />
                 <div id="view-toggle" className="flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
