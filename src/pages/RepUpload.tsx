@@ -166,7 +166,12 @@ export default function RepUpload() {
   };
 
   if (repLoading || coursesLoading) {
-    return <LoadingState />;
+    return (
+      <>
+        <LoadingState />
+        {user && <RepBottomNav repUserId={user.id} />}
+      </>
+    );
   }
 
   const isProcessing = uploading || converting;

@@ -109,19 +109,27 @@ export default function RepProfile() {
   };
 
   if (loading) {
-    return <LoadingState message="Loading profile..." />;
+    return (
+      <>
+        <LoadingState message="Loading profile..." />
+        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
+      </>
+    );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground">Profile not found</p>
-          <Button onClick={() => navigate("/afit-pdfs")}>
-            Back to AFIT PDFs
-          </Button>
+      <>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
+          <div className="text-center space-y-4">
+            <p className="text-muted-foreground">Profile not found</p>
+            <Button onClick={() => navigate("/afit-pdfs")}>
+              Back to AFIT PDFs
+            </Button>
+          </div>
         </div>
-      </div>
+        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
+      </>
     );
   }
 
