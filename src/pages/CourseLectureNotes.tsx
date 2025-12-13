@@ -282,7 +282,7 @@ function CourseLectureNotesContent() {
                               .slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="hover:underline">{(note as any).uploader_display_name || note.uploaded_by_display}</span>
+                        <span className="hover:underline">Uploaded by {(note as any).uploader_display_name || note.uploaded_by_display}</span>
                       </button>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
