@@ -1,7 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// PDF.js is configured to run without a separate worker for compatibility
+// across environments. Rendering happens on the main thread.
+
 
 /**
  * Generate a thumbnail image from the first page of a PDF file
@@ -14,8 +15,8 @@ export async function generatePDFThumbnail(file: File, maxWidth: number = 200): 
     // Read the file as an array buffer
     const arrayBuffer = await file.arrayBuffer();
     
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    // Load the PDF document (disable worker for compatibility)
+    const loadingTask = (pdfjsLib as any).getDocument({ data: arrayBuffer, disableWorker: true });
     const pdf = await loadingTask.promise;
     
     // Get the first page
