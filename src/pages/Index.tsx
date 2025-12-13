@@ -12,7 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -40,6 +40,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarProvider,
@@ -69,6 +74,8 @@ import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { FilePicker } from "@/components/FilePicker";
 import { RepBottomNav } from "@/components/RepBottomNav";
 import { BottomNav } from "@/components/BottomNav";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -119,6 +126,9 @@ function AppSidebar({
 }) {
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
+  const [aiSectionOpen, setAiSectionOpen] = useState(true);
+  const [filesSectionOpen, setFilesSectionOpen] = useState(true);
+  const [recentSectionOpen, setRecentSectionOpen] = useState(false);
   
   const handleAddCategoryLocal = async () => {
     if (!newCategoryName.trim()) {
@@ -132,75 +142,92 @@ function AppSidebar({
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 px-3 py-4">
+          <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
             </svg>
           </div>
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
-              <span className="font-semibold">PDFNest</span>
+              <span className="font-bold text-lg">PDFNest</span>
               <span className="text-xs text-muted-foreground">Organize PDFs</span>
             </div>
           )}
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
-        <SidebarGroup id="ai-features-section">
-          <SidebarGroupLabel>
-            <Sparkles className="w-4 h-4 mr-2" />
-            AI Features
+      <SidebarContent className="px-2">
+        {/* AI Features Section - Collapsible */}
+        <Collapsible open={aiSectionOpen} onOpenChange={setAiSectionOpen}>
+          <SidebarGroup id="ai-features-section">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">AI Features</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${aiSectionOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => onOpenAIFeature('summary')} className="py-2">
+                      <FileText className="w-5 h-5" />
+                      {open && <span>Summarize PDF</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => onOpenAIFeature('study-guide')} className="py-2">
+                      <BookOpen className="w-5 h-5" />
+                      {open && <span>Study Guide</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => onOpenAIFeature('voice')} className="py-2">
+                      <Volume2 className="w-5 h-5" />
+                      {open && <span>Voice Reader</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => onOpenAIFeature('translate')} className="py-2">
+                      <Languages className="w-5 h-5" />
+                      {open && <span>Translate</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => onOpenAIFeature('chat')} className="py-2">
+                      <MessageSquare className="w-5 h-5" />
+                      {open && <span>Chat with PDF</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        {/* Divider */}
+        <div className="my-2 border-t border-border/50" />
+
+        {/* AFIT Resources */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-2 py-1.5 flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-primary" />
+            <span className="font-semibold">AFIT Resources</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onOpenAIFeature('summary')}>
-                  <FileText className="w-4 h-4" />
-                  {open && <span>📄 Summarize PDF</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onOpenAIFeature('study-guide')}>
-                  <BookOpen className="w-4 h-4" />
-                  {open && <span>📚 Study Guide</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onOpenAIFeature('voice')}>
-                  <Volume2 className="w-4 h-4" />
-                  {open && <span>🔊 Voice Reader</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onOpenAIFeature('translate')}>
-                  <Languages className="w-4 h-4" />
-                  {open && <span>🌐 Translate</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onOpenAIFeature('chat')}>
-                  <MessageSquare className="w-4 h-4" />
-                  {open && <span>💬 Chat with PDF</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>AFIT Resources</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className="py-2">
                   <Link to="/afit-pdfs">
-                    <GraduationCap className="w-4 h-4" />
+                    <Folder className="w-5 h-5" />
                     {open && <span>AFIT PDFs</span>}
                   </Link>
                 </SidebarMenuButton>
@@ -210,158 +237,205 @@ function AppSidebar({
         </SidebarGroup>
 
         {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin Tools</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/admin/reps">
-                      <Users className="w-4 h-4" />
-                      {open && <span>Reps Profile</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <>
+            <div className="my-2 border-t border-border/50" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-2 py-1.5 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                <span className="font-semibold">Admin Tools</span>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="py-2">
+                      <Link to="/admin/reps">
+                        <Users className="w-5 h-5" />
+                        {open && <span>Reps Profile</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
         )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Recent Files</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {recentFiles.length === 0 ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton disabled>
-                    <span className="text-xs text-muted-foreground">No recent files</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : (
-                recentFiles.map((file) => (
-                  <SidebarMenuItem key={file.id}>
-                    <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      <span className="truncate">{file.name}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Divider */}
+        <div className="my-2 border-t border-border/50" />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Files</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={selectedCategory === "all"}
-                  onClick={() => onSelectCategory("all")}
-                >
-                  <span>All Files</span>
-                  {open && <span className="ml-auto text-xs">{files.length}</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              {categories.map((category) => {
-                const count = files.filter((f) => 
-                  category.id === "favorites" ? f.is_favorite :
-                  category.id === "uncategorized" ? !f.category_id :
-                  f.category_id === category.id
-                ).length;
-                
-                return (
-                  <SidebarMenuItem key={category.id}>
-                    <SidebarMenuButton 
-                      isActive={selectedCategory === category.id}
-                      onClick={() => onSelectCategory(category.id)}
-                    >
-                      <span className="truncate">{category.name}</span>
-                      {open && <span className="ml-auto text-xs">{count}</span>}
-                    </SidebarMenuButton>
-                    {category.id !== "uncategorized" && category.id !== "favorites" && (
-                      <SidebarMenuAction onClick={() => onDeleteCategory(category.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </SidebarMenuAction>
-                    )}
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-          
-          <SidebarGroupContent className="mt-2">
-            {!showNewCategoryForm ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => setShowNewCategoryForm(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {open && "Add Category"}
-              </Button>
-            ) : (
-              <div className="space-y-2 p-2">
-                <Input
-                  value={newCategoryName}
-                  onChange={(e) => onNewCategoryNameChange(e.target.value)}
-                  placeholder="Category name"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddCategoryLocal();
-                    if (e.key === "Escape") {
-                      onNewCategoryNameChange("");
-                      setShowNewCategoryForm(false);
-                    }
-                  }}
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={handleAddCategoryLocal}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      onNewCategoryNameChange("");
-                      setShowNewCategoryForm(false);
-                    }}
-                  >
-                    Cancel
-                  </Button>
+        {/* Recent Files - Collapsible */}
+        <Collapsible open={recentSectionOpen} onOpenChange={setRecentSectionOpen}>
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-semibold">Recent Files</span>
                 </div>
-              </div>
-            )}
-          </SidebarGroupContent>
-        </SidebarGroup>
+                <ChevronDown className={`w-4 h-4 transition-transform ${recentSectionOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1">
+                <SidebarMenu>
+                  {recentFiles.length === 0 ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton disabled className="py-2">
+                        <span className="text-xs text-muted-foreground">No recent files</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : (
+                    recentFiles.map((file) => (
+                      <SidebarMenuItem key={file.id}>
+                        <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)} className="py-2">
+                          <FileText className="w-5 h-5" />
+                          <span className="truncate">{file.name}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        {/* Divider */}
+        <div className="my-2 border-t border-border/50" />
+
+        {/* Files Section - Collapsible */}
+        <Collapsible open={filesSectionOpen} onOpenChange={setFilesSectionOpen}>
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-semibold">Files</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${filesSectionOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={selectedCategory === "all"}
+                      onClick={() => onSelectCategory("all")}
+                      className="py-2"
+                    >
+                      <Folder className="w-5 h-5" />
+                      <span>All Files</span>
+                      {open && <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">{files.length}</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  {categories.map((category) => {
+                    const count = files.filter((f) => 
+                      category.id === "favorites" ? f.is_favorite :
+                      category.id === "uncategorized" ? !f.category_id :
+                      f.category_id === category.id
+                    ).length;
+                    
+                    return (
+                      <SidebarMenuItem key={category.id}>
+                        <SidebarMenuButton 
+                          isActive={selectedCategory === category.id}
+                          onClick={() => onSelectCategory(category.id)}
+                          className="py-2"
+                        >
+                          {category.id === "favorites" ? (
+                            <Star className="w-5 h-5" />
+                          ) : (
+                            <Folder className="w-5 h-5" />
+                          )}
+                          <span className="truncate">{category.name}</span>
+                          {open && <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">{count}</span>}
+                        </SidebarMenuButton>
+                        {category.id !== "uncategorized" && category.id !== "favorites" && (
+                          <SidebarMenuAction onClick={() => onDeleteCategory(category.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </SidebarMenuAction>
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+              
+              <SidebarGroupContent className="mt-2 px-1">
+                {!showNewCategoryForm ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowNewCategoryForm(true)}
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    {open && "Add Category"}
+                  </Button>
+                ) : (
+                  <div className="space-y-2 p-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => onNewCategoryNameChange(e.target.value)}
+                      placeholder="Category name"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddCategoryLocal();
+                        if (e.key === "Escape") {
+                          onNewCategoryNameChange("");
+                          setShowNewCategoryForm(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={handleAddCategoryLocal}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          onNewCategoryNameChange("");
+                          setShowNewCategoryForm(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
       </SidebarContent>
       
-      <SidebarFooter>
+      <SidebarFooter className="px-2">
         <div id="storage-indicator">
           <StorageIndicator storageUsed={storageUsed} />
         </div>
+        <div className="my-2 border-t border-border/50" />
         <SidebarMenu>
           {isRep && (
             <>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className="py-2">
                   <Link to="/rep/upload">
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-5 h-5" />
                     {open && <span>Upload Lecture Notes</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className="py-2">
                   <Link to={`/rep/${repUserId}`}>
-                    <Users className="w-4 h-4" />
+                    <Users className="w-5 h-5" />
                     {open && <span>My Profile</span>}
                   </Link>
                 </SidebarMenuButton>
@@ -370,17 +444,17 @@ function AppSidebar({
           )}
           
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onOpenTutorial}>
-              <HelpCircle className="w-4 h-4" />
+            <SidebarMenuButton onClick={onOpenTutorial} className="py-2">
+              <HelpCircle className="w-5 h-5" />
               {open && <span>Help & Tutorial</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
           
           {isAdmin && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild className="py-2">
                 <Link to="/admin">
-                  <Shield className="w-4 h-4" />
+                  <Shield className="w-5 h-5" />
                   {open && <span>Admin Dashboard</span>}
                 </Link>
               </SidebarMenuButton>
@@ -388,8 +462,8 @@ function AppSidebar({
           )}
           
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut}>
-              <LogOut className="w-4 h-4" />
+            <SidebarMenuButton onClick={onSignOut} className="py-2">
+              <LogOut className="w-5 h-5" />
               {open && <span>Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -398,7 +472,6 @@ function AppSidebar({
     </Sidebar>
   );
 }
-
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -423,12 +496,17 @@ export default function Index() {
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [pendingAIFeature, setPendingAIFeature] = useState<AIModalType>(null);
+  const [showChecklist, setShowChecklist] = useState(() => {
+    if (!user?.id) return false;
+    return !localStorage.getItem(`checklist-dismissed-${user?.id}`);
+  });
+  const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -456,6 +534,18 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // Track completed checklist items
+  useEffect(() => {
+    if (!user?.id) return;
+    const completed: string[] = [];
+    if (files.length > 0) completed.push('upload');
+    if (categories.filter(c => c.id !== 'uncategorized' && c.id !== 'favorites').length > 0) completed.push('category');
+    if (files.some(f => f.is_favorite)) completed.push('favorite');
+    // Check if user has used AI features (stored in localStorage)
+    if (localStorage.getItem(`ai-used-${user.id}`)) completed.push('ai');
+    setCompletedChecklistItems(completed);
+  }, [user?.id, files, categories]);
 
   // Redirect reps to their profile page on first visit
   useEffect(() => {
@@ -542,6 +632,10 @@ export default function Index() {
     setShowFilePicker(false);
     setPendingAIFeature(null);
     trackRecentFile(fileId, fileName);
+    // Mark AI feature as used for checklist
+    if (user?.id) {
+      localStorage.setItem(`ai-used-${user.id}`, 'true');
+    }
   };
 
   const handleOpenPreview = (file: any) => {
@@ -770,7 +864,19 @@ export default function Index() {
               </p>
             </div>
 
-            <div 
+            {/* Getting Started Checklist for new users */}
+            {showChecklist && user && (
+              <GettingStartedChecklist
+                completedItems={completedChecklistItems}
+                onDismiss={() => {
+                  setShowChecklist(false);
+                  localStorage.setItem(`checklist-dismissed-${user.id}`, 'true');
+                }}
+                userId={user.id}
+              />
+            )}
+
+            <div
               id="upload-area"
               className={`bg-card rounded-xl shadow-sm border-2 border-dashed transition-colors p-8 mb-6 ${
                 isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
@@ -1534,6 +1640,12 @@ export default function Index() {
         onOpenChange={(open) => !open && setActiveAIModal(null)}
         fileId={selectedFileForAI?.id || ''}
         fileName={selectedFileForAI?.name || ''}
+      />
+
+      {/* Floating Action Button for quick upload */}
+      <FloatingActionButton 
+        onUpload={() => document.getElementById("file-input")?.click()}
+        onAIFeatures={() => navigate("/ai-features")}
       />
 
       {/* Bottom Navigation */}
