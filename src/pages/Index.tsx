@@ -61,7 +61,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { PDFPreviewModal } from "@/components/PDFPreviewModal";
+import { SimplePDFPreview } from "@/components/SimplePDFPreview";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { ThumbnailGenerator } from "@/components/ThumbnailGenerator";
 import { LazyImage } from "@/components/LazyImage";
@@ -490,7 +490,7 @@ export default function Index() {
   const [isDragging, setIsDragging] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string; fileSize?: number; createdAt?: string; thumbnailUrl?: string | null } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
@@ -640,7 +640,13 @@ export default function Index() {
 
   const handleOpenPreview = (file: any) => {
     if (!file.url) return;
-    setPreviewPdf({ url: file.url!, name: file.name });
+    setPreviewPdf({ 
+      url: file.url!, 
+      name: file.name,
+      fileSize: file.file_size,
+      createdAt: file.created_at,
+      thumbnailUrl: file.thumbnail_url
+    });
     trackRecentFile(file.id, file.name);
   };
 
@@ -1540,11 +1546,14 @@ export default function Index() {
         </main>
       </div>
 
-      <PDFPreviewModal
+      <SimplePDFPreview
         isOpen={!!previewPdf}
         onClose={() => setPreviewPdf(null)}
         pdfUrl={previewPdf?.url || ""}
         fileName={previewPdf?.name || ""}
+        fileSize={previewPdf?.fileSize}
+        createdAt={previewPdf?.createdAt}
+        thumbnailUrl={previewPdf?.thumbnailUrl}
       />
 
       <NavigationTutorial 
