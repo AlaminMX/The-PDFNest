@@ -7,11 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FileText } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BottomNav } from "@/components/BottomNav";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { useSession } from "@/hooks/useSession";
 
 function DepartmentCoursesContent() {
   const navigate = useNavigate();
   const { deptSlug } = useParams<{ deptSlug: string }>();
   const { departments, loading: deptLoading } = useDepartments();
+  const { session, user } = useSession();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
   const { courses, loading: coursesLoading } = useCourses(currentDept?.id);
@@ -43,7 +47,7 @@ function DepartmentCoursesContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-20 md:pb-8">
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -104,6 +108,15 @@ function DepartmentCoursesContent() {
           </div>
         )}
       </main>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        onUpload={() => navigate("/")}
+        onAIFeatures={() => navigate("/ai-features")}
+      />
+
+      {/* Bottom Navigation */}
+      <BottomNav isLoggedIn={!!session} userId={user?.id} />
     </div>
   );
 }
