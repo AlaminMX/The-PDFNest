@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, ExternalLink, X } from "lucide-react";
+import { FileText, Download, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 interface SimplePDFPreviewProps {
@@ -20,7 +20,6 @@ export function SimplePDFPreview({
   fileName,
   fileSize,
   createdAt,
-  thumbnailUrl
 }: SimplePDFPreviewProps) {
   
   const handleReadPDF = () => {
@@ -41,7 +40,6 @@ export function SimplePDFPreview({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      // Fallback to direct link
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.download = fileName;
@@ -58,29 +56,27 @@ export function SimplePDFPreview({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
           <DialogTitle className="sr-only">PDF Preview</DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col items-center gap-6 py-4">
-          {/* Thumbnail or Icon */}
-          <div className="relative w-32 h-44 rounded-lg overflow-hidden bg-muted border border-border shadow-md">
-            {thumbnailUrl ? (
-              <img 
-                src={thumbnailUrl} 
-                alt={fileName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                <FileText className="w-16 h-16 text-primary" />
+          {/* PDF Icon Placeholder */}
+          <div className="relative w-36 h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/20 shadow-lg">
+            <div className="w-full h-full flex flex-col items-center justify-center p-4">
+              <FileText className="w-16 h-16 text-primary mb-3" />
+              <div className="w-full space-y-1.5">
+                <div className="h-2 bg-primary/25 rounded-full w-full"></div>
+                <div className="h-2 bg-primary/20 rounded-full w-4/5"></div>
+                <div className="h-2 bg-primary/15 rounded-full w-3/5"></div>
+                <div className="h-2 bg-primary/10 rounded-full w-4/5"></div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* File Info */}
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-1 px-4">
             <h3 className="font-semibold text-lg leading-tight line-clamp-2">
               {fileName}
             </h3>
@@ -96,22 +92,22 @@ export function SimplePDFPreview({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col w-full gap-3">
+          <div className="flex flex-col w-full gap-3 px-2">
             <Button 
               onClick={handleReadPDF}
-              className="w-full gap-2"
+              className="w-full gap-2 h-12 rounded-xl text-base"
               size="lg"
             >
-              <ExternalLink className="w-4 h-4" />
-              Read PDF
+              <ExternalLink className="w-5 h-5" />
+              Open PDF
             </Button>
             <Button 
               onClick={handleDownload}
               variant="outline"
-              className="w-full gap-2"
+              className="w-full gap-2 h-12 rounded-xl text-base"
               size="lg"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-5 h-5" />
               Download
             </Button>
           </div>

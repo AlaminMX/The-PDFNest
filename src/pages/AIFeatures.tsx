@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FileText, BookOpen, Volume2, Languages, MessageSquare, Sparkles, Lock, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FileText, BookOpen, Volume2, Languages, MessageSquare, Sparkles, Lock, ArrowLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSession } from "@/hooks/useSession";
@@ -19,42 +19,42 @@ const AI_FEATURES = [
   {
     id: "summary" as AIModalType,
     icon: FileText,
-    title: "Summarize PDF",
-    description: "Get a concise summary of your document's key points",
-    gradient: "from-blue-500/20 to-cyan-500/20",
-    iconColor: "text-blue-500",
+    title: "Summarize",
+    description: "Get key points instantly",
+    gradient: "from-blue-500 to-cyan-500",
+    bgGradient: "from-blue-500/10 to-cyan-500/10",
   },
   {
     id: "study-guide" as AIModalType,
     icon: BookOpen,
     title: "Study Guide",
-    description: "Generate comprehensive study materials from your PDF",
-    gradient: "from-purple-500/20 to-pink-500/20",
-    iconColor: "text-purple-500",
+    description: "Generate study materials",
+    gradient: "from-purple-500 to-pink-500",
+    bgGradient: "from-purple-500/10 to-pink-500/10",
   },
   {
     id: "voice" as AIModalType,
     icon: Volume2,
     title: "Voice Reader",
-    description: "Listen to your PDF content with natural text-to-speech",
-    gradient: "from-green-500/20 to-emerald-500/20",
-    iconColor: "text-green-500",
+    description: "Listen to your PDFs",
+    gradient: "from-green-500 to-emerald-500",
+    bgGradient: "from-green-500/10 to-emerald-500/10",
   },
   {
     id: "translate" as AIModalType,
     icon: Languages,
     title: "Translate",
-    description: "Translate your documents into different languages",
-    gradient: "from-orange-500/20 to-amber-500/20",
-    iconColor: "text-orange-500",
+    description: "Convert to any language",
+    gradient: "from-orange-500 to-amber-500",
+    bgGradient: "from-orange-500/10 to-amber-500/10",
   },
   {
     id: "chat" as AIModalType,
     icon: MessageSquare,
-    title: "Chat with PDF",
-    description: "Ask questions and get answers from your document",
-    gradient: "from-red-500/20 to-rose-500/20",
-    iconColor: "text-red-500",
+    title: "Chat",
+    description: "Ask questions about content",
+    gradient: "from-red-500 to-rose-500",
+    bgGradient: "from-red-500/10 to-rose-500/10",
   },
 ];
 
@@ -91,79 +91,90 @@ export default function AIFeatures() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
+      {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3 p-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            AI Features
-          </h1>
-          <div className="ml-auto">
-            <ThemeToggle />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold">AI Features</h1>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      <main className="p-4 md:p-6 max-w-4xl mx-auto">
+      <main className="p-4 md:p-6 max-w-2xl mx-auto">
+        {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl mb-4 shadow-lg">
+            <Sparkles className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold mb-2">AI-Powered PDF Tools</h2>
+          <h2 className="text-3xl font-bold mb-2">AI Tools</h2>
           <p className="text-muted-foreground">
             {user 
-              ? "Select a feature to get started with your PDFs"
-              : "Sign in to unlock powerful AI features for your documents"
+              ? "Tap a feature to get started"
+              : "Sign in to unlock AI features"
             }
           </p>
         </motion.div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Feature List */}
+        <div className="space-y-3">
           {AI_FEATURES.map((feature, index) => {
             const Icon = feature.icon;
             
             return (
               <motion.button
                 key={feature.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.08 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleFeatureClick(feature.id)}
-                className={`relative group p-6 rounded-xl border border-border bg-gradient-to-br ${feature.gradient} text-left transition-all hover:shadow-lg hover:border-primary/50`}
+                className={`w-full p-4 rounded-2xl border border-border bg-gradient-to-r ${feature.bgGradient} text-left transition-all hover:shadow-md hover:border-primary/30 flex items-center gap-4`}
               >
-                {!user && (
-                  <div className="absolute top-3 right-3">
-                    <Lock className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                )}
-                <div className={`w-12 h-12 rounded-xl bg-background/80 flex items-center justify-center mb-4 ${feature.iconColor}`}>
-                  <Icon className="w-6 h-6" />
+                {/* Icon */}
+                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-lg`}>
+                  <Icon className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="font-semibold mb-1">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </div>
+
+                {/* Arrow or Lock */}
+                {user ? (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <Lock className="w-5 h-5 text-muted-foreground" />
+                )}
               </motion.button>
             );
           })}
         </div>
 
+        {/* Sign up CTA */}
         {!user && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-8 text-center"
+            className="mt-8"
           >
-            <Button onClick={() => navigate("/auth")} size="lg">
-              Sign Up for Free Access
+            <Button 
+              onClick={() => navigate("/auth")} 
+              size="lg" 
+              className="w-full h-14 text-lg rounded-2xl"
+            >
+              Sign Up for Free
             </Button>
           </motion.div>
         )}
@@ -171,6 +182,7 @@ export default function AIFeatures() {
 
       <BottomNav isLoggedIn={!!user} userId={user?.id} />
 
+      {/* File Picker Sheet */}
       <FilePicker
         open={showFilePicker}
         onOpenChange={setShowFilePicker}
@@ -179,6 +191,7 @@ export default function AIFeatures() {
         featureType={pendingFeature}
       />
 
+      {/* AI Modals */}
       <PDFSummaryModal
         open={activeModal === 'summary'}
         onOpenChange={(open) => !open && setActiveModal(null)}
