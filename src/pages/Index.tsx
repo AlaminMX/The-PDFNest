@@ -68,6 +68,7 @@ import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { FilePicker } from "@/components/FilePicker";
 import { RepBottomNav } from "@/components/RepBottomNav";
+import { BottomNav } from "@/components/BottomNav";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -1535,8 +1536,12 @@ export default function Index() {
         fileName={selectedFileForAI?.name || ''}
       />
 
-      {/* Footer */}
-      {isRep && user && <RepBottomNav repUserId={user.id} />}
+      {/* Bottom Navigation */}
+      {isRep && user ? (
+        <RepBottomNav repUserId={user.id} />
+      ) : (
+        <BottomNav isLoggedIn={!!user} userId={user?.id} />
+      )}
       
       <footer className="fixed bottom-0 left-0 right-0 py-2 text-center md:block hidden">
         <p className="text-xs text-muted-foreground/60">
