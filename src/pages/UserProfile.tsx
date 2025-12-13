@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, HardDrive, Calendar, Mail, User } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
+import { format, formatDistanceToNow } from "date-fns";
 
 interface UserProfileData {
   id: string;
@@ -20,6 +22,21 @@ interface UserProfileData {
   created_at: string | null;
 }
 
+interface RecentFile {
+  id: string;
+  name: string;
+  lastAccessed: number;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+  file_count?: number;
+}
+
+const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
+
 export default function UserProfile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
@@ -27,6 +44,8 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     fetchUserProfile();
@@ -62,6 +81,38 @@ export default function UserProfile() {
         .eq("user_id", user.id);
 
       setPdfCount(count || 0);
+
+      // Load recent files from localStorage
+      const storedRecent = localStorage.getItem(`recent-files-${user.id}`);
+      if (storedRecent) {
+        try {
+          setRecentFiles(JSON.parse(storedRecent));
+        } catch (e) {
+          console.error("Failed to parse recent files:", e);
+        }
+      }
+
+      // Load categories with file counts
+      const { data: categoriesData } = await supabase
+        .from("categories")
+        .select("id, name, color")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (categoriesData) {
+        // Get file counts for each category
+        const categoriesWithCounts = await Promise.all(
+          categoriesData.map(async (cat) => {
+            const { count: fileCount } = await supabase
+              .from("pdf_files")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", user.id)
+              .eq("category_id", cat.id);
+            return { ...cat, file_count: fileCount || 0 };
+          })
+        );
+        setCategories(categoriesWithCounts);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -73,6 +124,11 @@ export default function UserProfile() {
     if (!bytes) return "0 MB";
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
+  };
+
+  const getStoragePercentage = (bytes: number | null) => {
+    if (!bytes) return 0;
+    return Math.min((bytes / STORAGE_LIMIT) * 100, 100);
   };
 
   const getInitials = (name: string | null) => {
@@ -102,6 +158,8 @@ export default function UserProfile() {
   }
 
   const displayName = profile.display_name || profile.full_name || "User";
+  const storageUsed = profile.total_storage_used || 0;
+  const storagePercentage = getStoragePercentage(storageUsed);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-20 md:pb-8">
@@ -126,104 +184,181 @@ export default function UserProfile() {
       <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Profile Card */}
         <Card className="overflow-hidden">
-          <div className="h-24 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
+          <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-12">
-              <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-                <AvatarImage src={profile.avatar_url || undefined} alt={displayName} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10">
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
+                <AvatarImage src={profile.avatar_url || undefined} />
+                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-center sm:text-left pb-2">
+              <div className="flex-1 text-center sm:text-left space-y-1 pb-1">
                 <h2 className="text-2xl font-bold">{displayName}</h2>
                 {profile.email && (
-                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2 mt-1">
-                    <Mail className="w-4 h-4" />
-                    {profile.email}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
                 )}
               </div>
-              <Button onClick={() => setShowEditModal(true)} variant="outline">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
                 Edit Profile
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <FileText className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{pdfCount}</p>
-                <p className="text-xs text-muted-foreground">PDFs Uploaded</p>
+                <p className="text-xs text-muted-foreground">Total PDFs</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <HardDrive className="w-5 h-5 text-primary" />
+                <Folder className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatStorageSize(profile.total_storage_used)}</p>
-                <p className="text-xs text-muted-foreground">of 300 MB used</p>
+                <p className="text-2xl font-bold">{categories.length}</p>
+                <p className="text-xs text-muted-foreground">Categories</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          <Card className="col-span-2 md:col-span-1">
-            <CardContent className="p-4 flex items-center gap-3">
+          <Card className="p-4 col-span-2 md:col-span-1">
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Calendar className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">
-                  {profile.created_at
-                    ? new Date(profile.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "N/A"}
+                <p className="text-sm font-semibold">
+                  {profile.created_at 
+                    ? format(new Date(profile.created_at), "MMM d, yyyy")
+                    : "N/A"
+                  }
                 </p>
                 <p className="text-xs text-muted-foreground">Member since</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
-        {/* Storage Progress */}
+        {/* Storage Usage */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <HardDrive className="w-5 h-5" />
+            <CardTitle className="text-base flex items-center gap-2">
+              <HardDrive className="w-4 h-4" />
               Storage Usage
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>{formatStorageSize(profile.total_storage_used)}</span>
-                <span className="text-muted-foreground">300 MB</span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(((profile.total_storage_used || 0) / (300 * 1024 * 1024)) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {formatStorageSize(300 * 1024 * 1024 - (profile.total_storage_used || 0))} remaining
-              </p>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {formatStorageSize(storageUsed)} of 300 MB used
+              </span>
+              <span className="font-medium">
+                {storagePercentage.toFixed(1)}%
+              </span>
             </div>
+            <Progress 
+              value={storagePercentage} 
+              className="h-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {formatStorageSize(STORAGE_LIMIT - storageUsed)} remaining
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Recent Files */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Recently Accessed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentFiles.length > 0 ? (
+              <div className="space-y-2">
+                {recentFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                    onClick={() => navigate("/")}
+                  >
+                    <div className="p-2 rounded bg-primary/10">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(file.lastAccessed, { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No recently accessed files</p>
+                <p className="text-xs mt-1">Your recent PDFs will appear here</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Categories */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Folder className="w-4 h-4" />
+              Your Categories
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {categories.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {categories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                    onClick={() => navigate("/")}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{category.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {category.file_count} {category.file_count === 1 ? "file" : "files"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Folder className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No categories yet</p>
+                <p className="text-xs mt-1">Create categories to organize your PDFs</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
@@ -240,8 +375,7 @@ export default function UserProfile() {
         />
       )}
 
-      {/* Bottom Navigation */}
-      <BottomNav isLoggedIn={true} userId={userId || undefined} />
+      <BottomNav isLoggedIn={true} userId={userId} />
     </div>
   );
 }

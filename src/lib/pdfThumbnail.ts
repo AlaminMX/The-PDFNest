@@ -1,8 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set up PDF.js worker using CDN for version 5.x
-// pdfjs-dist v5 uses different worker path structure
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs';
+// Set up PDF.js worker - use legacy build for better compatibility
+// Note: pdfjs-dist@3.11.174 installed via npm works with this pattern
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 /**
  * Generate a thumbnail image from the first page of a PDF file
@@ -13,14 +13,19 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.394/b
 export async function generatePDFThumbnail(file: File, maxWidth: number = 200): Promise<Blob> {
   try {
     console.log('[PDF Thumbnail] Starting generation for:', file.name);
-    console.log('[PDF Thumbnail] Worker source:', pdfjsLib.GlobalWorkerOptions.workerSrc);
     
     // Read the file as an array buffer
     const arrayBuffer = await file.arrayBuffer();
     console.log('[PDF Thumbnail] File read, size:', arrayBuffer.byteLength);
     
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    // Load the PDF document with explicit configuration
+    const loadingTask = pdfjsLib.getDocument({
+      data: arrayBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    
     const pdf = await loadingTask.promise;
     console.log('[PDF Thumbnail] PDF loaded, pages:', pdf.numPages);
     
