@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generatePDFThumbnail } from "@/lib/pdfThumbnail";
 
 export interface PDFFile {
   id: string;
@@ -158,39 +157,7 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (uploadError) throw uploadError;
 
-      // Update progress to 90% while generating thumbnail
-      setUploadProgress(prev => {
-        const newProgress = new Map(prev);
-        const current = prev.get(uploadId);
-        if (current && current.status !== "cancelled") {
-          newProgress.set(uploadId, { ...current, progress: 90 });
-        }
-        return newProgress;
-      });
-
-      // Generate and upload thumbnail
-      let thumbnailPath = null;
-      try {
-        const thumbnailBlob = await generatePDFThumbnail(file);
-        const thumbnailFileName = `${Date.now()}-thumb-${sanitizedFileName.replace('.pdf', '.jpg')}`;
-        thumbnailPath = `${userId}/${thumbnailFileName}`;
-
-        const { error: thumbError } = await supabase.storage
-          .from("pdf-thumbnails")
-          .upload(thumbnailPath, thumbnailBlob, {
-            contentType: 'image/jpeg',
-          });
-
-        if (thumbError) {
-          console.error("Failed to upload thumbnail:", thumbError);
-          thumbnailPath = null; // Continue without thumbnail if it fails
-        }
-      } catch (thumbError) {
-        console.error("Failed to generate thumbnail:", thumbError);
-        // Continue without thumbnail
-      }
-
-      // Update progress to 95% while creating DB record
+      // Update progress to 95%
       setUploadProgress(prev => {
         const newProgress = new Map(prev);
         const current = prev.get(uploadId);
@@ -208,7 +175,7 @@ export function usePDFFiles(userId: string | undefined) {
         file_size: file.size,
         storage_path: filePath,
         category_id: categoryId === "uncategorized" ? null : categoryId,
-        thumbnail_url: thumbnailPath,
+        thumbnail_url: null,
       });
 
       if (dbError) throw dbError;

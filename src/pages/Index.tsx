@@ -63,8 +63,6 @@ import {
 } from "@/components/ui/sidebar";
 import { SimplePDFPreview } from "@/components/SimplePDFPreview";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
-import { ThumbnailGenerator } from "@/components/ThumbnailGenerator";
-import { LazyImage } from "@/components/LazyImage";
 import { StorageIndicator } from "@/components/StorageIndicator";
 import { PDFSummaryModal } from "@/components/PDFSummaryModal";
 import { StudyGuideModal } from "@/components/StudyGuideModal";
@@ -496,7 +494,7 @@ export default function Index() {
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
-  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
@@ -828,11 +826,6 @@ export default function Index() {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <div className="ml-auto flex items-center gap-2">
-                <ThumbnailGenerator 
-                  onComplete={refreshFiles} 
-                  files={files.map(f => ({ id: f.id, file_name: f.file_name, storage_path: f.storage_path, thumbnail_url: f.thumbnail_url }))}
-                  autoGenerate={true}
-                />
                 <div id="view-toggle" className="flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
@@ -1065,25 +1058,9 @@ export default function Index() {
                           className="w-4 h-4 cursor-pointer flex-shrink-0"
                         />
                         <div className="flex-shrink-0">
-                          {file.thumbnail_url ? (
-                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-border">
-                              <LazyImage
-                                src={file.thumbnail_url}
-                                alt={`${file.name} thumbnail`}
-                                className="w-full h-full object-cover"
-                                skeletonClassName="w-10 h-10"
-                                fallback={
-                                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-6 h-6 text-primary" />
-                                  </div>
-                                }
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-primary" />
-                            </div>
-                          )}
+                          <div className="w-10 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center border border-primary/20 shadow-sm">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
                         </div>
                         <div className="flex-1 min-w-0 max-w-full overflow-hidden">
                           {editingFileId === file.id ? (
@@ -1362,24 +1339,15 @@ export default function Index() {
                         className="absolute top-2 left-2 w-4 h-4 z-10"
                       />
 
-                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-muted">
-                        {file.thumbnail_url ? (
-                          <LazyImage
-                            src={file.thumbnail_url}
-                            alt={file.name}
-                            className="w-full h-full object-cover cursor-pointer"
-                            skeletonClassName="w-full h-full"
-                            fallback={
-                              <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                                <FileText className="w-16 h-16 text-primary" />
-                              </div>
-                            }
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                            <FileText className="w-16 h-16 text-primary" />
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/20 shadow-sm">
+                        <div className="w-full h-full flex flex-col items-center justify-center p-3">
+                          <FileText className="w-12 h-12 text-primary mb-2" />
+                          <div className="w-full space-y-1">
+                            <div className="h-1.5 bg-primary/20 rounded-full w-full"></div>
+                            <div className="h-1.5 bg-primary/15 rounded-full w-4/5"></div>
+                            <div className="h-1.5 bg-primary/10 rounded-full w-3/5"></div>
                           </div>
-                        )}
+                        </div>
                         
                         {file.is_favorite && (
                           <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1">
