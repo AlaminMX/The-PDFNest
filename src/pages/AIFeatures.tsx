@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FileText, BookOpen, Volume2, Languages, MessageSquare, Sparkles, Lock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "@/hooks/useSession";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { FilePicker } from "@/components/FilePicker";
 import { PDFSummaryModal } from "@/components/PDFSummaryModal";
@@ -60,7 +60,7 @@ const AI_FEATURES = [
 
 export default function AIFeatures() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useSession();
   const { files, loading: filesLoading } = usePDFFiles(user?.id);
   
   const [showFilePicker, setShowFilePicker] = useState(false);
