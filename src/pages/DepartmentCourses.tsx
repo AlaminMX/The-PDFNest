@@ -25,12 +25,12 @@ function DepartmentCoursesContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground font-medium">Loading courses...</p>
+          <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm text-muted-foreground">Loading courses...</p>
         </motion.div>
       </div>
     );
@@ -40,15 +40,15 @@ function DepartmentCoursesContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center px-4"
         >
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-muted-foreground" />
+          <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+            <BookOpen className="w-5 h-5 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground mb-4">Department not found</p>
-          <Button onClick={() => navigate("/afit-pdfs")} variant="outline">
+          <p className="text-sm text-muted-foreground mb-4">Department not found</p>
+          <Button onClick={() => navigate("/afit-pdfs")} variant="outline" size="sm">
             Back to Departments
           </Button>
         </motion.div>
@@ -59,19 +59,19 @@ function DepartmentCoursesContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/afit-pdfs")}
-              className="rounded-full"
+              className="rounded-full h-9 w-9"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold tracking-tight truncate max-w-[200px] md:max-w-none">
+              <h1 className="text-lg font-semibold truncate max-w-[180px] md:max-w-none">
                 {currentDept.name}
               </h1>
               <p className="text-xs text-muted-foreground">100 Level Courses</p>
@@ -81,51 +81,50 @@ function DepartmentCoursesContent() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-5">
         {/* Info Banner */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-xl bg-muted/50 border"
+          className="mb-5 p-3 rounded-lg bg-muted/30"
         >
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{courses.length} courses</span> available. 
-            Select a course to view lecture notes.
+            <span className="font-medium text-foreground">{courses.length} courses</span> available
           </p>
         </motion.div>
 
         {/* Course List */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {courses.map((course, index) => (
             <motion.div
               key={course.id}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
+              transition={{ duration: 0.2, delay: index * 0.04 }}
             >
               <button
                 onClick={() => navigate(`/afit-pdfs/${deptSlug}/${course.code}`)}
-                className="w-full text-left p-4 rounded-xl border bg-card hover:bg-accent/50 transition-all duration-200 hover:shadow-md group"
+                className="w-full text-left p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors group"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-primary/5 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-primary/70" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-primary">{course.code}</span>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-medium text-sm text-primary">{course.code}</span>
                       <Badge 
-                        variant={course.note_count > 0 ? "default" : "secondary"} 
-                        className="text-xs"
+                        variant={course.note_count > 0 ? "secondary" : "outline"} 
+                        className="text-[10px] px-1.5 py-0"
                       >
                         {course.note_count} {course.note_count === 1 ? 'note' : 'notes'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {course.name}
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
                 </div>
               </button>
             </motion.div>
@@ -136,12 +135,12 @@ function DepartmentCoursesContent() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16"
+            className="text-center py-12"
           >
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-muted-foreground" />
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <FileText className="w-5 h-5 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">No courses available for this department</p>
+            <p className="text-sm text-muted-foreground">No courses available</p>
           </motion.div>
         )}
       </main>
