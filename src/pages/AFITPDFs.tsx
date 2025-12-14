@@ -14,8 +14,8 @@ const departmentIcons: Record<string, typeof BookOpen> = {
 };
 
 const departmentColors: Record<string, string> = {
-  "computer-science": "from-blue-500/20 to-blue-600/10 border-blue-500/30",
-  "cyber-security": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30",
+  "computer-science": "bg-blue-500/5 hover:bg-blue-500/10 border-blue-500/20",
+  "cyber-security": "bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20",
 };
 
 const departmentAccents: Record<string, string> = {
@@ -32,12 +32,12 @@ function AFITPDFsContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground font-medium">Loading departments...</p>
+          <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm text-muted-foreground">Loading departments...</p>
         </motion.div>
       </div>
     );
@@ -50,19 +50,19 @@ function AFITPDFsContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/")}
-              className="rounded-full"
+              className="rounded-full h-9 w-9"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">AFIT PDFs</h1>
+              <h1 className="text-lg font-semibold">AFIT PDFs</h1>
               <p className="text-xs text-muted-foreground">100 Level Resources</p>
             </div>
           </div>
@@ -70,57 +70,57 @@ function AFITPDFsContent() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6">
         {/* Hero Section */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-center mb-10"
+          transition={{ duration: 0.3 }}
+          className="text-center mb-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <BookOpen className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 text-primary text-xs font-medium mb-3">
+            <BookOpen className="w-3.5 h-3.5" />
             Academic Resources
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+          <h2 className="text-xl md:text-2xl font-semibold mb-2">
             Select Your Department
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Access lecture notes uploaded by course representatives for your courses
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Access lecture notes uploaded by course representatives
           </p>
         </motion.div>
 
         {/* Department Cards */}
-        <div className="grid gap-4 md:gap-6 max-w-2xl mx-auto">
+        <div className="grid gap-3 max-w-xl mx-auto">
           {level100Departments.map((dept, index) => {
             const Icon = departmentIcons[dept.slug] || BookOpen;
-            const colorClass = departmentColors[dept.slug] || "from-primary/20 to-primary/10 border-primary/30";
+            const colorClass = departmentColors[dept.slug] || "bg-primary/5 hover:bg-primary/10 border-primary/20";
             const accentClass = departmentAccents[dept.slug] || "bg-primary/10 text-primary";
             
             return (
               <motion.div
                 key={dept.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
+                transition={{ duration: 0.3, delay: index * 0.08 }}
               >
                 <button
                   onClick={() => navigate(`/afit-pdfs/${dept.slug}`)}
-                  className={`w-full text-left p-6 rounded-2xl border-2 bg-gradient-to-br ${colorClass} hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group`}
+                  className={`w-full text-left p-5 rounded-xl border ${colorClass} transition-all duration-200 group`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-xl ${accentClass} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-7 h-7" />
+                    <div className={`w-12 h-12 rounded-lg ${accentClass} flex items-center justify-center shrink-0`}>
+                      <Icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold mb-1 truncate">
+                      <h3 className="font-medium mb-0.5">
                         {dept.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         100 Level Courses
                       </p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                   </div>
                 </button>
               </motion.div>
@@ -132,12 +132,12 @@ function AFITPDFsContent() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16"
+            className="text-center py-12"
           >
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-muted-foreground" />
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <BookOpen className="w-5 h-5 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">No departments available</p>
+            <p className="text-sm text-muted-foreground">No departments available</p>
           </motion.div>
         )}
       </main>

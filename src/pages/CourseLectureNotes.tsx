@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useCourses } from "@/hooks/useCourses";
@@ -10,13 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen } from "lucide-react";
+import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/hooks/useSession";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +63,9 @@ function CourseLectureNotesContent() {
   const currentCourse = courses.find(c => c.code === courseCode);
   const { notes, loading: notesLoading, incrementViews, getSignedUrl, deleteNote, renameNote } = useLectureNotes(currentCourse?.id);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<{ id: string; title: string; filePath: string; fileSize: number } | null>(null);
@@ -83,6 +86,21 @@ function CourseLectureNotesContent() {
   const [selectedNote, setSelectedNote] = useState<{ id: string; title: string; filePath: string } | null>(null);
 
   const loading = deptLoading || coursesLoading || notesLoading;
+
+  // Filter notes based on search query
+  const filteredNotes = useMemo(() => {
+    if (!searchQuery.trim()) return notes;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return notes.filter(note => {
+      const titleMatch = note.title.toLowerCase().includes(query);
+      const uploaderMatch = (
+        note.uploaded_by_display.toLowerCase().includes(query) ||
+        ((note as any).uploader_display_name || "").toLowerCase().includes(query)
+      );
+      return titleMatch || uploaderMatch;
+    });
+  }, [notes, searchQuery]);
 
   const handleView = async (noteId: string, filePath: string, title: string) => {
     try {
@@ -206,12 +224,12 @@ function CourseLectureNotesContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground font-medium">Loading lecture notes...</p>
+          <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm text-muted-foreground">Loading lecture notes...</p>
         </motion.div>
       </div>
     );
@@ -221,15 +239,15 @@ function CourseLectureNotesContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center px-4"
         >
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-muted-foreground" />
+          <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+            <BookOpen className="w-5 h-5 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground mb-4">Course not found</p>
-          <Button onClick={() => navigate("/afit-pdfs")} variant="outline">
+          <p className="text-sm text-muted-foreground mb-4">Course not found</p>
+          <Button onClick={() => navigate("/afit-pdfs")} variant="outline" size="sm">
             Back to Departments
           </Button>
         </motion.div>
@@ -240,20 +258,20 @@ function CourseLectureNotesContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/afit-pdfs/${deptSlug}`)}
-              className="rounded-full"
+              className="rounded-full h-9 w-9"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-primary">{currentCourse.code}</h1>
-              <p className="text-xs text-muted-foreground truncate max-w-[180px] md:max-w-none">
+              <h1 className="text-lg font-semibold text-primary">{currentCourse.code}</h1>
+              <p className="text-xs text-muted-foreground truncate max-w-[160px] md:max-w-none">
                 {currentCourse.name}
               </p>
             </div>
@@ -262,41 +280,79 @@ function CourseLectureNotesContent() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
-        {/* Stats Banner */}
+      <main className="container mx-auto px-4 py-5">
+        {/* Stats & Search */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-xl bg-muted/50 border flex items-center justify-between"
+          className="mb-5 space-y-3"
         >
-          <div>
+          <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground text-lg">{notes.length}</span>{" "}
-              {notes.length === 1 ? 'lecture note' : 'lecture notes'} available
+              <span className="font-medium text-foreground">{notes.length}</span>{" "}
+              {notes.length === 1 ? 'lecture note' : 'lecture notes'}
             </p>
+            <Badge variant="outline" className="text-xs font-normal">
+              {currentDept.name}
+            </Badge>
           </div>
-          <Badge variant="outline" className="text-xs">
-            {currentDept.name}
-          </Badge>
+          
+          {/* Search Bar */}
+          {notes.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search by title or uploader..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9 h-10 bg-muted/30 border-border/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </motion.div>
 
+        {/* Search Results Info */}
+        <AnimatePresence>
+          {searchQuery && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4"
+            >
+              <p className="text-xs text-muted-foreground">
+                {filteredNotes.length} {filteredNotes.length === 1 ? 'result' : 'results'} for "{searchQuery}"
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Notes List */}
-        <div className="space-y-3">
-          {notes.map((note, index) => (
+        <div className="space-y-2">
+          {filteredNotes.map((note, index) => (
             <motion.div
               key={note.id}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="p-4 rounded-xl border bg-card hover:shadow-md transition-all"
+              transition={{ duration: 0.2, delay: index * 0.04 }}
+              className="p-4 rounded-lg border border-border/50 bg-card/50 transition-colors"
             >
               {/* Note Header */}
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5 text-primary" />
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-9 h-9 rounded-md bg-primary/5 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-primary/70" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm mb-1 line-clamp-2">{note.title}</h3>
+                  <h3 className="font-medium text-sm mb-1 line-clamp-2">{note.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <button
                       onClick={() => navigate(`/rep/${note.uploaded_by}`)}
@@ -329,7 +385,7 @@ function CourseLectureNotesContent() {
                     )}
                   </div>
                 </div>
-                <Badge variant="secondary" className="shrink-0 text-xs">
+                <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 font-normal">
                   {(note.file_size / (1024 * 1024)).toFixed(1)} MB
                 </Badge>
               </div>
@@ -338,30 +394,31 @@ function CourseLectureNotesContent() {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  className="flex-1 md:flex-none"
+                  variant="secondary"
+                  className="flex-1 md:flex-none h-8 text-xs"
                   onClick={() => handleView(note.id, note.file_path, note.title)}
                 >
-                  <Eye className="w-4 h-4 mr-1.5" />
+                  <Eye className="w-3.5 h-3.5 mr-1.5" />
                   View
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 md:flex-none"
+                  className="flex-1 md:flex-none h-8 text-xs"
                   onClick={() => handleDownload(note.file_path, note.title)}
                 >
-                  <Download className="w-4 h-4 mr-1.5" />
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
                   Download
                 </Button>
                 
                 {/* More Actions Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="shrink-0">
+                    <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => handleShare(note.id, note.title)}>
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
@@ -416,16 +473,34 @@ function CourseLectureNotesContent() {
           ))}
         </div>
 
-        {notes.length === 0 && (
+        {/* No Results */}
+        {searchQuery && filteredNotes.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16"
+            className="text-center py-12"
           >
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-muted-foreground" />
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <Search className="w-5 h-5 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground mb-2">No lecture notes yet</p>
+            <p className="text-sm text-muted-foreground mb-1">No results found</p>
+            <p className="text-xs text-muted-foreground">
+              Try searching with different keywords
+            </p>
+          </motion.div>
+        )}
+
+        {/* Empty State */}
+        {!searchQuery && notes.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <FileText className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">No lecture notes yet</p>
             <p className="text-xs text-muted-foreground">
               Course reps can upload notes for this course
             </p>
