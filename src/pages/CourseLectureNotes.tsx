@@ -6,15 +6,17 @@ import { useLectureNotes } from "@/hooks/useLectureNotes";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical } from "lucide-react";
+import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BottomNav } from "@/components/BottomNav";
+import { useSession } from "@/hooks/useSession";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +56,7 @@ function CourseLectureNotesContent() {
   const { deptSlug, courseCode } = useParams<{ deptSlug: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
+  const { session, user: sessionUser } = useSession();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
   const { courses, loading: coursesLoading } = useCourses(currentDept?.id);
@@ -100,7 +103,6 @@ function CourseLectureNotesContent() {
     try {
       const url = await getSignedUrl(filePath);
       if (url) {
-        // Fetch as blob to force download instead of opening
         const response = await fetch(url);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
@@ -112,7 +114,6 @@ function CourseLectureNotesContent() {
         link.click();
         document.body.removeChild(link);
         
-        // Clean up blob URL
         window.URL.revokeObjectURL(blobUrl);
         toast.dismiss(toastId);
         toast.success("Download started");
@@ -130,10 +131,7 @@ function CourseLectureNotesContent() {
     const url = `${window.location.origin}/afit-pdfs/${deptSlug}/${courseCode}?note=${noteId}`;
     
     if (navigator.share) {
-      navigator.share({
-        title: title,
-        url: url,
-      }).catch(() => {});
+      navigator.share({ title, url }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard");
@@ -206,265 +204,232 @@ function CourseLectureNotesContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading lecture notes...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground font-medium">Loading lecture notes...</p>
+        </motion.div>
       </div>
     );
   }
 
   if (!currentDept || !currentCourse) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center px-4"
+        >
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-muted-foreground" />
+          </div>
           <p className="text-muted-foreground mb-4">Course not found</p>
-          <Button onClick={() => navigate("/afit-pdfs")}>
+          <Button onClick={() => navigate("/afit-pdfs")} variant="outline">
             Back to Departments
           </Button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
+      {/* Header */}
+      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/afit-pdfs/${deptSlug}`)}
+              className="rounded-full"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{currentCourse.code}</h1>
-              <p className="text-sm text-muted-foreground">{currentCourse.name}</p>
+              <h1 className="text-xl font-bold tracking-tight text-primary">{currentCourse.code}</h1>
+              <p className="text-xs text-muted-foreground truncate max-w-[180px] md:max-w-none">
+                {currentCourse.name}
+              </p>
             </div>
           </div>
           <ThemeToggle />
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="container mx-auto px-4 py-6">
+        {/* Stats Banner */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-xl bg-muted/50 border flex items-center justify-between"
+        >
           <div>
-            <h2 className="text-xl font-semibold mb-1">Lecture Notes</h2>
             <p className="text-sm text-muted-foreground">
-              {notes.length} {notes.length === 1 ? 'note' : 'notes'} available
+              <span className="font-semibold text-foreground text-lg">{notes.length}</span>{" "}
+              {notes.length === 1 ? 'lecture note' : 'lecture notes'} available
             </p>
           </div>
-        </div>
+          <Badge variant="outline" className="text-xs">
+            {currentDept.name}
+          </Badge>
+        </motion.div>
 
-        <div className="space-y-4">
-          {notes.map((note) => (
-            <Card key={note.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg mb-2 truncate">{note.title}</CardTitle>
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      <button
-                        onClick={() => navigate(`/rep/${note.uploaded_by}`)}
-                        className="flex items-center gap-2 hover:text-primary transition-colors"
-                      >
-                        <Avatar className="w-6 h-6">
-                          <AvatarImage src={(note as any).uploader_avatar || undefined} />
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {((note as any).uploader_display_name || note.uploaded_by_display)
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="hover:underline">Uploaded by {(note as any).uploader_display_name || note.uploaded_by_display}</span>
-                      </button>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {format(new Date(note.created_at!), "MMM dd, yyyy")}
-                      </div>
-                      {note.views !== null && note.views > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
-                          {note.views} {note.views === 1 ? 'view' : 'views'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {(note.file_size / (1024 * 1024)).toFixed(1)} MB
-                  </Badge>
+        {/* Notes List */}
+        <div className="space-y-3">
+          {notes.map((note, index) => (
+            <motion.div
+              key={note.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              className="p-4 rounded-xl border bg-card hover:shadow-md transition-all"
+            >
+              {/* Note Header */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5 text-primary" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* Desktop actions */}
-                <div className="hidden md:flex flex-wrap gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleView(note.id, note.file_path, note.title)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(note.file_path, note.title)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleShare(note.id, note.title)}
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share
-                  </Button>
-                  
-                  {/* AI Features Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm mb-1 line-clamp-2">{note.title}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <button
+                      onClick={() => navigate(`/rep/${note.uploaded_by}`)}
+                      className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                    >
+                      <Avatar className="w-4 h-4">
+                        <AvatarImage src={(note as any).uploader_avatar || undefined} />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {((note as any).uploader_display_name || note.uploaded_by_display)
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hover:underline">
+                        {(note as any).uploader_display_name || note.uploaded_by_display}
+                      </span>
+                    </button>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {format(new Date(note.created_at!), "MMM d, yyyy")}
+                    </span>
+                    {note.views !== null && note.views > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        {note.views}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Badge variant="secondary" className="shrink-0 text-xs">
+                  {(note.file_size / (1024 * 1024)).toFixed(1)} MB
+                </Badge>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1 md:flex-none"
+                  onClick={() => handleView(note.id, note.file_path, note.title)}
+                >
+                  <Eye className="w-4 h-4 mr-1.5" />
+                  View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 md:flex-none"
+                  onClick={() => handleDownload(note.file_path, note.title)}
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  Download
+                </Button>
+                
+                {/* More Actions Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="shrink-0">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => handleShare(note.id, note.title)}>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator />
+                    
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
                         <Sparkles className="w-4 h-4 mr-2" />
                         AI Features
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => handleAIAction('summary', { id: note.id, title: note.title, filePath: note.file_path })}>
-                        📄 Summarize
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAIAction('study-guide', { id: note.id, title: note.title, filePath: note.file_path })}>
-                        📚 Study Guide
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAIAction('voice', { id: note.id, title: note.title, filePath: note.file_path })}>
-                        🔊 Voice Reader
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAIAction('translate', { id: note.id, title: note.title, filePath: note.file_path })}>
-                        🌐 Translate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAIAction('chat', { id: note.id, title: note.title, filePath: note.file_path })}>
-                        💬 Chat with PDF
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={() => handleAIAction('summary', { id: note.id, title: note.title, filePath: note.file_path })}>
+                          Summarize
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAIAction('study-guide', { id: note.id, title: note.title, filePath: note.file_path })}>
+                          Study Guide
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAIAction('voice', { id: note.id, title: note.title, filePath: note.file_path })}>
+                          Voice Reader
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAIAction('translate', { id: note.id, title: note.title, filePath: note.file_path })}>
+                          Translate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAIAction('chat', { id: note.id, title: note.title, filePath: note.file_path })}>
+                          Chat with PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
 
-                  {user?.id === note.uploaded_by && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRenameClick({ id: note.id, title: note.title })}
-                      >
-                        <Edit2 className="w-4 h-4 mr-2" />
-                        Rename
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteClick(note)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Mobile actions */}
-                <div className="flex md:hidden gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleView(note.id, note.file_path, note.title)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleDownload(note.file_path, note.title)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="w-5 h-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem onClick={() => handleShare(note.id, note.title)}>
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          AI Features
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          <DropdownMenuItem onClick={() => handleAIAction('summary', { id: note.id, title: note.title, filePath: note.file_path })}>
-                            📄 Summarize
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAIAction('study-guide', { id: note.id, title: note.title, filePath: note.file_path })}>
-                            📚 Study Guide
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAIAction('voice', { id: note.id, title: note.title, filePath: note.file_path })}>
-                            🔊 Voice Reader
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAIAction('translate', { id: note.id, title: note.title, filePath: note.file_path })}>
-                            🌐 Translate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAIAction('chat', { id: note.id, title: note.title, filePath: note.file_path })}>
-                            💬 Chat with PDF
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      {user?.id === note.uploaded_by && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleRenameClick({ id: note.id, title: note.title })}>
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteClick(note)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
+                    {user?.id === note.uploaded_by && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleRenameClick({ id: note.id, title: note.title })}>
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(note)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </motion.div>
           ))}
         </div>
 
         {notes.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No lecture notes available for this course yet</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground mb-2">No lecture notes yet</p>
+            <p className="text-xs text-muted-foreground">
+              Course reps can upload notes for this course
+            </p>
+          </motion.div>
         )}
       </main>
 
@@ -560,6 +525,8 @@ function CourseLectureNotesContent() {
           />
         </>
       )}
+
+      <BottomNav isLoggedIn={!!session} userId={sessionUser?.id} />
     </div>
   );
 }
