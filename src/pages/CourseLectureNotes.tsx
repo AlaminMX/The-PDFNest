@@ -258,7 +258,7 @@ function CourseLectureNotesContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -270,8 +270,8 @@ function CourseLectureNotesContent() {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold text-primary">{currentCourse.code}</h1>
-              <p className="text-xs text-muted-foreground truncate max-w-[160px] md:max-w-none">
+              <h1 className="text-lg font-semibold">{currentCourse.code}</h1>
+              <p className="text-[13px] text-muted-foreground truncate max-w-[160px] md:max-w-none">
                 {currentCourse.name}
               </p>
             </div>
@@ -292,9 +292,9 @@ function CourseLectureNotesContent() {
               <span className="font-medium text-foreground">{notes.length}</span>{" "}
               {notes.length === 1 ? 'lecture note' : 'lecture notes'}
             </p>
-            <Badge variant="outline" className="text-xs font-normal">
+            <span className="text-xs text-muted-foreground">
               {currentDept.name}
-            </Badge>
+            </span>
           </div>
           
           {/* Search Bar */}
@@ -306,7 +306,7 @@ function CourseLectureNotesContent() {
                 placeholder="Search by title or uploader..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-9 h-10 bg-muted/30 border-border/50"
+                className="pl-9 pr-9 h-10 bg-muted/20 border-border/20"
               />
               {searchQuery && (
                 <button
@@ -344,15 +344,15 @@ function CourseLectureNotesContent() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: index * 0.04 }}
-              className="p-4 rounded-lg border border-border/50 bg-card/50 transition-colors"
+              className="p-4 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors"
             >
               {/* Note Header */}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-9 h-9 rounded-md bg-primary/5 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-primary/70" />
+                <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                  <FileText className="w-4.5 h-4.5 text-primary/60" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm mb-1 line-clamp-2">{note.title}</h3>
+                  <h3 className="font-medium text-[15px] mb-1.5 line-clamp-2 leading-snug">{note.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <button
                       onClick={() => navigate(`/rep/${note.uploaded_by}`)}
@@ -360,7 +360,7 @@ function CourseLectureNotesContent() {
                     >
                       <Avatar className="w-4 h-4">
                         <AvatarImage src={(note as any).uploader_avatar || undefined} />
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                        <AvatarFallback className="text-[10px] bg-primary/8 text-primary">
                           {((note as any).uploader_display_name || note.uploaded_by_display)
                             .split(" ")
                             .map((n: string) => n[0])
@@ -370,7 +370,7 @@ function CourseLectureNotesContent() {
                         </AvatarFallback>
                       </Avatar>
                       <span className="hover:underline">
-                        {(note as any).uploader_display_name || note.uploaded_by_display}
+                        Uploaded by {(note as any).uploader_display_name || note.uploaded_by_display}
                       </span>
                     </button>
                     <span className="flex items-center gap-1">
@@ -385,9 +385,9 @@ function CourseLectureNotesContent() {
                     )}
                   </div>
                 </div>
-                <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 font-normal">
+                <span className="shrink-0 text-[11px] text-muted-foreground/70 font-normal">
                   {(note.file_size / (1024 * 1024)).toFixed(1)} MB
-                </Badge>
+                </span>
               </div>
 
               {/* Actions */}
