@@ -14,13 +14,13 @@ const departmentIcons: Record<string, typeof BookOpen> = {
 };
 
 const departmentColors: Record<string, string> = {
-  "computer-science": "bg-blue-500/5 hover:bg-blue-500/10 border-blue-500/20",
-  "cyber-security": "bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20",
+  "computer-science": "bg-blue-500/5 hover:bg-blue-500/8",
+  "cyber-security": "bg-emerald-500/5 hover:bg-emerald-500/8",
 };
 
 const departmentAccents: Record<string, string> = {
-  "computer-science": "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  "cyber-security": "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  "computer-science": "bg-blue-500/8 text-blue-600 dark:text-blue-400",
+  "cyber-security": "bg-emerald-500/8 text-emerald-600 dark:text-emerald-400",
 };
 
 function AFITPDFsContent() {
@@ -50,7 +50,7 @@ function AFITPDFsContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -106,7 +106,7 @@ function AFITPDFsContent() {
               >
                 <button
                   onClick={() => navigate(`/afit-pdfs/${dept.slug}`)}
-                  className={`w-full text-left p-5 rounded-xl border ${colorClass} transition-all duration-200 group`}
+                  className={`w-full text-left p-5 rounded-xl ${colorClass} transition-all duration-200 group`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-lg ${accentClass} flex items-center justify-center shrink-0`}>

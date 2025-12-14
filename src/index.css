@@ -22,10 +22,10 @@
     --accent-foreground: 0 77% 42%;
     --destructive: 0 77% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 31% 91%;
-    --input: 214 31% 91%;
+    --border: 214 20% 94%;
+    --input: 214 20% 94%;
     --ring: 0 84% 51%;
-    --radius: 0.5rem;
+    --radius: 0.625rem;
     --gradient-start: 210 20% 98%;
     --gradient-end: 0 86% 97%;
 
@@ -98,8 +98,8 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 217.2 20% 22%;
+    --input: 217.2 20% 22%;
     --ring: 0 84% 60%;
     --gradient-start: 222.2 84% 4.9%;
     --gradient-end: 220 30% 8%;

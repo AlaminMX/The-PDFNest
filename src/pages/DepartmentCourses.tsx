@@ -59,7 +59,7 @@ function DepartmentCoursesContent() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -104,7 +104,7 @@ function DepartmentCoursesContent() {
             >
               <button
                 onClick={() => navigate(`/afit-pdfs/${deptSlug}/${course.code}`)}
-                className="w-full text-left p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors group"
+                className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-md bg-primary/5 flex items-center justify-center shrink-0">
