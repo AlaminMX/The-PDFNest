@@ -77,7 +77,7 @@ export function useDownloadManager() {
       };
 
       xhr.onload = () => {
-        if (xhr.status === 200) {
+        if (xhr.status >= 200 && xhr.status < 300) {
           updateDownload(id, { progress: 100, status: "complete" });
           
           // Trigger actual download
@@ -86,10 +86,19 @@ export function useDownloadManager() {
           const link = document.createElement("a");
           link.href = blobUrl;
           link.download = fileName;
+          link.style.display = "none";
           document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
+          
+          // Use setTimeout to ensure the click happens in a new event loop
+          setTimeout(() => {
+            link.click();
+            document.body.removeChild(link);
+            
+            // Delay revoking the blob URL to ensure download starts
+            setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
+            }, 1000);
+          }, 0);
           
           // Remove from list after delay
           setTimeout(() => {
@@ -99,7 +108,7 @@ export function useDownloadManager() {
               return newMap;
             });
             xhrRefs.current.delete(id);
-          }, 2000);
+          }, 3000);
           
           resolve(true);
         } else {
@@ -149,10 +158,12 @@ export function useDownloadManager() {
       
       const file = queue.shift()!;
       await downloadFile(file.url, file.fileName);
+      // Add delay between downloads to prevent browser blocking
+      await new Promise(resolve => setTimeout(resolve, 500));
       await processNext();
     };
 
-    // Start initial batch
+    // Start initial batch (reduced concurrency for reliability)
     for (let i = 0; i < Math.min(concurrency, files.length); i++) {
       active.push(processNext());
     }
