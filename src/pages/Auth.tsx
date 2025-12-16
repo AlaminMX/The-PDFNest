@@ -8,6 +8,7 @@ import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicato
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Confetti } from "@/components/Confetti";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -51,6 +52,8 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -83,7 +86,19 @@ export default function Auth() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Handle tab/browser close for non-remembered sessions
+    const handleBeforeUnload = () => {
+      if (sessionStorage.getItem('tempSession') === 'true') {
+        supabase.auth.signOut();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -113,6 +128,14 @@ export default function Auth() {
         });
 
         if (error) throw error;
+        
+        // Handle "Remember me" - store preference for session handling
+        if (!rememberMe) {
+          sessionStorage.setItem('tempSession', 'true');
+        } else {
+          sessionStorage.removeItem('tempSession');
+        }
+        
         toast.success("Welcome back!");
       } else {
         const redirectUrl = `${window.location.origin}/`;
@@ -140,6 +163,10 @@ export default function Auth() {
             })
             .eq("id", user.id);
         }
+        
+        // Show confetti for new signups
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4000);
         
         toast.success("Account created! Please check your email to verify your account.");
       }
@@ -180,6 +207,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+      {showConfetti && <Confetti />}
       {/* Layered gradient background */}
       <div className="absolute inset-0 bg-gradient-to-tl from-primary/10 via-transparent to-accent/10 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-secondary/5 to-transparent pointer-events-none" />
@@ -362,7 +390,20 @@ export default function Auth() {
               )}
 
               {isLogin && (
-                <div className="text-right">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="rememberMe"
+                      className="text-sm text-muted-foreground leading-none cursor-pointer"
+                    >
+                      Remember me
+                    </label>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIsForgotPassword(true)}
