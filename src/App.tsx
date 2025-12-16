@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
+import PasswordResetSuccess from "./pages/PasswordResetSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminReps from "./pages/AdminReps";
 import AdminUserDetail from "./pages/AdminUserDetail";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reps" element={<AdminReps />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
