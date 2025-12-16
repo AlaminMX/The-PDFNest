@@ -295,6 +295,35 @@ export default function Auth() {
           transition={{ delay: 0.2, duration: 0.4 }}
           className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6"
         >
+          {/* Sign In / Sign Up Toggle - Top of Form */}
+          {!isForgotPassword && (
+            <div className="flex rounded-lg bg-muted/50 p-1 mb-2">
+              <button
+                type="button"
+                onClick={() => setIsLogin(true)}
+                disabled={loading}
+                className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200 ${
+                  isLogin
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsLogin(false)}
+                disabled={loading}
+                className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all duration-200 ${
+                  !isLogin
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
           {isForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
@@ -444,20 +473,6 @@ export default function Auth() {
             </form>
           )}
 
-          {!isForgotPassword && (
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:underline"
-                disabled={loading}
-              >
-                {isLogin
-                  ? "Don't have an account? Sign up"
-                  : "Already have an account? Sign in"}
-              </button>
-            </div>
-          )}
         </motion.div>
       </motion.div>
     </div>
