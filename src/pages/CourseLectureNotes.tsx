@@ -117,30 +117,21 @@ function CourseLectureNotesContent() {
   };
 
   const handleDownload = async (filePath: string, title: string) => {
-    const toastId = toast.loading("Preparing download...");
     try {
       const url = await getSignedUrl(filePath);
       if (url) {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        
         const link = document.createElement("a");
-        link.href = blobUrl;
+        link.href = url;
         link.download = `${title}.pdf`;
+        link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        window.URL.revokeObjectURL(blobUrl);
-        toast.dismiss(toastId);
         toast.success("Download started");
       } else {
-        toast.dismiss(toastId);
         toast.error("Failed to download PDF");
       }
     } catch (err) {
-      toast.dismiss(toastId);
       toast.error("Failed to download PDF");
     }
   };

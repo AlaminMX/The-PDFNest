@@ -63,8 +63,7 @@ export default function ResetPassword() {
 
       if (error) throw error;
 
-      toast.success("Password updated successfully! You can now sign in.");
-      navigate("/auth");
+      navigate("/reset-password-success");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {
