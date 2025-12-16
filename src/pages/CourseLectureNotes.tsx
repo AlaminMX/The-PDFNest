@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { BottomNav } from "@/components/BottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { useSession } from "@/hooks/useSession";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -256,7 +256,7 @@ function CourseLectureNotesContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
       {/* Header */}
       <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -601,7 +601,7 @@ function CourseLectureNotesContent() {
         </>
       )}
 
-      <BottomNav isLoggedIn={!!session} userId={sessionUser?.id} />
+      <SmartBottomNav />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, FileText, Calendar, Award, Edit2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { RepBottomNav } from "@/components/RepBottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { format } from "date-fns";
 
@@ -112,7 +112,7 @@ export default function RepProfile() {
     return (
       <>
         <LoadingState message="Loading profile..." />
-        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
+        <SmartBottomNav />
       </>
     );
   }
@@ -128,7 +128,7 @@ export default function RepProfile() {
             </Button>
           </div>
         </div>
-        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
+        <SmartBottomNav />
       </>
     );
   }
@@ -156,7 +156,7 @@ export default function RepProfile() {
         onUpdateComplete={fetchRepProfile}
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-20 md:pb-0">
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-24 md:pb-0">
         <PageHeader
           title={profile.displayName}
           subtitle="Course Representative"
@@ -270,7 +270,7 @@ export default function RepProfile() {
           )}
         </div>
         
-        {isOwnProfile && user && <RepBottomNav repUserId={user.id} />}
+        <SmartBottomNav />
       </main>
     </div>
     </>
