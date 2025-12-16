@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +17,30 @@ serve(async (req) => {
 
   try {
     const { fileId, question, conversationId = null } = await req.json();
-    console.log("Chat with PDF:", fileId, "question:", question);
+    
+    // Input validation
+    if (!fileId || typeof fileId !== 'string' || !UUID_REGEX.test(fileId)) {
+      return new Response(JSON.stringify({ error: 'Invalid file ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (!question || typeof question !== 'string' || question.trim().length === 0 || question.length > 2000) {
+      return new Response(JSON.stringify({ error: 'Question must be 1-2000 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (conversationId !== null && (typeof conversationId !== 'string' || !UUID_REGEX.test(conversationId))) {
+      return new Response(JSON.stringify({ error: 'Invalid conversation ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log("Chat with PDF:", fileId, "question:", question.substring(0, 50));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
