@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Trash2, FileText, Calendar, HardDrive, Mail, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -51,6 +53,27 @@ export default function AdminUserDetail() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [pdfs, setPdfs] = useState<PDFFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
+
+  const filteredPdfs = useMemo(() => {
+    let filtered = pdfs.filter(pdf => 
+      pdf.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pdf.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "size":
+          return b.file_size - a.file_size;
+        case "date":
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  }, [pdfs, searchQuery, sortBy]);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -213,9 +236,9 @@ export default function AdminUserDetail() {
         {/* PDFs List */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Uploaded PDFs</CardTitle>
+            <CardTitle className="text-lg">Uploaded PDFs ({pdfs.length})</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {pdfs.length === 0 ? (
               <EmptyState
                 icon={<FileText className="h-8 w-8 text-muted-foreground" />}
@@ -223,6 +246,33 @@ export default function AdminUserDetail() {
                 description="This user has not uploaded any PDFs yet."
               />
             ) : (
+              <>
+                {/* Search and Filter */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search PDFs..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "name" | "size")}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="size">Size</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {filteredPdfs.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No PDFs match your search</p>
+                ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -235,7 +285,7 @@ export default function AdminUserDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pdfs.map((pdf, index) => (
+                    {filteredPdfs.map((pdf, index) => (
                       <TableRow key={pdf.id}>
                         <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
@@ -273,6 +323,8 @@ export default function AdminUserDetail() {
                   </TableBody>
                 </Table>
               </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
