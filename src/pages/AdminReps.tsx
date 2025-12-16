@@ -60,13 +60,27 @@ export default function AdminReps() {
     try {
       setLoading(true);
 
+      // Ensure we have a valid session before querying
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("No active session found");
+        toast.error("Please log in again");
+        setLoading(false);
+        return;
+      }
+
       // Fetch all users with rep role
       const { data: repRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
         .eq("role", "rep");
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error("Error fetching rep roles:", rolesError);
+        throw rolesError;
+      }
+
+      console.log("Found rep roles:", repRoles);
 
       if (!repRoles || repRoles.length === 0) {
         setReps([]);
@@ -89,17 +103,22 @@ export default function AdminReps() {
         `)
         .in("id", repUserIds);
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      console.log("Found profiles:", profiles);
 
       // Fetch lecture notes count for each rep
       const repsWithStats = await Promise.all(
         (profiles || []).map(async (profile) => {
-          const { count, error: countError } = await supabase
+          const { count } = await supabase
             .from("lecture_notes")
             .select("*", { count: "exact", head: true })
             .eq("uploaded_by", profile.id);
 
-          const { data: lastNote, error: lastError } = await supabase
+          const { data: lastNote } = await supabase
             .from("lecture_notes")
             .select("created_at")
             .eq("uploaded_by", profile.id)
