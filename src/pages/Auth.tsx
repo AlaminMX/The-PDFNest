@@ -173,34 +173,48 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Layered gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-tl from-primary/10 via-transparent to-accent/10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-secondary/5 to-transparent pointer-events-none" />
+      
       {/* Animated background orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ 
-            x: [0, 100, 0],
-            y: [0, -50, 0],
+            x: [0, 120, 0],
+            y: [0, -60, 0],
+            scale: [1, 1.3, 1],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-primary/30 to-primary/10 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, -100, 0],
+            y: [0, 100, 0],
             scale: [1, 1.2, 1],
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl"
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -bottom-32 -left-32 w-[28rem] h-[28rem] bg-gradient-to-tr from-accent/40 to-primary/20 rounded-full blur-3xl"
         />
         <motion.div
           animate={{ 
-            x: [0, -80, 0],
-            y: [0, 80, 0],
+            x: [0, 60, 0],
+            y: [0, -40, 0],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/3 left-1/4 w-72 h-72 bg-gradient-to-r from-secondary/50 to-accent/30 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{ 
+            x: [0, -40, 0],
+            y: [0, 50, 0],
             scale: [1, 1.1, 1],
           }}
-          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/30 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{ 
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/2 left-1/4 w-64 h-64 bg-secondary/40 rounded-full blur-3xl"
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-gradient-to-bl from-primary/25 to-secondary/20 rounded-full blur-3xl"
         />
       </div>
 
