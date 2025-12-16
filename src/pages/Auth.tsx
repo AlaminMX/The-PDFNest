@@ -41,7 +41,10 @@ const signUpSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  
+  // Check if first-time visitor - default to signup for new visitors
+  const isFirstTimeVisitor = !localStorage.getItem('hasVisitedBefore');
+  const [isLogin, setIsLogin] = useState(!isFirstTimeVisitor);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,6 +54,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Mark that user has visited before
+    localStorage.setItem('hasVisitedBefore', 'true');
+    
     const handleRedirect = () => {
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       if (redirectPath) {
