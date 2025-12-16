@@ -10,6 +10,7 @@ import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminReps from "./pages/AdminReps";
+import AdminUserDetail from "./pages/AdminUserDetail";
 import AFITPDFs from "./pages/AFITPDFs";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reps" element={<AdminReps />} />
+            <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
             <Route path="/afit-pdfs/:deptSlug" element={<DepartmentCourses />} />
             <Route path="/afit-pdfs/:deptSlug/:courseCode" element={<CourseLectureNotes />} />
