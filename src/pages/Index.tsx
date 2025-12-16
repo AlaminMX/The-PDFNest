@@ -4,6 +4,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
+import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ import { FilePicker } from "@/components/FilePicker";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
+import { DownloadProgress } from "@/components/DownloadProgress";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -476,6 +478,7 @@ export default function Index() {
   const { isRep, loading: repLoading } = useRepStatus();
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
+  const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -714,6 +717,31 @@ export default function Index() {
   const handleBulkMove = () => {
     setBulkAction("move");
     setBulkActionDialogOpen(true);
+  };
+
+  const handleBulkDownload = async () => {
+    const filesToDownload = sortedFiles.filter(f => selectedFiles.has(f.id) && f.url);
+    if (filesToDownload.length === 0) {
+      toast.error("No files to download");
+      return;
+    }
+    
+    toast.info(`Starting download of ${filesToDownload.length} files...`);
+    
+    await downloadMultiple(
+      filesToDownload.map(f => ({ url: f.url!, fileName: `${f.name}.pdf` })),
+      3
+    );
+    
+    setSelectedFiles(new Set());
+  };
+
+  const handleFileDownload = (file: { url?: string | null; name: string }) => {
+    if (!file.url) {
+      toast.error("File URL not available");
+      return;
+    }
+    downloadFile(file.url, `${file.name}.pdf`);
   };
 
   const confirmBulkAction = async () => {
@@ -969,6 +997,10 @@ export default function Index() {
                       <span className="text-sm text-muted-foreground">
                         {selectedFiles.size} selected
                       </span>
+                      <Button size="sm" variant="secondary" onClick={handleBulkDownload}>
+                        <Download className="w-3.5 h-3.5 mr-1" />
+                        <span className="hidden sm:inline">Download</span>
+                      </Button>
                       <Button size="sm" variant="outline" onClick={handleBulkMove}>
                         <span className="hidden sm:inline">Move to Category</span>
                         <span className="sm:hidden">Move</span>
@@ -1132,25 +1164,24 @@ export default function Index() {
                             </button>
                             {file.url && (
                               <>
-                                <button
-                                  onClick={() => handleOpenPreview(file)}
-                                  className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
-                                  title="Preview PDF"
-                                >
-                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
-                                   </svg>
-                                 </button>
-                                 <a
-                                   href={file.url}
-                                   download={file.name}
+                                 <button
+                                   onClick={() => handleOpenPreview(file)}
                                    className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
-                                   title="Download file"
+                                   title="Preview PDF"
                                  >
                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                     <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                   </svg>
-                                 </a>
+                                     <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleFileDownload(file)}
+                                    className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
+                                    title="Download file"
+                                  >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                    </svg>
+                                  </button>
                                </>
                              )}
                              <DropdownMenu>
@@ -1248,16 +1279,11 @@ export default function Index() {
                                     </svg>
                                     Preview
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                                    const link = document.createElement('a');
-                                    link.href = file.url!;
-                                    link.download = file.name;
-                                    link.click();
-                                  }}>
-                                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                    </svg>
-                                     Download
+                                  <DropdownMenuItem onClick={() => handleFileDownload(file)}>
+                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                       <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                     </svg>
+                                      Download
                                    </DropdownMenuItem>
                                  </>
                                )}
@@ -1626,6 +1652,13 @@ export default function Index() {
       <FloatingActionButton 
         onUpload={() => document.getElementById("file-input")?.click()}
         onAIFeatures={() => navigate("/ai-features")}
+      />
+
+      {/* Download Progress */}
+      <DownloadProgress
+        downloads={downloads}
+        onCancel={cancelDownload}
+        onClearCompleted={clearCompleted}
       />
 
       {/* Bottom Navigation */}
