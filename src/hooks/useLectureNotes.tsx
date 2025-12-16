@@ -154,12 +154,6 @@ export function useLectureNotes(courseId?: string) {
         throw new Error("Only PDF files are allowed");
       }
 
-      // Validate file size (25MB limit)
-      const maxSize = 25 * 1024 * 1024;
-      if (file.size > maxSize) {
-        throw new Error("File size must be less than 25MB");
-      }
-
       // Check total storage limit (300MB)
       const { data: profile } = await supabase
         .from("profiles")
