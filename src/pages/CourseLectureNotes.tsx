@@ -10,10 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
+import { DownloadProgress } from "@/components/DownloadProgress";
 import { useSession } from "@/hooks/useSession";
+import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -57,6 +60,7 @@ function CourseLectureNotesContent() {
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
   const { session, user: sessionUser } = useSession();
+  const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
   const { courses, loading: coursesLoading } = useCourses(currentDept?.id);
@@ -65,6 +69,9 @@ function CourseLectureNotesContent() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Selection state for bulk actions
+  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -120,19 +127,53 @@ function CourseLectureNotesContent() {
     try {
       const url = await getSignedUrl(filePath);
       if (url) {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${title}.pdf`;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Download started");
+        await downloadFile(url, `${title}.pdf`);
       } else {
         toast.error("Failed to download PDF");
       }
     } catch (err) {
       toast.error("Failed to download PDF");
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    const selectedList = filteredNotes.filter(note => selectedNotes.has(note.id));
+    if (selectedList.length === 0) return;
+    
+    toast.info(`Starting download of ${selectedList.length} files...`);
+    
+    const filesToDownload: { url: string; fileName: string }[] = [];
+    
+    for (const note of selectedList) {
+      const url = await getSignedUrl(note.file_path);
+      if (url) {
+        filesToDownload.push({ url, fileName: `${note.title}.pdf` });
+      }
+    }
+    
+    if (filesToDownload.length > 0) {
+      await downloadMultiple(filesToDownload, 3);
+      setSelectedNotes(new Set());
+    }
+  };
+
+  const toggleNoteSelection = (noteId: string) => {
+    setSelectedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(noteId)) {
+        newSet.delete(noteId);
+      } else {
+        newSet.add(noteId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedNotes.size === filteredNotes.length) {
+      setSelectedNotes(new Set());
+    } else {
+      setSelectedNotes(new Set(filteredNotes.map(n => n.id)));
     }
   };
 
@@ -327,6 +368,48 @@ function CourseLectureNotesContent() {
           )}
         </AnimatePresence>
 
+        {/* Bulk Actions Bar */}
+        <AnimatePresence>
+          {selectedNotes.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20 flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selectedNotes.size === filteredNotes.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-sm font-medium">
+                  {selectedNotes.size} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-8"
+                  onClick={handleBulkDownload}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8"
+                  onClick={() => setSelectedNotes(new Set())}
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Clear
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Notes List */}
         <div className="space-y-2">
           {filteredNotes.map((note, index) => (
@@ -335,10 +418,19 @@ function CourseLectureNotesContent() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: index * 0.04 }}
-              className="p-4 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors"
+              className={`p-4 rounded-xl transition-colors ${
+                selectedNotes.has(note.id) 
+                  ? "bg-primary/10 border border-primary/30" 
+                  : "bg-muted/20 hover:bg-muted/30"
+              }`}
             >
               {/* Note Header */}
               <div className="flex items-start gap-3 mb-3">
+                <Checkbox
+                  checked={selectedNotes.has(note.id)}
+                  onCheckedChange={() => toggleNoteSelection(note.id)}
+                  className="mt-1"
+                />
                 <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
                   <FileText className="w-4.5 h-4.5 text-primary/60" />
                 </div>
@@ -591,6 +683,13 @@ function CourseLectureNotesContent() {
           />
         </>
       )}
+
+      {/* Download Progress */}
+      <DownloadProgress
+        downloads={downloads}
+        onCancel={cancelDownload}
+        onClearCompleted={clearCompleted}
+      />
 
       <SmartBottomNav />
     </div>
