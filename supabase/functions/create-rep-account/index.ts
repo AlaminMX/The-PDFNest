@@ -5,6 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -60,9 +66,42 @@ Deno.serve(async (req) => {
     // Parse request body
     const { email, password, displayName, departmentId } = await req.json();
 
+    // Input validation - presence checks
     if (!email || !password || !displayName || !departmentId) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields: email, password, displayName, and departmentId are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Input validation - email format
+    if (typeof email !== 'string' || !EMAIL_REGEX.test(email) || email.length > 255) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Input validation - password
+    if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
+      return new Response(
+        JSON.stringify({ error: "Password must be between 6 and 128 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Input validation - displayName
+    if (typeof displayName !== 'string' || displayName.trim().length === 0 || displayName.length > 100) {
+      return new Response(
+        JSON.stringify({ error: "Display name must be 1-100 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Input validation - departmentId
+    if (typeof departmentId !== 'string' || !UUID_REGEX.test(departmentId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid department ID format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -75,7 +114,7 @@ Deno.serve(async (req) => {
       password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        display_name: displayName,
+        display_name: displayName.trim(),
       },
     });
 
@@ -94,7 +133,7 @@ Deno.serve(async (req) => {
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
-        display_name: displayName,
+        display_name: displayName.trim(),
         department_id: departmentId,
       })
       .eq("id", userId);

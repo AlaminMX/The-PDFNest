@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +17,25 @@ serve(async (req) => {
 
   try {
     const { fileId, startPage = 1, endPage = 10 } = await req.json();
+    
+    // Input validation - fileId
+    if (!fileId || typeof fileId !== 'string' || !UUID_REGEX.test(fileId)) {
+      return new Response(JSON.stringify({ error: 'Invalid file ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Input validation - page range
+    if (typeof startPage !== 'number' || typeof endPage !== 'number' ||
+        !Number.isInteger(startPage) || !Number.isInteger(endPage) ||
+        startPage < 1 || endPage < startPage || endPage - startPage > 50) {
+      return new Response(JSON.stringify({ error: 'Invalid page range. Start must be >= 1, end must be >= start, max 50 pages per request.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     console.log("Converting PDF to speech:", fileId, "pages:", startPage, "-", endPage);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -67,8 +89,8 @@ serve(async (req) => {
       useSystemFonts: true,
     }).promise;
     
-    // Validate page range
-    if (startPage < 1 || endPage < startPage || startPage > pdf.numPages) {
+    // Validate page range against actual PDF
+    if (startPage > pdf.numPages) {
       return new Response(JSON.stringify({ error: 'Invalid page range', totalPages: pdf.numPages }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -7,6 +7,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Common supported languages for translation
+const SUPPORTED_LANGUAGES = [
+  'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Dutch',
+  'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi', 'Russian',
+  'Turkish', 'Polish', 'Vietnamese', 'Thai', 'Indonesian', 'Malay',
+  'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Greek', 'Hebrew',
+  'Czech', 'Romanian', 'Hungarian', 'Ukrainian', 'Bengali', 'Tamil'
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +26,47 @@ serve(async (req) => {
 
   try {
     const { fileId, targetLanguage = 'Spanish', startPage = 1, endPage = 10 } = await req.json();
-    console.log("Translating PDF:", fileId, "to", targetLanguage, "pages", startPage, "-", endPage);
+    
+    // Input validation - fileId
+    if (!fileId || typeof fileId !== 'string' || !UUID_REGEX.test(fileId)) {
+      return new Response(JSON.stringify({ error: 'Invalid file ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Input validation - targetLanguage
+    if (!targetLanguage || typeof targetLanguage !== 'string' || targetLanguage.length > 50) {
+      return new Response(JSON.stringify({ error: 'Invalid target language' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Check if language is in supported list (case-insensitive)
+    const normalizedLanguage = SUPPORTED_LANGUAGES.find(
+      lang => lang.toLowerCase() === targetLanguage.toLowerCase()
+    );
+    if (!normalizedLanguage) {
+      return new Response(JSON.stringify({ 
+        error: `Unsupported language. Supported languages: ${SUPPORTED_LANGUAGES.join(', ')}` 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Input validation - page range
+    if (typeof startPage !== 'number' || typeof endPage !== 'number' ||
+        !Number.isInteger(startPage) || !Number.isInteger(endPage) ||
+        startPage < 1 || endPage < startPage || endPage - startPage > 50) {
+      return new Response(JSON.stringify({ error: 'Invalid page range. Start must be >= 1, end must be >= start, max 50 pages per request.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log("Translating PDF:", fileId, "to", normalizedLanguage, "pages", startPage, "-", endPage);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -106,7 +158,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert translator. Translate the following text to ${targetLanguage}. Maintain the original formatting, structure, and paragraph breaks. Provide only the translation without any explanations or notes.`
+            content: `You are an expert translator. Translate the following text to ${normalizedLanguage}. Maintain the original formatting, structure, and paragraph breaks. Provide only the translation without any explanations or notes.`
           },
           {
             role: 'user',
@@ -131,7 +183,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       originalText: fullText.substring(0, 5000),
       translatedText,
-      targetLanguage,
+      targetLanguage: normalizedLanguage,
       totalPages,
       pagesTranslated: `${start}-${end}`,
       note: end < totalPages ? `Translated pages ${start}-${end} of ${totalPages} total pages` : `Translated all ${totalPages} pages`

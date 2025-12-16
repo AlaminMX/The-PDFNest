@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +17,15 @@ serve(async (req) => {
 
   try {
     const { fileId } = await req.json();
+    
+    // Input validation
+    if (!fileId || typeof fileId !== 'string' || !UUID_REGEX.test(fileId)) {
+      return new Response(JSON.stringify({ error: 'Invalid file ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     console.log("Summarizing PDF:", fileId);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
