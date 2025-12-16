@@ -1,131 +1,94 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Upload, 
+  FolderOpen, 
+  Search, 
+  Sparkles, 
+  FileText, 
+  Rocket,
+  Star,
+  LayoutGrid,
+  MessageSquare,
+  Languages,
+  Volume2,
+  BookOpen
+} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface TutorialStep {
   title: string;
   description: string;
-  emoji: string;
-  highlight?: string | null;
+  icon: React.ElementType;
+  color: string;
+  features?: { icon: React.ElementType; label: string }[];
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    title: "Welcome to PDFNest! 📚",
-    description: "Let's explore all the powerful features to help you organize and work with your PDF documents.",
-    emoji: "👋",
-    highlight: null
+    title: "Welcome to PDFNest",
+    description: "Your smart PDF companion. Let's take a quick tour of the key features.",
+    icon: FileText,
+    color: "from-primary/20 to-primary/5",
   },
   {
-    title: "Upload PDFs 📤",
-    description: "Drag and drop PDF files onto the upload area, or click the upload button. Upload multiple files at once with ease!",
-    emoji: "📤",
-    highlight: "upload-area"
+    title: "Upload & Organize",
+    description: "Drag & drop PDFs to upload. Create categories to keep files organized, and star important ones for quick access.",
+    icon: Upload,
+    color: "from-blue-500/20 to-blue-500/5",
+    features: [
+      { icon: Upload, label: "Drag & Drop" },
+      { icon: FolderOpen, label: "Categories" },
+      { icon: Star, label: "Favorites" },
+    ],
   },
   {
-    title: "Storage Limit 💾",
-    description: "Each account has 300MB of total storage space. Monitor your usage in the sidebar's storage indicator at the bottom.",
-    emoji: "💾",
-    highlight: "storage-indicator"
+    title: "Browse & Find",
+    description: "Search files instantly, sort by name/date/size, and switch between list and grid views.",
+    icon: Search,
+    color: "from-emerald-500/20 to-emerald-500/5",
+    features: [
+      { icon: Search, label: "Search" },
+      { icon: LayoutGrid, label: "Views" },
+    ],
   },
   {
-    title: "Organize with Categories 📁",
-    description: "Create custom categories in the sidebar to organize your files. Assign each file to a category for better organization.",
-    emoji: "📁",
-    highlight: null
+    title: "AI-Powered Tools",
+    description: "Unlock powerful AI features to summarize, translate, chat with your PDFs, and more.",
+    icon: Sparkles,
+    color: "from-violet-500/20 to-violet-500/5",
+    features: [
+      { icon: FileText, label: "Summarize" },
+      { icon: BookOpen, label: "Study Guide" },
+      { icon: Volume2, label: "Voice Reader" },
+      { icon: Languages, label: "Translate" },
+      { icon: MessageSquare, label: "Chat" },
+    ],
   },
   {
-    title: "Search & Filter 🔍",
-    description: "Use the search bar to find files by name. Sort your files by name, date, or size using the sort dropdown.",
-    emoji: "🔍",
-    highlight: "search-bar"
+    title: "AFIT Resources",
+    description: "Access lecture notes uploaded by course reps. Browse by department and course.",
+    icon: FolderOpen,
+    color: "from-amber-500/20 to-amber-500/5",
   },
   {
-    title: "Mark Favorites ⭐",
-    description: "Click the star icon on any file to mark it as a favorite. Access all favorites quickly from the Favorites category.",
-    emoji: "⭐",
-    highlight: null
+    title: "You're All Set!",
+    description: "Start uploading PDFs and explore the AI tools. Your productivity journey begins now!",
+    icon: Rocket,
+    color: "from-primary/20 to-primary/5",
   },
-  {
-    title: "View Modes 👁️",
-    description: "Switch between List view and Grid view using the toggle buttons in the header. Choose what works best for you!",
-    emoji: "👁️",
-    highlight: "view-toggle"
-  },
-  {
-    title: "Quick AI Access 🤖",
-    description: "Access all AI features directly from the sidebar! Click any AI tool, then select which PDF to apply it to.",
-    emoji: "🤖",
-    highlight: "ai-features-section"
-  },
-  {
-    title: "AI Summarization 📄",
-    description: "Get instant AI-powered summaries of your PDFs. Click any file's AI menu → Summarize to extract key points.",
-    emoji: "📄",
-    highlight: null
-  },
-  {
-    title: "Study Guide Generator 📚",
-    description: "Generate comprehensive study guides with key concepts, definitions, practice questions, and review points.",
-    emoji: "📚",
-    highlight: null
-  },
-  {
-    title: "Voice Reader 🔊",
-    description: "Listen to your PDFs with text-to-speech. Navigate page by page and control playback speed.",
-    emoji: "🔊",
-    highlight: null
-  },
-  {
-    title: "PDF Translator 🌐",
-    description: "Translate PDFs to 20+ languages including Spanish, French, German, Chinese, Japanese, and more!",
-    emoji: "🌐",
-    highlight: null
-  },
-  {
-    title: "Chat with PDF 💬",
-    description: "Ask questions about your PDF content. The AI will answer based on the document with relevant excerpts.",
-    emoji: "💬",
-    highlight: null
-  },
-  {
-    title: "File Actions ⚙️",
-    description: "Rename, preview, download, change category, or delete files. On mobile, tap the three dots menu for all actions.",
-    emoji: "⚙️",
-    highlight: null
-  },
-  {
-    title: "Bulk Operations ✨",
-    description: "Select multiple files using checkboxes, then move them to categories or delete them all at once.",
-    emoji: "✨",
-    highlight: null
-  },
-  {
-    title: "Dark Mode 🌙",
-    description: "Toggle between light and dark themes using the theme switcher in the header. Your preference is saved automatically.",
-    emoji: "🌙",
-    highlight: "theme-toggle"
-  },
-  {
-    title: "Mobile Support 📱",
-    description: "PDFNest works great on mobile! Tap the menu icon to open the sidebar and access all features on the go.",
-    emoji: "📱",
-    highlight: null
-  },
-  {
-    title: "You're Ready! 🚀",
-    description: "You now know all of PDFNest's features. Start uploading PDFs and explore the AI-powered tools to boost your productivity!",
-    emoji: "🚀",
-    highlight: null
-  }
 ];
 
 interface NavigationTutorialProps {
@@ -135,93 +98,216 @@ interface NavigationTutorialProps {
 
 export function NavigationTutorial({ open, onOpenChange }: NavigationTutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const isMobile = useIsMobile();
   
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
     localStorage.setItem("tutorial-completed", "true");
     onOpenChange(false);
     setCurrentStep(0);
-  };
+  }, [onOpenChange]);
   
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     localStorage.setItem("tutorial-completed", "true");
     onOpenChange(false);
     setCurrentStep(0);
-  };
+  }, [onOpenChange]);
+
+  const goNext = useCallback(() => {
+    if (currentStep < TUTORIAL_STEPS.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  }, [currentStep]);
+
+  const goPrev = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  }, [currentStep]);
+
+  const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 50;
+    if (info.offset.x < -threshold) {
+      goNext();
+    } else if (info.offset.x > threshold) {
+      goPrev();
+    }
+  }, [goNext, goPrev]);
   
   const currentStepData = TUTORIAL_STEPS[currentStep];
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
+  const Icon = currentStepData.icon;
 
-  // Highlighting effect
-  useEffect(() => {
-    if (open && currentStepData.highlight) {
-      const element = document.getElementById(currentStepData.highlight);
-      if (element) {
-        element.classList.add('tutorial-highlight');
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-    return () => {
-      document.querySelectorAll('.tutorial-highlight').forEach(el => {
-        el.classList.remove('tutorial-highlight');
-      });
-    };
-  }, [currentStep, open, currentStepData.highlight]);
-  
+  const content = (
+    <div className="flex flex-col h-full">
+      {/* Progress Bar */}
+      <div className="flex gap-1.5 px-6 pt-4">
+        {TUTORIAL_STEPS.map((_, index) => (
+          <motion.div
+            key={index}
+            className={cn(
+              "h-1 rounded-full flex-1 transition-colors duration-300",
+              index <= currentStep ? "bg-primary" : "bg-muted"
+            )}
+            initial={false}
+            animate={{ 
+              scaleX: index === currentStep ? 1 : 0.95,
+              opacity: index <= currentStep ? 1 : 0.4
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Step Counter */}
+      <div className="px-6 pt-3">
+        <span className="text-xs text-muted-foreground font-medium">
+          {currentStep + 1} of {TUTORIAL_STEPS.length}
+        </span>
+      </div>
+
+      {/* Content with Swipe */}
+      <motion.div
+        className="flex-1 px-6 py-4 overflow-hidden"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="h-full flex flex-col"
+          >
+            {/* Icon Card */}
+            <motion.div 
+              className={cn(
+                "w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4 mx-auto",
+                currentStepData.color
+              )}
+              initial={{ scale: 0.8, rotate: -10 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            >
+              <Icon className="w-10 h-10 text-foreground" />
+            </motion.div>
+
+            {/* Title & Description */}
+            <motion.h2 
+              className="text-xl font-semibold text-center mb-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              {currentStepData.title}
+            </motion.h2>
+            <motion.p 
+              className="text-sm text-muted-foreground text-center leading-relaxed"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              {currentStepData.description}
+            </motion.p>
+
+            {/* Feature Icons Grid */}
+            {currentStepData.features && (
+              <motion.div 
+                className="flex flex-wrap justify-center gap-3 mt-6"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                {currentStepData.features.map((feature, idx) => (
+                  <motion.div
+                    key={feature.label}
+                    className="flex flex-col items-center gap-1.5"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.25 + idx * 0.05 }}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+                      <feature.icon className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      {feature.label}
+                    </span>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Swipe Hint (mobile only) */}
+      {isMobile && currentStep < TUTORIAL_STEPS.length - 1 && (
+        <motion.p
+          className="text-[10px] text-muted-foreground/60 text-center pb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          Swipe to navigate
+        </motion.p>
+      )}
+
+      {/* Footer Actions */}
+      <div className="px-6 pb-6 pt-2 flex items-center justify-between gap-3">
+        {currentStep === 0 ? (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleSkip}
+            className="text-muted-foreground"
+          >
+            Skip
+          </Button>
+        ) : (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={goPrev}
+            className="text-muted-foreground"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+        )}
+        
+        {isLastStep ? (
+          <Button onClick={handleComplete} className="flex-1 max-w-[160px]">
+            Get Started
+            <Rocket className="w-4 h-4 ml-2" />
+          </Button>
+        ) : (
+          <Button onClick={goNext} className="flex-1 max-w-[160px]">
+            Next
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Mobile: Bottom Drawer
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[85vh]">
+          {content}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop: Centered Dialog
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{currentStepData.title}</DialogTitle>
-          <DialogDescription>{currentStepData.description}</DialogDescription>
-        </DialogHeader>
-        
-        <div className="text-6xl text-center py-8">
-          {currentStepData.emoji}
-        </div>
-        
-        <div className="flex items-center justify-center gap-1 py-2">
-          {TUTORIAL_STEPS.map((_, index) => (
-            <div
-              key={index}
-              className={`h-1.5 rounded-full transition-all ${
-                index === currentStep
-                  ? "w-6 bg-primary"
-                  : index < currentStep
-                  ? "w-1.5 bg-primary/50"
-                  : "w-1.5 bg-muted"
-              }`}
-            />
-          ))}
-        </div>
-        
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
-          <span className="text-sm text-muted-foreground">
-            {currentStep + 1} / {TUTORIAL_STEPS.length}
-          </span>
-          <div className="flex gap-2">
-            {currentStep === 0 && (
-              <Button variant="ghost" onClick={handleSkip}>
-                Skip Tutorial
-              </Button>
-            )}
-            {currentStep > 0 && (
-              <Button variant="outline" onClick={() => setCurrentStep(currentStep - 1)}>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Back
-              </Button>
-            )}
-            {isLastStep ? (
-              <Button onClick={handleComplete}>
-                Get Started
-              </Button>
-            ) : (
-              <Button onClick={() => setCurrentStep(currentStep + 1)}>
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
+      <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden">
+        {content}
       </DialogContent>
     </Dialog>
   );
