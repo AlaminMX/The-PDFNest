@@ -80,10 +80,7 @@ export default function RepUpload() {
         return;
       }
 
-      if (file.size > 25 * 1024 * 1024) {
-        toast.error("File size must be less than 25MB");
-        return;
-      }
+      // No file size limit for lecture notes
 
       // If it's a PDF, set it directly
       if (file.type === "application/pdf") {
@@ -299,7 +296,7 @@ export default function RepUpload() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Maximum file size: 25MB • Supported: PDF, Images, TXT, DOC, DOCX, PPT, PPTX
+                  Supported: PDF, Images, TXT, DOC, DOCX, PPT, PPTX
                 </p>
               </div>
 
