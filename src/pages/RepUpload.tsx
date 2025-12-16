@@ -15,7 +15,7 @@ import { ArrowLeft, Upload, CheckCircle, AlertCircle, FileType, Loader2 } from "
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
-import { RepBottomNav } from "@/components/RepBottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 
@@ -169,7 +169,7 @@ export default function RepUpload() {
     return (
       <>
         <LoadingState />
-        {user && <RepBottomNav repUserId={user.id} />}
+        <SmartBottomNav />
       </>
     );
   }
@@ -334,7 +334,7 @@ export default function RepUpload() {
           </Card>
         </main>
         
-        {user && <RepBottomNav repUserId={user.id} />}
+        <SmartBottomNav />
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, GraduationCap, Shield, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { BottomNav } from "@/components/BottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { useSession } from "@/hooks/useSession";
 import { motion } from "framer-motion";
 
@@ -48,7 +48,7 @@ function AFITPDFsContent() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
       {/* Header */}
       <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -142,7 +142,7 @@ function AFITPDFsContent() {
         )}
       </main>
 
-      <BottomNav isLoggedIn={!!session} userId={user?.id} />
+      <SmartBottomNav />
     </div>
   );
 }

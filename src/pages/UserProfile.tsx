@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2 } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { format, formatDistanceToNow } from "date-fns";
@@ -162,7 +162,7 @@ export default function UserProfile() {
   const storagePercentage = getStoragePercentage(storageUsed);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-20 md:pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24 md:pb-8">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -375,7 +375,7 @@ export default function UserProfile() {
         />
       )}
 
-      <BottomNav isLoggedIn={true} userId={userId} />
+      <SmartBottomNav />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { StudyGuideModal } from "@/components/StudyGuideModal";
 import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
-import { BottomNav } from "@/components/BottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import type { AIModalType } from "@/pages/Index";
 
 const AI_FEATURES = [
@@ -91,7 +91,7 @@ export default function AIFeatures() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-24 md:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3 p-4">
@@ -180,7 +180,7 @@ export default function AIFeatures() {
         )}
       </main>
 
-      <BottomNav isLoggedIn={!!user} userId={user?.id} />
+      <SmartBottomNav />
 
       {/* File Picker Sheet */}
       <FilePicker

@@ -70,8 +70,7 @@ import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { FilePicker } from "@/components/FilePicker";
-import { RepBottomNav } from "@/components/RepBottomNav";
-import { BottomNav } from "@/components/BottomNav";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 
@@ -1630,11 +1629,7 @@ export default function Index() {
       />
 
       {/* Bottom Navigation */}
-      {isRep && user ? (
-        <RepBottomNav repUserId={user.id} />
-      ) : (
-        <BottomNav isLoggedIn={!!user} userId={user?.id} />
-      )}
+      <SmartBottomNav />
       
       <footer className="fixed bottom-0 left-0 right-0 py-2 text-center md:block hidden">
         <p className="text-xs text-muted-foreground/60">
