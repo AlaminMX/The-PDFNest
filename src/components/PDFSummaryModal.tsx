@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Copy, Download, Loader2, Sparkles, FileText } from "lucide-react";
+import { Copy, Download, Loader2, Sparkles, FileText, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
+import { exportAndUpload } from "@/lib/exportPDF";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PDFSummaryModalProps {
   open: boolean;
@@ -19,6 +21,8 @@ interface PDFSummaryModalProps {
 export function PDFSummaryModal({ open, onOpenChange, fileId, fileName }: PDFSummaryModalProps) {
   const [summary, setSummary] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && fileId) {
@@ -59,6 +63,23 @@ export function PDFSummaryModal({ open, onOpenChange, fileId, fileName }: PDFSum
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Summary downloaded");
+  };
+
+  const handleExportPDF = async () => {
+    if (!user?.id) {
+      toast.error("Please sign in to export");
+      return;
+    }
+    
+    setExporting(true);
+    await exportAndUpload({
+      title: 'AI Summary',
+      subtitle: `Generated from "${fileName}"`,
+      content: summary,
+      type: 'summary',
+      sourceFileName: fileName
+    }, user.id);
+    setExporting(false);
   };
 
   return (
@@ -107,14 +128,28 @@ export function PDFSummaryModal({ open, onOpenChange, fileId, fileName }: PDFSum
               </Card>
             </ScrollArea>
 
-            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex gap-2 justify-end">
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex gap-2 justify-end flex-wrap">
               <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2 h-9">
                 <Copy className="h-3.5 w-3.5" />
                 Copy
               </Button>
-              <Button variant="default" size="sm" onClick={handleDownload} className="gap-2 h-9">
+              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2 h-9">
                 <Download className="h-3.5 w-3.5" />
-                Download
+                Text
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleExportPDF} 
+                disabled={exporting}
+                className="gap-2 h-9"
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                Export PDF
               </Button>
             </div>
           </div>

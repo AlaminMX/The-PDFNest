@@ -4,11 +4,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Sparkles, BookOpen, Copy, Download, Lightbulb, MessageSquare, CheckCircle, GraduationCap } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Copy, Download, Lightbulb, MessageSquare, CheckCircle, GraduationCap, FileDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
+import { exportAndUpload } from "@/lib/exportPDF";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StudyGuideModalProps {
   open: boolean;
@@ -20,7 +22,9 @@ interface StudyGuideModalProps {
 export function StudyGuideModal({ open, onOpenChange, fileId, fileName }: StudyGuideModalProps) {
   const [studyGuide, setStudyGuide] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState("concepts");
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && fileId) {
@@ -81,6 +85,32 @@ export function StudyGuideModal({ open, onOpenChange, fileId, fileName }: StudyG
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Study guide downloaded");
+  };
+
+  const handleExportPDF = async () => {
+    if (!user?.id) {
+      toast.error("Please sign in to export");
+      return;
+    }
+    
+    setExporting(true);
+    
+    const sections = [
+      { section: 'Key Concepts', content: contentToString(studyGuide?.keyConcepts || studyGuide?.key_concepts || '') },
+      { section: 'Definitions', content: contentToString(studyGuide?.definitions || studyGuide?.important_definitions || '') },
+      { section: 'Practice Questions', content: contentToString(studyGuide?.practiceQuestions || studyGuide?.practice_questions || '') },
+      { section: 'Review Points', content: contentToString(studyGuide?.reviewPoints || studyGuide?.review_points || '') }
+    ].filter(s => s.content.trim());
+    
+    await exportAndUpload({
+      title: 'AI Study Guide',
+      subtitle: `Generated from "${fileName}"`,
+      content: sections,
+      type: 'study-guide',
+      sourceFileName: fileName
+    }, user.id);
+    
+    setExporting(false);
   };
 
   const tabs = [
@@ -185,10 +215,24 @@ export function StudyGuideModal({ open, onOpenChange, fileId, fileName }: StudyG
               </div>
             </Tabs>
 
-            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex justify-end flex-shrink-0">
-              <Button variant="default" size="sm" onClick={handleDownloadAll} className="gap-2 h-9">
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex justify-end gap-2 flex-shrink-0 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleDownloadAll} className="gap-2 h-9">
                 <Download className="h-3.5 w-3.5" />
-                Download Full Guide
+                Text
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className="gap-2 h-9"
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                Export PDF
               </Button>
             </div>
           </div>
