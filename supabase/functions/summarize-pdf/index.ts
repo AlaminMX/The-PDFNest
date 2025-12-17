@@ -59,14 +59,43 @@ serve(async (req) => {
       });
     }
 
-    // Get PDF file data
-    const { data: pdfFile, error: fileError } = await supabase
+    // Try to find file in pdf_files table first (user's personal PDFs)
+    let storagePath: string | null = null;
+    let storageBucket = 'pdfs';
+    let isLectureNote = false;
+
+    const { data: pdfFile } = await supabase
       .from('pdf_files')
       .select('storage_path, user_id')
       .eq('id', fileId)
       .single();
 
-    if (fileError || !pdfFile || pdfFile.user_id !== user.id) {
+    if (pdfFile) {
+      // User PDF - verify ownership
+      if (pdfFile.user_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'File not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      storagePath = pdfFile.storage_path;
+    } else {
+      // Try lecture_notes table (public lecture notes)
+      const { data: lectureNote } = await supabase
+        .from('lecture_notes')
+        .select('file_path')
+        .eq('id', fileId)
+        .single();
+
+      if (lectureNote) {
+        storagePath = lectureNote.file_path;
+        storageBucket = 'school_pdfs';
+        isLectureNote = true;
+        console.log("Found lecture note:", fileId);
+      }
+    }
+
+    if (!storagePath) {
       return new Response(JSON.stringify({ error: 'File not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,8 +104,8 @@ serve(async (req) => {
 
     // Download PDF from storage
     const { data: pdfData, error: downloadError } = await supabase.storage
-      .from('pdfs')
-      .download(pdfFile.storage_path);
+      .from(storageBucket)
+      .download(storagePath);
 
     if (downloadError) {
       console.error("Download error:", downloadError);
