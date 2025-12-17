@@ -236,6 +236,47 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
   return { blob, fileName };
 }
 
+// Get or create the "AI Exports" category for a user
+async function getOrCreateAIExportsCategory(userId: string): Promise<string | null> {
+  const AI_EXPORTS_CATEGORY_NAME = '✨ AI Exports';
+  const AI_EXPORTS_CATEGORY_COLOR = '#8B5CF6'; // Purple to match AI theme
+  
+  try {
+    // Check if the category already exists
+    const { data: existingCategory } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', AI_EXPORTS_CATEGORY_NAME)
+      .maybeSingle();
+    
+    if (existingCategory) {
+      return existingCategory.id;
+    }
+    
+    // Create the category if it doesn't exist
+    const { data: newCategory, error } = await supabase
+      .from('categories')
+      .insert({
+        user_id: userId,
+        name: AI_EXPORTS_CATEGORY_NAME,
+        color: AI_EXPORTS_CATEGORY_COLOR
+      })
+      .select('id')
+      .single();
+    
+    if (error) {
+      console.error('Error creating AI Exports category:', error);
+      return null;
+    }
+    
+    return newCategory.id;
+  } catch (error) {
+    console.error('Error getting/creating AI Exports category:', error);
+    return null;
+  }
+}
+
 export async function exportAndUpload(
   options: ExportOptions,
   userId: string,
@@ -248,6 +289,9 @@ export async function exportAndUpload(
     
     onProgress?.('Uploading to your account...');
     
+    // Get or create the AI Exports category
+    const categoryId = await getOrCreateAIExportsCategory(userId);
+    
     // Upload to storage
     const filePath = `${userId}/${fileName}`;
     const { error: uploadError } = await supabase.storage
@@ -256,14 +300,14 @@ export async function exportAndUpload(
     
     if (uploadError) throw uploadError;
     
-    // Create database record
+    // Create database record with AI Exports category
     const { error: dbError } = await supabase.from('pdf_files').insert({
       user_id: userId,
       name: fileName,
       file_name: fileName,
       file_size: blob.size,
       storage_path: filePath,
-      category_id: null,
+      category_id: categoryId,
       thumbnail_url: null,
     });
     
@@ -285,7 +329,7 @@ export async function exportAndUpload(
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast.success('PDF exported and saved to your account');
+    toast.success('PDF exported and saved to AI Exports');
     return true;
   } catch (error: any) {
     console.error('Export error:', error);
