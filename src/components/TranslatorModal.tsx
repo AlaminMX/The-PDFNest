@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Download, Sparkles, Languages } from "lucide-react";
+import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AIContentRenderer } from "@/components/AIContentRenderer";
 
 interface TranslatorModalProps {
   open: boolean;
@@ -37,7 +38,6 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
 
   useEffect(() => {
     if (open && fileId) {
-      // Reset state when modal opens
       setOriginalText("");
       setTranslatedText("");
       setNote("");
@@ -92,22 +92,18 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
     }
   };
 
-  const handleTranslate = () => {
-    loadTranslation();
-  };
-
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
   };
 
   const handleDownload = () => {
-    const content = `=== ORIGINAL TEXT ===\n\n${originalText}\n\n\n=== TRANSLATED TO ${targetLanguage.toUpperCase()} ===\n\n${translatedText}`;
+    const content = `=== ORIGINAL TEXT (Pages ${startPage}-${endPage}) ===\n\n${originalText}\n\n=== TRANSLATED TO ${targetLanguage.toUpperCase()} ===\n\n${translatedText}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fileName}-translation-${targetLanguage}.txt`;
+    a.download = `${fileName}-translation-${targetLanguage.toLowerCase()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -117,20 +113,22 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+      <DialogContent className="max-w-5xl max-h-[85vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2.5 rounded-xl bg-primary/10">
                 <Languages className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl">AI Translator</DialogTitle>
-                <DialogDescription className="text-xs mt-1">{fileName}</DialogDescription>
+                <DialogTitle className="text-lg font-semibold">AI Translator</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">
+                  {fileName}
+                </DialogDescription>
               </div>
             </div>
             {loading && (
-              <Badge variant="secondary" className="gap-1.5">
+              <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-0">
                 <Sparkles className="h-3 w-3 animate-pulse" />
                 Translating
               </Badge>
@@ -138,12 +136,12 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-4 bg-muted/20 border-b space-y-4 flex-shrink-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="language">Target Language</Label>
+        <div className="px-6 py-4 bg-muted/10 border-b border-border/50 flex-shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="language" className="text-xs">Target Language</Label>
               <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                <SelectTrigger id="language">
+                <SelectTrigger id="language" className="h-9">
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
@@ -156,128 +154,120 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="startPage">Start Page</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="startPage" className="text-xs">Start Page</Label>
               <Input
                 id="startPage"
                 type="number"
                 min="1"
                 value={startPage}
                 onChange={(e) => setStartPage(e.target.value)}
-                placeholder="1"
+                className="h-9"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endPage">End Page</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="endPage" className="text-xs">End Page</Label>
               <Input
                 id="endPage"
                 type="number"
                 min="1"
                 value={endPage}
                 onChange={(e) => setEndPage(e.target.value)}
-                placeholder="10"
+                className="h-9"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <Button onClick={handleTranslate} disabled={loading} className="gap-2">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Translating pages {startPage}-{endPage}...
-                </>
-              ) : (
-                <>
-                  <Languages className="h-4 w-4" />
-                  Translate Pages {startPage}-{endPage}
-                </>
-              )}
-            </Button>
-            {totalPages && (
-              <span className="text-xs text-muted-foreground">
-                Total pages: {totalPages}
-              </span>
-            )}
+            <div className="flex items-end">
+              <Button onClick={loadTranslation} disabled={loading} className="w-full h-9 gap-2">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Translating...
+                  </>
+                ) : (
+                  <>
+                    <Languages className="h-4 w-4" />
+                    Translate
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-
+          {totalPages && (
+            <p className="text-xs text-muted-foreground mt-2">
+              PDF has {totalPages} pages total
+            </p>
+          )}
           {note && !loading && (
-            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">{note}</p>
+            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded mt-2">{note}</p>
           )}
         </div>
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 flex-1 overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4 flex-1">
             <div className="relative">
-              <Loader2 className="h-14 w-14 animate-spin text-primary" />
-              <Sparkles className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+              <Sparkles className="h-5 w-5 absolute -top-1 -right-1 text-primary animate-pulse" />
             </div>
             <div className="text-center space-y-1">
               <p className="text-sm font-medium">Translating to {targetLanguage}...</p>
               <p className="text-xs text-muted-foreground">Processing pages {startPage}-{endPage}</p>
             </div>
           </div>
-        )}
-
-        {(originalText || translatedText) && !loading && (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1 px-6">
-            <div className="pb-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold">Original Text</Label>
+        ) : (originalText || translatedText) ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1 px-6 py-4" style={{ maxHeight: "calc(85vh - 280px)" }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-4 bg-muted/20 border-border/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="outline" className="text-xs">Original</Badge>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={() => handleCopy(originalText, "Original text")}
-                      className="h-8"
+                      className="h-7 px-2"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <Card className="bg-muted/30 border-muted">
-                    <ScrollArea className="h-[400px] p-4">
-                      <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                        {originalText}
-                      </div>
-                    </ScrollArea>
-                  </Card>
-                </div>
+                  <ScrollArea className="h-[280px]">
+                    <AIContentRenderer content={originalText} className="text-muted-foreground" />
+                  </ScrollArea>
+                </Card>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold">{targetLanguage} Translation</Label>
+                <Card className="p-4 bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge className="text-xs bg-primary/10 text-primary border-0">
+                      <ArrowRight className="h-3 w-3 mr-1" />
+                      {targetLanguage}
+                    </Badge>
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => handleCopy(translatedText, "Translation")}
-                      className="h-8"
+                      onClick={() => handleCopy(translatedText, "Translated text")}
+                      className="h-7 px-2"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <Card className="bg-muted/30 border-muted">
-                    <ScrollArea className="h-[400px] p-4">
-                      <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                        {translatedText}
-                      </div>
-                    </ScrollArea>
-                  </Card>
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-4 border-t">
-                <Button variant="default" size="sm" onClick={handleDownload} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download Translation
-                </Button>
-              </div>
+                  <ScrollArea className="h-[280px]">
+                    <AIContentRenderer content={translatedText} />
+                  </ScrollArea>
+                </Card>
               </div>
             </ScrollArea>
+
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex justify-end flex-shrink-0">
+              <Button variant="default" size="sm" onClick={handleDownload} className="gap-2 h-9">
+                <Download className="h-3.5 w-3.5" />
+                Download Translation
+              </Button>
+            </div>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

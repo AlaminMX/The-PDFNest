@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Volume2, Sparkles, Copy, Download } from "lucide-react";
+import { Loader2, Volume2, Sparkles, Copy, Download, Square, Play } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AIContentRenderer } from "@/components/AIContentRenderer";
 
 interface PDFAudioPlayerProps {
   open: boolean;
@@ -25,16 +26,28 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
   const [endPage, setEndPage] = useState("10");
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [note, setNote] = useState("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     if (open && fileId) {
-      // Reset state when modal opens
       setText("");
       setNote("");
       setStartPage("1");
       setEndPage("10");
     }
   }, [open, fileId]);
+
+  useEffect(() => {
+    const handleEnd = () => setIsSpeaking(false);
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.addEventListener?.('end', handleEnd);
+    }
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.removeEventListener?.('end', handleEnd);
+      }
+    };
+  }, []);
 
   const loadPageText = async () => {
     setLoading(true);
@@ -80,10 +93,6 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
     }
   };
 
-  const handleExtract = () => {
-    loadPageText();
-  };
-
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
     toast.success("Text copied to clipboard");
@@ -107,7 +116,9 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
     if ('speechSynthesis' in window && text) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onend = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
       toast.success("Speaking...");
     } else {
       toast.error("Text-to-speech not supported in this browser");
@@ -117,25 +128,28 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
   const handleStop = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      setIsSpeaking(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2.5 rounded-xl bg-primary/10">
                 <Volume2 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl">AI Voice Reader</DialogTitle>
-                <DialogDescription className="text-xs mt-1">{fileName}</DialogDescription>
+                <DialogTitle className="text-lg font-semibold">AI Voice Reader</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">
+                  {fileName}
+                </DialogDescription>
               </div>
             </div>
             {loading && (
-              <Badge variant="secondary" className="gap-1.5">
+              <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-0">
                 <Sparkles className="h-3 w-3 animate-pulse" />
                 Extracting
               </Badge>
@@ -143,10 +157,10 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-4 bg-muted/20 border-b space-y-4 flex-shrink-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startPage">Start Page</Label>
+        <div className="px-6 py-4 bg-muted/10 border-b border-border/50 space-y-4 flex-shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="startPage" className="text-xs">Start Page</Label>
               <Input
                 id="startPage"
                 type="number"
@@ -154,11 +168,12 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
                 value={startPage}
                 onChange={(e) => setStartPage(e.target.value)}
                 placeholder="1"
+                className="h-9"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endPage">End Page</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="endPage" className="text-xs">End Page</Label>
               <Input
                 id="endPage"
                 type="number"
@@ -166,102 +181,102 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
                 value={endPage}
                 onChange={(e) => setEndPage(e.target.value)}
                 placeholder="10"
+                className="h-9"
               />
+            </div>
+
+            <div className="flex items-end">
+              <Button onClick={loadPageText} disabled={loading} className="w-full h-9 gap-2">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Extracting...
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="h-4 w-4" />
+                    Extract Text
+                  </>
+                )}
+              </Button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button onClick={handleExtract} disabled={loading} className="gap-2">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Extracting pages {startPage}-{endPage}...
-                </>
-              ) : (
-                <>
-                  <Volume2 className="h-4 w-4" />
-                  Extract Pages {startPage}-{endPage}
-                </>
-              )}
-            </Button>
-            {totalPages && (
-              <span className="text-xs text-muted-foreground">
-                Total pages: {totalPages}
-              </span>
-            )}
-          </div>
+          {totalPages && (
+            <p className="text-xs text-muted-foreground">
+              PDF has {totalPages} pages total
+            </p>
+          )}
 
           {note && !loading && (
             <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">{note}</p>
           )}
 
-          <Alert>
+          <Alert className="bg-muted/30 border-border/50">
             <Volume2 className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              Using browser's built-in text-to-speech. For enhanced AI voices, OpenAI API integration is required.
+              Using browser's built-in text-to-speech for audio playback.
             </AlertDescription>
           </Alert>
         </div>
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 flex-1 overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4 flex-1">
             <div className="relative">
-              <Loader2 className="h-14 w-14 animate-spin text-primary" />
-              <Sparkles className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+              <Sparkles className="h-5 w-5 absolute -top-1 -right-1 text-primary animate-pulse" />
             </div>
             <div className="text-center space-y-1">
               <p className="text-sm font-medium">Extracting text for voice reader...</p>
               <p className="text-xs text-muted-foreground">Processing pages {startPage}-{endPage}</p>
             </div>
           </div>
-        )}
-
-        {text && !loading && (
+        ) : text ? (
           <div className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1 px-6">
-              <div className="pb-6">
-                <div className="py-4 space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-semibold">Extracted Text (Pages {startPage}-{endPage})</Label>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={handleCopy}
-                        className="h-8"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <Card className="bg-muted/30 border-muted">
-                      <ScrollArea className="h-[300px] p-4">
-                        <div className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                          {text}
-                        </div>
-                      </ScrollArea>
-                    </Card>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 justify-between pt-4 border-t">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleStop}>
-                      Stop
-                    </Button>
-                    <Button variant="default" size="sm" onClick={handleSpeak} className="gap-2">
-                      <Volume2 className="h-4 w-4" />
-                      Speak Text
-                    </Button>
-                  </div>
-                  <Button variant="default" size="sm" onClick={handleDownload} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download Text
+            <ScrollArea className="flex-1 px-6 py-4">
+              <Card className="p-5 bg-muted/20 border-border/30">
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="text-sm font-medium">
+                    Extracted Text (Pages {startPage}-{endPage})
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleCopy}
+                    className="h-8 px-2"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </div>
+                <ScrollArea className="h-[240px]">
+                  <AIContentRenderer content={text} />
+                </ScrollArea>
+              </Card>
             </ScrollArea>
+
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex gap-2 justify-between flex-shrink-0">
+              <div className="flex gap-2">
+                {isSpeaking ? (
+                  <Button variant="outline" size="sm" onClick={handleStop} className="gap-2 h-9">
+                    <Square className="h-3.5 w-3.5" />
+                    Stop
+                  </Button>
+                ) : (
+                  <Button variant="default" size="sm" onClick={handleSpeak} className="gap-2 h-9">
+                    <Play className="h-3.5 w-3.5" />
+                    Speak Text
+                  </Button>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2 h-9">
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </Button>
+            </div>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );
