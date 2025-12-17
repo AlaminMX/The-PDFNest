@@ -52,24 +52,35 @@ export default function RepProfile() {
     try {
       setLoading(true);
 
-      // Fetch profile
+      // Fetch profile from public_rep_profiles view (safe, limited fields only)
       const { data: profileData } = await supabase
-        .from("profiles")
+        .from("public_rep_profiles")
         .select(`
           display_name,
           is_insider,
           avatar_url,
-          departments (
-            name
-          )
+          department_id
         `)
         .eq("id", userId)
         .single();
 
       if (profileData) {
+        // Fetch department name separately
+        let departmentName = "Unknown Department";
+        if (profileData.department_id) {
+          const { data: deptData } = await supabase
+            .from("departments")
+            .select("name")
+            .eq("id", profileData.department_id)
+            .single();
+          if (deptData) {
+            departmentName = deptData.name;
+          }
+        }
+        
         setProfile({
           displayName: profileData.display_name || "Course Rep",
-          departmentName: (profileData.departments as any)?.name || "Unknown Department",
+          departmentName,
           isInsider: profileData.is_insider || false,
           avatarUrl: profileData.avatar_url,
         });
