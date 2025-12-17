@@ -457,7 +457,11 @@ export default function Auth() {
                   >
                     I accept the{" "}
                     <Link to="/terms" className="text-primary hover:underline">
-                      terms and conditions
+                      Terms & Conditions
+                    </Link>
+                    {" "}and{" "}
+                    <Link to="/privacy" className="text-primary hover:underline">
+                      Privacy Policy
                     </Link>
                   </label>
                 </div>
@@ -473,6 +477,22 @@ export default function Auth() {
             </form>
           )}
 
+        </motion.div>
+
+        {/* Footer links */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
+          <Link to="/terms" className="hover:text-foreground hover:underline transition-colors">
+            Terms & Conditions
+          </Link>
+          <span className="mx-2">•</span>
+          <Link to="/privacy" className="hover:text-foreground hover:underline transition-colors">
+            Privacy Policy
+          </Link>
         </motion.div>
       </motion.div>
     </div>
