@@ -1,83 +1,206 @@
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function Terms() {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5">
       <PageHeader
-        title="Terms and Conditions"
+        title="Terms & Conditions"
         subtitle="Please read these terms carefully"
         showBack
       />
 
       <main className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         <div className="bg-card rounded-lg shadow-lg p-6 md:p-8 space-y-6">
-          <div className="space-y-6 text-muted-foreground">
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">1. Acceptance of Terms</h2>
-              <p className="leading-relaxed">By accessing or using PDFNest ("the Platform"), you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree, please discontinue use immediately.</p>
+          <p className="text-sm text-muted-foreground">Last updated: December 2024</p>
+          
+          <p className="text-muted-foreground leading-relaxed">
+            Welcome to PDFNest. These Terms & Conditions govern your access to and use of the PDFNest platform. By creating an account or using the service, you agree to these terms. If you do not agree, do not use the platform.
+          </p>
+
+          <div className="space-y-8 text-muted-foreground">
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">1. What PDFNest Is</h2>
+              <p className="leading-relaxed">
+                PDFNest is a cloud-based document storage and access platform designed to help users store, organize, and retrieve PDF files, including academic materials. PDFNest provides infrastructure only. We are not an academic authority, publisher, or educational institution.
+              </p>
+              <p className="leading-relaxed">
+                PDFNest does not create, certify, verify, or guarantee the accuracy of any academic content uploaded to the platform.
+              </p>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">2. Service Overview</h2>
-              <p className="leading-relaxed">PDFNest provides users with online storage, management, and reading tools for PDF files. Each user is given free or paid access to storage space and related services as specified in their account plan.</p>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">3. User Responsibilities</h2>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">2. User Accounts</h2>
               <ul className="list-disc pl-6 space-y-2 leading-relaxed">
-                <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
-                <li>You agree not to upload, share, or store any illegal, harmful, or copyrighted materials that you do not have permission to use.</li>
-                <li>You agree not to use the Platform for any unlawful or fraudulent purposes.</li>
+                <li>You are responsible for maintaining the confidentiality of your login credentials.</li>
+                <li>All activity carried out under your account is your responsibility.</li>
+                <li>PDFNest is not liable for unauthorized access resulting from user negligence.</li>
               </ul>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">4. Uploaded Content</h2>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">3. User-Uploaded Content</h2>
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">Ownership</h3>
+                <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                  <li>Users retain full ownership of any files they upload.</li>
+                  <li>Uploading content does not transfer ownership to PDFNest.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">License to PDFNest</h3>
+                <p className="leading-relaxed">
+                  By uploading content, you grant PDFNest a non-exclusive, limited license to store, display, process, and analyze the content solely for platform operation, improvement, moderation, security, and support purposes.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">Responsibility</h3>
+                <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                  <li>You confirm that you have the legal right to upload any content you submit.</li>
+                  <li>PDFNest is not responsible for copyright infringement or legal violations arising from user-uploaded content.</li>
+                </ul>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">4. Administrative Access & Moderation</h2>
+              <p className="leading-relaxed">
+                To operate the platform responsibly, PDFNest administrators may access user-uploaded content and limited account data under strict conditions.
+              </p>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">Admin May:</h3>
+                <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                  <li>View and download uploaded PDF files</li>
+                  <li>Review content for moderation, safety, academic relevance, quality assurance, research, and platform improvement</li>
+                  <li>Access uploader information and basic metadata (upload time, file size, format)</li>
+                  <li>Remove or restrict access to content that violates platform policies, laws, or safety standards</li>
+                  <li>Suspend or terminate accounts for violations, abuse, or security risks</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-foreground">Admin May Not:</h3>
+                <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                  <li>Edit, alter, or modify user-uploaded academic content</li>
+                  <li>Redistribute, publish, or sell uploaded files</li>
+                  <li>Claim ownership of user content</li>
+                  <li>Prevent users from downloading or deleting their own files</li>
+                </ul>
+              </div>
+
+              <p className="leading-relaxed">
+                Administrative access is purpose-limited and applied using the minimum necessary access principle.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">5. Course Representative Uploads</h2>
+              <p className="leading-relaxed">
+                Content uploaded by course representatives is user-generated. PDFNest does not edit or alter these materials and does not guarantee their completeness, accuracy, or exam relevance.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">6. Academic Disclaimer</h2>
+              <p className="leading-relaxed">
+                PDFNest is not affiliated with AFIT or any academic institution unless explicitly stated.
+              </p>
+              <p className="leading-relaxed">
+                Lecture notes and academic materials are provided for convenience only. Users are responsible for verifying information independently. PDFNest is not liable for academic outcomes, performance, or decisions based on platform content.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">7. AI-Powered Features</h2>
+              <p className="leading-relaxed">
+                PDFNest may provide AI-based tools such as summaries, study guides, translations, voice reading, or chat assistance.
+              </p>
               <ul className="list-disc pl-6 space-y-2 leading-relaxed">
-                <li>You retain full ownership of the PDF files you upload to your account.</li>
-                <li>By uploading content, you grant PDFNest a limited, non-exclusive, and revocable license to store, process, and display your files for the purpose of providing the service.</li>
-                <li><strong className="text-foreground">Administrative Access:</strong> For security, moderation, maintenance, and legal compliance purposes, authorized PDFNest administrators may access, review, or remove uploaded PDFs. This ensures protection against abuse, copyright infringement, or policy violations.</li>
-                <li>We do not publicly share or sell your PDFs without your consent.</li>
+                <li>AI outputs are automated and may contain errors.</li>
+                <li>AI features are for assistance only and should not be treated as authoritative or definitive.</li>
+                <li>Users must independently verify critical information.</li>
               </ul>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">5. Data Privacy</h2>
-              <p className="leading-relaxed">Your data is stored securely and handled according to our Privacy Policy. Administrative access is limited strictly to authorized personnel and exercised only when necessary for service maintenance, user support, or legal obligations.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">8. Storage, Availability & Data Loss</h2>
+              <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                <li>PDFNest aims for reliable service but does not guarantee uninterrupted availability.</li>
+                <li>Files may be lost due to system failures, maintenance, or third-party service disruptions.</li>
+                <li>Users are encouraged to maintain personal backups of important files.</li>
+              </ul>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">6. Storage & Account Limits</h2>
-              <p className="leading-relaxed">Free accounts have limited storage capacity. Exceeding your limit may restrict uploads until you upgrade or delete files.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">9. Free Storage & Usage Limits</h2>
+              <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                <li>Free storage limits may apply and may change over time.</li>
+                <li>PDFNest reserves the right to introduce paid plans, adjust limits, or restrict excessive or abusive usage.</li>
+              </ul>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">7. Service Availability</h2>
-              <p className="leading-relaxed">We strive for maximum uptime but cannot guarantee uninterrupted service. PDFNest reserves the right to modify, suspend, or discontinue any aspect of the service at any time.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">10. Prohibited Use</h2>
+              <p className="leading-relaxed">You may not:</p>
+              <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                <li>Upload illegal, harmful, malicious, or misleading content</li>
+                <li>Attempt to exploit, hack, scrape, or disrupt the platform</li>
+                <li>Use PDFNest for fraud, impersonation, or academic dishonesty</li>
+              </ul>
+              <p className="leading-relaxed">
+                Violations may result in immediate account suspension or termination.
+              </p>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">8. Termination</h2>
-              <p className="leading-relaxed">We may suspend or terminate your account if you violate these Terms, engage in prohibited activities, or misuse the Platform.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">11. Account Suspension & Termination</h2>
+              <p className="leading-relaxed">
+                PDFNest reserves the right to suspend or terminate accounts at its discretion for policy violations, security concerns, or legal compliance. Access to stored files may be lost upon termination.
+              </p>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">9. Disclaimer</h2>
-              <p className="leading-relaxed">PDFNest is provided "as is" and "as available." We do not guarantee that the service will always be error-free or secure. Use is at your own risk.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">12. Limitation of Liability</h2>
+              <p className="leading-relaxed">PDFNest is not liable for:</p>
+              <ul className="list-disc pl-6 space-y-2 leading-relaxed">
+                <li>Data loss</li>
+                <li>Academic outcomes</li>
+                <li>Indirect or consequential damages</li>
+              </ul>
+              <p className="leading-relaxed">
+                Any liability, where applicable, is limited to the amount paid by the user for the service.
+              </p>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">10. Limitation of Liability</h2>
-              <p className="leading-relaxed">PDFNest shall not be liable for any direct, indirect, incidental, or consequential damages resulting from your use or inability to use the Platform.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">13. Indemnification</h2>
+              <p className="leading-relaxed">
+                You agree to indemnify and hold PDFNest harmless from any claims, damages, or legal actions arising from your content, conduct, or misuse of the platform.
+              </p>
             </section>
 
-            <section className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">11. Changes to Terms</h2>
-              <p className="leading-relaxed">We may update these Terms periodically. Continued use of the Platform after changes take effect constitutes acceptance of the revised Terms.</p>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">14. Changes to These Terms</h2>
+              <p className="leading-relaxed">
+                PDFNest may update these Terms at any time. Continued use of the platform constitutes acceptance of the updated terms.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">15. Governing Law</h2>
+              <p className="leading-relaxed">
+                These Terms are governed by the laws of the Federal Republic of Nigeria. Any disputes shall be resolved in Nigerian courts.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-foreground">16. Contact</h2>
+              <p className="leading-relaxed">
+                For questions or support, contact: <a href="mailto:nexelwebdev@gmail.com" className="text-primary hover:underline">nexelwebdev@gmail.com</a>
+              </p>
             </section>
           </div>
         </div>
