@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight } from "lucide-react";
+import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight, FileDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
+import { exportAndUpload } from "@/lib/exportPDF";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TranslatorModalProps {
   open: boolean;
@@ -28,6 +30,7 @@ const LANGUAGES = [
 
 export function TranslatorModal({ open, onOpenChange, fileId, fileName }: TranslatorModalProps) {
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("Spanish");
   const [startPage, setStartPage] = useState("1");
   const [endPage, setEndPage] = useState("10");
@@ -35,6 +38,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [note, setNote] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && fileId) {
@@ -109,6 +113,30 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Translation downloaded");
+  };
+
+  const handleExportPDF = async () => {
+    if (!user?.id) {
+      toast.error("Please sign in to export");
+      return;
+    }
+    
+    setExporting(true);
+    
+    const sections = [
+      { section: `Original Text (Pages ${startPage}-${endPage})`, content: originalText },
+      { section: `Translated to ${targetLanguage}`, content: translatedText }
+    ];
+    
+    await exportAndUpload({
+      title: `Translation to ${targetLanguage}`,
+      subtitle: `Pages ${startPage}-${endPage} from "${fileName}"`,
+      content: sections,
+      type: 'translation',
+      sourceFileName: fileName
+    }, user.id);
+    
+    setExporting(false);
   };
 
   return (
@@ -260,10 +288,24 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
               </div>
             </ScrollArea>
 
-            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex justify-end flex-shrink-0">
-              <Button variant="default" size="sm" onClick={handleDownload} className="gap-2 h-9">
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/10 flex justify-end gap-2 flex-shrink-0 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2 h-9">
                 <Download className="h-3.5 w-3.5" />
-                Download Translation
+                Text
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className="gap-2 h-9"
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                Export PDF
               </Button>
             </div>
           </div>

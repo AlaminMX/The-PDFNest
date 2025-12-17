@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Trash2, Sparkles, MessageSquare, Bot, User } from "lucide-react";
+import { Loader2, Send, Trash2, Sparkles, MessageSquare, Bot, User, FileDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
+import { exportAndUpload } from "@/lib/exportPDF";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,8 +28,10 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && fileId) {
@@ -104,6 +108,35 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
     toast.success("Conversation cleared");
   };
 
+  const handleExportPDF = async () => {
+    if (!user?.id) {
+      toast.error("Please sign in to export");
+      return;
+    }
+    
+    if (messages.length === 0) {
+      toast.error("No conversation to export");
+      return;
+    }
+    
+    setExporting(true);
+    
+    const chatContent = messages.map(msg => {
+      const role = msg.role === 'user' ? '**You:**' : '**AI Assistant:**';
+      return `${role}\n${msg.content}`;
+    }).join('\n\n---\n\n');
+    
+    await exportAndUpload({
+      title: 'Chat Conversation',
+      subtitle: `Discussion about "${fileName}"`,
+      content: chatContent,
+      type: 'chat',
+      sourceFileName: fileName
+    }, user.id);
+    
+    setExporting(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0">
@@ -128,14 +161,30 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
                 </Badge>
               )}
               {messages.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleClearConversation}
-                  className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleExportPDF}
+                    disabled={exporting}
+                    className="h-8 px-2 text-muted-foreground hover:text-primary"
+                    title="Export as PDF"
+                  >
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleClearConversation}
+                    className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
