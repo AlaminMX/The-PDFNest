@@ -13,6 +13,7 @@ import PasswordResetSuccess from "./pages/PasswordResetSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminReps from "./pages/AdminReps";
 import AdminUserDetail from "./pages/AdminUserDetail";
+import AdminActivityLogs from "./pages/AdminActivityLogs";
 import AFITPDFs from "./pages/AFITPDFs";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reps" element={<AdminReps />} />
+            <Route path="/admin/logs" element={<AdminActivityLogs />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
             <Route path="/afit-pdfs/:deptSlug" element={<DepartmentCourses />} />

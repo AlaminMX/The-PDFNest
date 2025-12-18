@@ -270,16 +270,9 @@ export default function Auth() {
         >
           <motion.div 
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl"
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden"
           >
-            <svg
-              className="w-8 h-8 text-primary"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-            </svg>
+            <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="w-full h-full object-contain" />
           </motion.div>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
