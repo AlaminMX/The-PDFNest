@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Search, LogOut, Users, FileText, HardDrive, ChevronRight } from "lucide-react";
+import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface UserData {
   id: string;
@@ -19,6 +21,10 @@ interface UserData {
   totalStorage: number;
   createdAt: string;
 }
+
+type SortField = "name" | "storage" | "pdfCount" | "createdAt";
+type SortOrder = "asc" | "desc";
+type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -35,6 +41,14 @@ function getDisplayName(email: string, fullName: string | null): string {
   return email.split('@')[0];
 }
 
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
@@ -43,6 +57,11 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [totalPDFs, setTotalPDFs] = useState(0);
   const [totalStorage, setTotalStorage] = useState(0);
+  
+  // Filter and sort states
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [filterType, setFilterType] = useState<FilterType>("all");
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -122,10 +141,56 @@ export default function AdminDashboard() {
     navigate("/auth");
   };
 
-  const filteredUsers = users.filter(user =>
-    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtered and sorted users
+  const filteredAndSortedUsers = useMemo(() => {
+    // First apply search filter
+    let filtered = users.filter(user =>
+      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Apply additional filters
+    switch (filterType) {
+      case "withPdfs":
+        filtered = filtered.filter(user => user.pdfCount > 0);
+        break;
+      case "noPdfs":
+        filtered = filtered.filter(user => user.pdfCount === 0);
+        break;
+      case "over100MB":
+        filtered = filtered.filter(user => user.totalStorage > 100 * 1024 * 1024);
+        break;
+      case "over1GB":
+        filtered = filtered.filter(user => user.totalStorage > 1024 * 1024 * 1024);
+        break;
+    }
+
+    // Sort
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "name":
+          comparison = a.displayName.localeCompare(b.displayName);
+          break;
+        case "storage":
+          comparison = a.totalStorage - b.totalStorage;
+          break;
+        case "pdfCount":
+          comparison = a.pdfCount - b.pdfCount;
+          break;
+        case "createdAt":
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [users, searchQuery, sortField, sortOrder, filterType]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+  };
 
   if (adminLoading || loading) {
     return (
@@ -144,11 +209,18 @@ export default function AdminDashboard() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
+            <div className="flex items-center gap-3">
+              <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="h-10 w-10 rounded-lg object-contain" />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="hidden sm:flex">
+                <Activity className="h-4 w-4 mr-2" />
+                Activity Logs
+              </Button>
               <ThemeToggle />
               <Button variant="outline" size="icon" onClick={handleSignOut} title="Sign Out">
                 <LogOut className="h-4 w-4" />
@@ -198,17 +270,75 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users by name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        {/* Search and Filters */}
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="storage">Storage Size</SelectItem>
+                  <SelectItem value="pdfCount">PDF Count</SelectItem>
+                  <SelectItem value="createdAt">Join Date</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button variant="outline" size="icon" onClick={toggleSortOrder} title={sortOrder === "asc" ? "Ascending" : "Descending"}>
+                <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
+              </Button>
+
+              <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
+                <SelectTrigger className="w-[150px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="withPdfs">With PDFs</SelectItem>
+                  <SelectItem value="noPdfs">No PDFs</SelectItem>
+                  <SelectItem value="over100MB">Over 100MB</SelectItem>
+                  <SelectItem value="over1GB">Over 1GB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* Active filters indicator */}
+          {(filterType !== "all" || searchQuery) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {searchQuery && (
+                <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
+                  Search: "{searchQuery}" ×
+                </Badge>
+              )}
+              {filterType !== "all" && (
+                <Badge variant="secondary" className="cursor-pointer" onClick={() => setFilterType("all")}>
+                  {filterType === "withPdfs" && "With PDFs"}
+                  {filterType === "noPdfs" && "No PDFs"}
+                  {filterType === "over100MB" && "Over 100MB"}
+                  {filterType === "over1GB" && "Over 1GB"}
+                  {" ×"}
+                </Badge>
+              )}
+              <span className="text-sm text-muted-foreground">
+                ({filteredAndSortedUsers.length} of {users.length} users)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* User List Table */}
@@ -219,20 +349,21 @@ export default function AdminDashboard() {
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden lg:table-cell">Joined</TableHead>
                 <TableHead className="text-center">PDFs</TableHead>
                 <TableHead className="text-right">Total Size</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user, index) => (
+                filteredAndSortedUsers.map((user, index) => (
                   <TableRow 
                     key={user.id} 
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -247,8 +378,13 @@ export default function AdminDashboard() {
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {user.email}
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
+                      {formatDate(user.createdAt)}
+                    </TableCell>
                     <TableCell className="text-center">
-                      {user.pdfCount}
+                      <Badge variant={user.pdfCount > 0 ? "default" : "secondary"}>
+                        {user.pdfCount}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       {formatBytes(user.totalStorage)}

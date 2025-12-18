@@ -78,15 +78,8 @@ export default function ResetPassword() {
       </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8 space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl">
-            <svg
-              className="w-8 h-8 text-primary"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-            </svg>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden">
+            <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>

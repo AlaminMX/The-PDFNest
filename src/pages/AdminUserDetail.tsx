@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search } from "lucide-react";
+import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -55,6 +55,7 @@ export default function AdminUserDetail() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const filteredPdfs = useMemo(() => {
     let filtered = pdfs.filter(pdf => 
@@ -126,26 +127,52 @@ export default function AdminUserDetail() {
   };
 
   const handleDownload = async (pdf: PDFFile) => {
+    setDownloadingId(pdf.id);
+    const toastId = toast.loading(`Preparing download for ${pdf.name}...`);
+    
     try {
+      // Download the file as blob
       const { data, error } = await supabase.storage
         .from("pdfs")
         .download(pdf.storage_path);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Storage error:", error);
+        throw new Error(`Failed to download: ${error.message}`);
+      }
 
-      const url = URL.createObjectURL(data);
+      if (!data) {
+        throw new Error("No data received from storage");
+      }
+
+      // Create blob URL
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create anchor and trigger download
       const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
-      a.download = pdf.file_name;
+      a.download = pdf.file_name || `${pdf.name}.pdf`;
+      
+      // Append to body
       document.body.appendChild(a);
+      
+      // Click to start download
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      
+      // Clean up after a delay to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1500);
 
-      toast.success("File downloaded successfully");
-    } catch (error) {
+      toast.success(`Downloaded ${pdf.name}`, { id: toastId });
+    } catch (error: any) {
       console.error("Error downloading file:", error);
-      toast.error("Failed to download file");
+      toast.error(error.message || "Failed to download file", { id: toastId });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -303,9 +330,14 @@ export default function AdminUserDetail() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDownload(pdf)}
+                              disabled={downloadingId === pdf.id}
                               title="Download"
                             >
-                              <Download className="h-4 w-4" />
+                              {downloadingId === pdf.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               variant="ghost"

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { logActivity } from "@/lib/activityLogger";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -16,6 +17,11 @@ export function useAuth() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Log login activity
+      if (event === 'SIGNED_IN' && session) {
+        logActivity('login');
+      }
       
       if (!session) {
         navigate("/auth");
@@ -37,6 +43,7 @@ export function useAuth() {
   }, [navigate]);
 
   const signOut = async () => {
+    await logActivity('logout');
     await supabase.auth.signOut();
     navigate("/auth");
   };

@@ -142,11 +142,7 @@ function AppSidebar({
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-3 py-4">
-          <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-            </svg>
-          </div>
+          <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="size-10 rounded-xl shadow-md object-contain" />
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
               <span className="font-bold text-lg">PDFNest</span>
