@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { logActivity } from "@/lib/activityLogger";
+import { startSession, endSession, setupIdleDetection } from "@/lib/sessionLogger";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -11,6 +11,8 @@ export function useAuth() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cleanupIdleDetection: (() => void) | null = null;
+
     // Set up auth state listener FIRST
     const {
       data: { subscription },
@@ -18,9 +20,12 @@ export function useAuth() {
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Log login activity
+      // Start session on login
       if (event === 'SIGNED_IN' && session) {
-        logActivity('login');
+        setTimeout(() => {
+          startSession();
+          cleanupIdleDetection = setupIdleDetection();
+        }, 0);
       }
       
       if (!session) {
@@ -36,14 +41,22 @@ export function useAuth() {
       
       if (!session) {
         navigate("/auth");
+      } else {
+        // Set up idle detection for existing sessions
+        cleanupIdleDetection = setupIdleDetection();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (cleanupIdleDetection) {
+        cleanupIdleDetection();
+      }
+    };
   }, [navigate]);
 
   const signOut = async () => {
-    await logActivity('logout');
+    await endSession();
     await supabase.auth.signOut();
     navigate("/auth");
   };

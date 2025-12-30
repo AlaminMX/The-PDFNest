@@ -6,7 +6,7 @@ import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { useNavigate } from "react-router-dom";
-import { logActivity } from "@/lib/activityLogger";
+import { logActivity } from "@/lib/sessionLogger";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
