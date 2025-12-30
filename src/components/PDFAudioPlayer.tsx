@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
+import { logActivity } from "@/lib/activityLogger";
 
 interface PDFAudioPlayerProps {
   open: boolean;
@@ -85,6 +86,9 @@ export function PDFAudioPlayer({ open, onOpenChange, fileId, fileName }: PDFAudi
       setText(data.text);
       setTotalPages(data.totalPages);
       setNote(data.note || "");
+      
+      // Log activity
+      await logActivity("ai_voice", { fileName, fileId, startPage: start, endPage: end });
     } catch (error: any) {
       console.error("Error loading text:", error);
       toast.error(error.message || "Failed to extract text");

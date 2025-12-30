@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
+import { logActivity } from "@/lib/activityLogger";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -87,6 +88,9 @@ export function PDFChatInterface({ open, onOpenChange, fileId, fileName }: PDFCh
 
       setConversationId(data.conversationId);
       setMessages((data.messages as unknown) as Message[]);
+      
+      // Log activity
+      await logActivity("ai_chat", { fileName, fileId, questionLength: question.length });
     } catch (error: any) {
       console.error("Error asking question:", error);
       toast.error(error.message || "Failed to get response");

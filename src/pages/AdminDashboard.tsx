@@ -24,7 +24,7 @@ interface UserData {
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt";
 type SortOrder = "asc" | "desc";
-type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB";
+type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -163,6 +163,12 @@ export default function AdminDashboard() {
       case "over1GB":
         filtered = filtered.filter(user => user.totalStorage > 1024 * 1024 * 1024);
         break;
+      case "recentUpload":
+        // Users who uploaded in the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        filtered = filtered.filter(user => new Date(user.createdAt) >= sevenDaysAgo);
+        break;
     }
 
     // Sort
@@ -217,9 +223,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="hidden sm:flex">
-                <Activity className="h-4 w-4 mr-2" />
-                Activity Logs
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Activity Logs</span>
               </Button>
               <ThemeToggle />
               <Button variant="outline" size="icon" onClick={handleSignOut} title="Sign Out">
@@ -311,6 +317,7 @@ export default function AdminDashboard() {
                   <SelectItem value="noPdfs">No PDFs</SelectItem>
                   <SelectItem value="over100MB">Over 100MB</SelectItem>
                   <SelectItem value="over1GB">Over 1GB</SelectItem>
+                  <SelectItem value="recentUpload">Recently Joined (7 days)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -331,6 +338,7 @@ export default function AdminDashboard() {
                   {filterType === "noPdfs" && "No PDFs"}
                   {filterType === "over100MB" && "Over 100MB"}
                   {filterType === "over1GB" && "Over 1GB"}
+                  {filterType === "recentUpload" && "Recently Joined"}
                   {" ×"}
                 </Badge>
               )}
