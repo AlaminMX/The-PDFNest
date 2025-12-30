@@ -13,7 +13,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getActivityDisplayName } from "@/lib/activityLogger";
+import { getActivityDisplayName } from "@/lib/sessionLogger";
 
 interface PDFFile {
   id: string;

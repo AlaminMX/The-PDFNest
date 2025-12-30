@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
-import { logActivity } from "@/lib/activityLogger";
+import { logActivity } from "@/lib/sessionLogger";
 
 interface PDFSummaryModalProps {
   open: boolean;

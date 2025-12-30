@@ -489,6 +489,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          activities: Json
+          activity_summary: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          is_active: boolean
+          login_at: string
+          logout_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          activities?: Json
+          activity_summary?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          login_at?: string
+          logout_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          activities?: Json
+          activity_summary?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          login_at?: string
+          logout_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_rep_profiles: {

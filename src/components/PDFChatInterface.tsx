@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
-import { logActivity } from "@/lib/activityLogger";
+import { logActivity } from "@/lib/sessionLogger";
 
 interface Message {
   role: 'user' | 'assistant';
