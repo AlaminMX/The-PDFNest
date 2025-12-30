@@ -22,7 +22,7 @@ interface TranslatorModalProps {
 }
 
 const LANGUAGES = [
-  "Spanish", "French", "German", "Italian", "Portuguese", "Dutch",
+  "English", "Spanish", "French", "German", "Italian", "Portuguese", "Dutch",
   "Chinese (Simplified)", "Chinese (Traditional)", "Japanese", "Korean",
   "Arabic", "Russian", "Hindi", "Turkish", "Polish", "Swedish",
   "Norwegian", "Danish", "Finnish", "Greek"

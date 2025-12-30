@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useDepartments } from "@/hooks/useDepartments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, FileText, Calendar, Plus, Trash2, Eye } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/LoadingState";
@@ -31,7 +30,6 @@ export default function AdminReps() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
-  const { departments } = useDepartments();
   const [reps, setReps] = useState<RepProfile[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -41,7 +39,14 @@ export default function AdminReps() {
   const [newRepEmail, setNewRepEmail] = useState("");
   const [newRepPassword, setNewRepPassword] = useState("");
   const [newRepDisplayName, setNewRepDisplayName] = useState("");
-  const [newRepDepartmentId, setNewRepDepartmentId] = useState("");
+  
+  // Dynamic department input (free text)
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [newDepartmentColor, setNewDepartmentColor] = useState("");
+  const [newDepartmentIcon, setNewDepartmentIcon] = useState("");
+  
+  // Dynamic courses list
+  const [courses, setCourses] = useState<{ code: string; name: string }[]>([{ code: "", name: "" }]);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
@@ -60,7 +65,6 @@ export default function AdminReps() {
     try {
       setLoading(true);
 
-      // Ensure we have a valid session before querying
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error("No active session found");
@@ -69,7 +73,6 @@ export default function AdminReps() {
         return;
       }
 
-      // Fetch all users with rep role
       const { data: repRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -80,8 +83,6 @@ export default function AdminReps() {
         throw rolesError;
       }
 
-      console.log("Found rep roles:", repRoles);
-
       if (!repRoles || repRoles.length === 0) {
         setReps([]);
         setLoading(false);
@@ -90,7 +91,6 @@ export default function AdminReps() {
 
       const repUserIds = repRoles.map((r) => r.user_id);
 
-      // Fetch profiles for these reps
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select(`
@@ -108,9 +108,6 @@ export default function AdminReps() {
         throw profilesError;
       }
 
-      console.log("Found profiles:", profiles);
-
-      // Fetch lecture notes count for each rep
       const repsWithStats = await Promise.all(
         (profiles || []).map(async (profile) => {
           const { count } = await supabase
@@ -143,9 +140,32 @@ export default function AdminReps() {
     }
   };
 
+  const addCourse = () => {
+    setCourses([...courses, { code: "", name: "" }]);
+  };
+
+  const removeCourse = (index: number) => {
+    if (courses.length > 1) {
+      setCourses(courses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateCourse = (index: number, field: "code" | "name", value: string) => {
+    const updated = [...courses];
+    updated[index][field] = value;
+    setCourses(updated);
+  };
+
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  };
+
   const handleCreateRep = async () => {
-    if (!newRepEmail || !newRepPassword || !newRepDisplayName || !newRepDepartmentId) {
-      toast.error("Please fill in all fields");
+    if (!newRepEmail || !newRepPassword || !newRepDisplayName || !newDepartmentName.trim()) {
+      toast.error("Please fill in email, password, display name, and department");
       return;
     }
 
@@ -154,14 +174,69 @@ export default function AdminReps() {
       return;
     }
 
+    // Validate at least one course with name
+    const validCourses = courses.filter(c => c.name.trim());
+    if (validCourses.length === 0) {
+      toast.error("Please add at least one course");
+      return;
+    }
+
     setCreating(true);
     try {
+      // Step 1: Check if department exists or create new one
+      const deptSlug = generateSlug(newDepartmentName.trim());
+      
+      let { data: existingDept } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("slug", deptSlug)
+        .maybeSingle();
+
+      let departmentId: string;
+
+      if (existingDept) {
+        departmentId = existingDept.id;
+      } else {
+        // Create new department
+        const { data: newDept, error: deptError } = await supabase
+          .from("departments")
+          .insert({
+            name: newDepartmentName.trim(),
+            slug: deptSlug,
+            color: newDepartmentColor.trim() || null,
+            icon: newDepartmentIcon.trim() || null,
+          })
+          .select("id")
+          .single();
+
+        if (deptError) throw new Error("Failed to create department: " + deptError.message);
+        departmentId = newDept.id;
+      }
+
+      // Step 2: Create courses under this department
+      const coursesToInsert = validCourses.map(c => ({
+        department_id: departmentId,
+        code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
+        name: c.name.trim(),
+        level: 100, // Default level
+      }));
+
+      const { error: coursesError } = await supabase
+        .from("courses")
+        .insert(coursesToInsert);
+
+      if (coursesError) {
+        console.error("Error creating courses:", coursesError);
+        // Continue anyway - courses might already exist
+      }
+
+      // Step 3: Create rep account via edge function
       const response = await supabase.functions.invoke("create-rep-account", {
         body: {
           email: newRepEmail,
           password: newRepPassword,
           displayName: newRepDisplayName,
-          departmentId: newRepDepartmentId,
+          departmentId: departmentId,
         },
       });
 
@@ -169,12 +244,8 @@ export default function AdminReps() {
         throw new Error(response.error.message || "Failed to create rep account");
       }
 
-      toast.success("Rep account created successfully");
-      setShowCreateDialog(false);
-      setNewRepEmail("");
-      setNewRepPassword("");
-      setNewRepDisplayName("");
-      setNewRepDepartmentId("");
+      toast.success("Rep account created successfully with department and courses");
+      resetForm();
       fetchReps();
     } catch (error: any) {
       console.error("Error creating rep:", error);
@@ -184,13 +255,23 @@ export default function AdminReps() {
     }
   };
 
+  const resetForm = () => {
+    setShowCreateDialog(false);
+    setNewRepEmail("");
+    setNewRepPassword("");
+    setNewRepDisplayName("");
+    setNewDepartmentName("");
+    setNewDepartmentColor("");
+    setNewDepartmentIcon("");
+    setCourses([{ code: "", name: "" }]);
+  };
+
   const handleDeleteRep = async (repId: string, displayName: string) => {
     if (!confirm(`Are you sure you want to delete rep "${displayName}"? This will remove their account and all uploaded content.`)) {
       return;
     }
 
     try {
-      // Delete all lecture notes by this rep
       const { data: notes, error: notesQueryError } = await supabase
         .from("lecture_notes")
         .select("id, file_path")
@@ -198,12 +279,10 @@ export default function AdminReps() {
 
       if (notesQueryError) throw notesQueryError;
 
-      // Delete files from storage
       if (notes && notes.length > 0) {
         const filePaths = notes.map(n => n.file_path);
         await supabase.storage.from("school_pdfs").remove(filePaths);
 
-        // Delete lecture notes records
         const { error: deleteNotesError } = await supabase
           .from("lecture_notes")
           .delete()
@@ -212,7 +291,6 @@ export default function AdminReps() {
         if (deleteNotesError) throw deleteNotesError;
       }
 
-      // Delete rep role
       const { error: roleError } = await supabase
         .from("user_roles")
         .delete()
@@ -261,65 +339,160 @@ export default function AdminReps() {
                 Create Rep Account
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Rep Account</DialogTitle>
+            <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+              <DialogHeader className="px-6 pt-6 pb-4 border-b">
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Create New Rep Account
+                </DialogTitle>
                 <DialogDescription>
-                  Create a new course representative account with login credentials.
+                  Create a course representative with a new or existing department and courses.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="rep@example.com"
-                    value={newRepEmail}
-                    onChange={(e) => setNewRepEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Minimum 8 characters"
-                    value={newRepPassword}
-                    onChange={(e) => setNewRepPassword(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    placeholder="Rep display name"
-                    value={newRepDisplayName}
-                    onChange={(e) => setNewRepDisplayName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select value={newRepDepartmentId} onValueChange={setNewRepDepartmentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </SelectItem>
+              
+              <ScrollArea className="max-h-[60vh] px-6 py-4">
+                <div className="space-y-6">
+                  {/* Rep Credentials */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Rep Credentials
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="rep@example.com"
+                          value={newRepEmail}
+                          onChange={(e) => setNewRepEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Minimum 8 characters"
+                          value={newRepPassword}
+                          onChange={(e) => setNewRepPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">Display Name</Label>
+                      <Input
+                        id="displayName"
+                        placeholder="e.g., CS Course Rep"
+                        value={newRepDisplayName}
+                        onChange={(e) => setNewRepDisplayName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Department */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Department
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="departmentName">Department Name</Label>
+                        <Input
+                          id="departmentName"
+                          placeholder="e.g., Computer Science"
+                          value={newDepartmentName}
+                          onChange={(e) => setNewDepartmentName(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          If department exists, rep will be linked to it. Otherwise, a new one will be created.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="deptColor">Color (optional)</Label>
+                          <Input
+                            id="deptColor"
+                            placeholder="e.g., emerald, blue"
+                            value={newDepartmentColor}
+                            onChange={(e) => setNewDepartmentColor(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="deptIcon">Icon Emoji (optional)</Label>
+                          <Input
+                            id="deptIcon"
+                            placeholder="e.g., 💻, 🔒"
+                            value={newDepartmentIcon}
+                            onChange={(e) => setNewDepartmentIcon(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Courses */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        Courses Offered
+                      </h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addCourse}
+                        className="gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Course
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {courses.map((course, index) => (
+                        <div key={index} className="flex gap-3 items-start">
+                          <div className="flex-1 grid grid-cols-3 gap-3">
+                            <Input
+                              placeholder="Code (optional)"
+                              value={course.code}
+                              onChange={(e) => updateCourse(index, "code", e.target.value)}
+                              className="col-span-1"
+                            />
+                            <Input
+                              placeholder="Course Name"
+                              value={course.name}
+                              onChange={(e) => updateCourse(index, "name", e.target.value)}
+                              className="col-span-2"
+                            />
+                          </div>
+                          {courses.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCourse(index)}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Add all courses this department offers. You can add unlimited courses.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              </ScrollArea>
+
+              <DialogFooter className="px-6 py-4 border-t">
+                <Button variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreateRep} disabled={creating}>
-                  {creating ? "Creating..." : "Create Account"}
+                  {creating ? "Creating..." : "Create Rep & Department"}
                 </Button>
               </DialogFooter>
             </DialogContent>
