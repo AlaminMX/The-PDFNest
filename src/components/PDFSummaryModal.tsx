@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
+import { logActivity } from "@/lib/activityLogger";
 
 interface PDFSummaryModalProps {
   open: boolean;
@@ -39,6 +40,9 @@ export function PDFSummaryModal({ open, onOpenChange, fileId, fileName }: PDFSum
 
       if (error) throw error;
       setSummary(data.summary);
+      
+      // Log activity
+      await logActivity("ai_summary", { fileName, fileId });
     } catch (error: any) {
       console.error("Error loading summary:", error);
       toast.error(error.message || "Failed to generate summary");

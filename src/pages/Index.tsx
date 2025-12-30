@@ -6,6 +6,7 @@ import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { useNavigate } from "react-router-dom";
+import { logActivity } from "@/lib/activityLogger";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -644,6 +645,8 @@ export default function Index() {
       thumbnailUrl: file.thumbnail_url
     });
     trackRecentFile(file.id, file.name);
+    // Log activity
+    logActivity("view_pdf", { fileName: file.name, fileId: file.id });
   };
 
   const handleOpenRecentFile = (fileId: string) => {
@@ -738,6 +741,8 @@ export default function Index() {
       return;
     }
     downloadFile(file.url, `${file.name}.pdf`);
+    // Log activity
+    logActivity("download_pdf", { fileName: file.name });
   };
 
   const confirmBulkAction = async () => {

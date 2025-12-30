@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2 } from "lucide-react";
+import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { getActivityDisplayName } from "@/lib/activityLogger";
 
 interface PDFFile {
   id: string;
@@ -28,6 +30,13 @@ interface UserProfile {
   full_name: string | null;
   created_at: string;
   total_storage_used: number;
+}
+
+interface ActivityLog {
+  id: string;
+  activity_type: string;
+  details: any;
+  created_at: string;
 }
 
 function formatBytes(bytes: number): string {
@@ -52,6 +61,7 @@ export default function AdminUserDetail() {
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [pdfs, setPdfs] = useState<PDFFile[]>([]);
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
@@ -118,6 +128,18 @@ export default function AdminUserDetail() {
 
       if (pdfError) throw pdfError;
       setPdfs(pdfData || []);
+
+      // Fetch user's recent activity
+      const { data: activityData, error: activityError } = await supabase
+        .from("user_activity_logs")
+        .select("id, activity_type, details, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (!activityError) {
+        setActivities(activityData || []);
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast.error("Failed to load user data");
@@ -257,6 +279,51 @@ export default function AdminUserDetail() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Timeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Recent Activity ({activities.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activities.length === 0 ? (
+              <EmptyState
+                icon={<Activity className="h-8 w-8 text-muted-foreground" />}
+                title="No activity recorded"
+                description="This user has no activity logs yet."
+              />
+            ) : (
+              <div className="space-y-3">
+                {activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">
+                          {getActivityDisplayName(activity.activity_type)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(activity.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      {activity.details && Object.keys(activity.details).length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {activity.details.fileName || activity.details.page || JSON.stringify(activity.details).slice(0, 50)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

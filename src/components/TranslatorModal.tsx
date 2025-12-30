@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
+import { logActivity } from "@/lib/activityLogger";
 
 interface TranslatorModalProps {
   open: boolean;
@@ -88,6 +89,9 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
       setTranslatedText(data.translatedText);
       setNote(data.note || "");
       setTotalPages(data.totalPages);
+      
+      // Log activity
+      await logActivity("ai_translate", { fileName, fileId, targetLanguage, startPage: start, endPage: end });
     } catch (error: any) {
       console.error("Error translating:", error);
       toast.error(error.message || "Failed to translate");

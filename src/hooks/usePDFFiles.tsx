@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 export interface PDFFile {
   id: string;
@@ -205,6 +206,9 @@ export function usePDFFiles(userId: string | undefined) {
         });
       }, 2000);
 
+      // Log activity
+      await logActivity("upload_pdf", { fileName: file.name, fileSize: file.size });
+
       await loadFiles();
       toast.success("File uploaded successfully");
     } catch (error: any) {
@@ -303,6 +307,9 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (dbError) throw dbError;
 
+      // Log activity
+      await logActivity("delete_pdf", { fileName: storagePath });
+
       // Update storage usage
       if (fileData?.file_size) {
         await supabase.rpc('update_user_storage', {
@@ -347,6 +354,9 @@ export function usePDFFiles(userId: string | undefined) {
         .eq("id", fileId);
 
       if (error) throw error;
+
+      // Log activity
+      await logActivity("rename_pdf", { fileId, newName });
 
       await loadFiles();
       toast.success("File renamed successfully");

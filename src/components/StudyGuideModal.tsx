@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
+import { logActivity } from "@/lib/activityLogger";
 
 interface StudyGuideModalProps {
   open: boolean;
@@ -41,6 +42,9 @@ export function StudyGuideModal({ open, onOpenChange, fileId, fileName }: StudyG
 
       if (error) throw error;
       setStudyGuide(data.studyGuide);
+      
+      // Log activity
+      await logActivity("ai_study_guide", { fileName, fileId });
     } catch (error: any) {
       console.error("Error loading study guide:", error);
       toast.error(error.message || "Failed to generate study guide");
