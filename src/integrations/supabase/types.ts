@@ -90,19 +90,25 @@ export type Database = {
       }
       departments: {
         Row: {
+          color: string | null
           created_at: string | null
+          icon: string | null
           id: string
           name: string
           slug: string
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           name: string
           slug: string
         }
         Update: {
+          color?: string | null
           created_at?: string | null
+          icon?: string | null
           id?: string
           name?: string
           slug?: string

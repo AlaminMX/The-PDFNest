@@ -15,6 +15,7 @@ import AdminReps from "./pages/AdminReps";
 import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminActivityLogs from "./pages/AdminActivityLogs";
 import AFITPDFs from "./pages/AFITPDFs";
+import SchoolStore from "./pages/SchoolStore";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/admin/logs" element={<AdminActivityLogs />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
+            <Route path="/school-store" element={<SchoolStore />} />
             <Route path="/afit-pdfs/:deptSlug" element={<DepartmentCourses />} />
             <Route path="/afit-pdfs/:deptSlug/:courseCode" element={<CourseLectureNotes />} />
             <Route path="/rep/upload" element={<RepUpload />} />
