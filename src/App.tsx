@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import PasswordResetSuccess from "./pages/PasswordResetSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminReps from "./pages/AdminReps";
+import AdminDepartments from "./pages/AdminDepartments";
 import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminSessionLogs from "./pages/AdminSessionLogs";
 import AFITPDFs from "./pages/AFITPDFs";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/reps" element={<AdminReps />} />
+            <Route path="/admin/departments" element={<AdminDepartments />} />
             <Route path="/admin/logs" element={<AdminSessionLogs />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
