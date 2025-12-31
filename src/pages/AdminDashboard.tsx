@@ -5,7 +5,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity } from "lucide-react";
+import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -223,6 +223,10 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/departments")} className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Departments</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="gap-2">
                 <Activity className="h-4 w-4" />
                 <span className="hidden sm:inline">Activity Logs</span>

@@ -157,8 +157,7 @@ export default function AdminDepartments() {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <h3 
-                          className="font-semibold text-lg"
-                          style={{ color: styles.accentText }}
+                          className="font-semibold text-lg text-white"
                         >
                           {dept.name}
                         </h3>
@@ -235,8 +234,7 @@ export default function AdminDepartments() {
                     </div>
                     <div>
                       <h4 
-                        className="font-semibold"
-                        style={{ color: previewStyles.accentText }}
+                        className="font-semibold text-white"
                       >
                         {editingDept.name || "Department Name"}
                       </h4>
