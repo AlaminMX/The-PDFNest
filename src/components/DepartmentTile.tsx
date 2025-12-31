@@ -69,8 +69,7 @@ export function DepartmentTile({
           {/* Content */}
           <div className="flex-1 min-w-0">
             <h3
-              className="font-semibold mb-0.5 truncate"
-              style={{ color: styles.accentText }}
+              className="font-semibold mb-0.5 truncate text-white"
             >
               {name}
             </h3>
