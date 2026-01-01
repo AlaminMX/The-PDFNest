@@ -21,6 +21,7 @@ export function useDepartments() {
       const { data, error: fetchError } = await supabase
         .from("departments")
         .select("*")
+        .order("display_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
 
       if (fetchError) throw fetchError;
