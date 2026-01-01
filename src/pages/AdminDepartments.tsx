@@ -5,22 +5,128 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartments } from "@/hooks/useDepartments";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Edit, Palette, Sparkles } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
-import { DepartmentTile } from "@/components/DepartmentTile";
 import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
+import { Reorder, useDragControls } from "framer-motion";
 
 interface EditingDepartment {
   id: string;
   name: string;
   color: string | null;
   icon: string | null;
+}
+
+interface NewDepartment {
+  name: string;
+  color: string;
+  icon: string;
+}
+
+interface DepartmentItemProps {
+  dept: any;
+  index: number;
+  onEdit: (dept: any) => void;
+  onDelete: (dept: any) => void;
+}
+
+function DepartmentItem({ dept, index, onEdit, onDelete }: DepartmentItemProps) {
+  const dragControls = useDragControls();
+  const styles = getDepartmentStyles(dept.color, index);
+  const icon = getDepartmentIcon(dept.icon, dept.name);
+  const iconGlow = getIconGlowStyles(styles.hsl);
+
+  return (
+    <Reorder.Item
+      value={dept}
+      id={dept.id}
+      dragListener={false}
+      dragControls={dragControls}
+      className="list-none"
+    >
+      <Card 
+        className="overflow-hidden transition-all hover:shadow-lg"
+        style={{ borderColor: `${styles.cssHsl}20` }}
+      >
+        <div 
+          className="p-4"
+          style={{ background: styles.bgLight }}
+        >
+          <div className="flex items-center gap-4">
+            {/* Drag Handle */}
+            <div
+              className="cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-white/10 transition-colors"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            {/* Icon Preview */}
+            <div
+              className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: styles.accentBg,
+                boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
+              }}
+            >
+              <span
+                className="text-3xl"
+                style={{
+                  filter: iconGlow.filter,
+                  textShadow: iconGlow.textShadow,
+                }}
+              >
+                {icon}
+              </span>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg text-white">
+                {dept.name}
+              </h3>
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Palette className="w-3 h-3" />
+                  {dept.color || "Auto"}
+                </span>
+                <span>•</span>
+                <span>Icon: {dept.icon || "Auto"}</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(dept)}
+                className="gap-1.5"
+              >
+                <Edit className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => onDelete(dept)}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </Reorder.Item>
+  );
 }
 
 export default function AdminDepartments() {
@@ -31,6 +137,12 @@ export default function AdminDepartments() {
   
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "" });
+  const [creating, setCreating] = useState(false);
+  const [deletingDept, setDeletingDept] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [orderedDepts, setOrderedDepts] = useState<any[]>([]);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
@@ -38,6 +150,11 @@ export default function AdminDepartments() {
       navigate("/");
     }
   }, [isAdmin, authLoading, adminLoading, navigate]);
+
+  // Sync ordered departments with fetched departments
+  useEffect(() => {
+    setOrderedDepts(departments);
+  }, [departments]);
 
   const handleEdit = (dept: any) => {
     setEditingDept({
@@ -80,6 +197,101 @@ export default function AdminDepartments() {
     }
   };
 
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .trim();
+  };
+
+  const handleCreate = async () => {
+    if (!newDept.name.trim()) {
+      toast.error("Department name is required");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const slug = generateSlug(newDept.name);
+      
+      // Get the next display order
+      const maxOrder = orderedDepts.reduce((max, d) => Math.max(max, d.display_order || 0), 0);
+      
+      const { error } = await supabase
+        .from("departments")
+        .insert({
+          name: newDept.name.trim(),
+          slug: slug,
+          color: newDept.color?.trim() || null,
+          icon: newDept.icon?.trim() || null,
+          display_order: maxOrder + 1,
+        });
+
+      if (error) throw error;
+
+      toast.success("Department created successfully");
+      setShowCreateDialog(false);
+      setNewDept({ name: "", color: "", icon: "" });
+      refreshDepartments();
+    } catch (error: any) {
+      console.error("Error creating department:", error);
+      toast.error(error.message || "Failed to create department");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingDept) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("departments")
+        .delete()
+        .eq("id", deletingDept.id);
+
+      if (error) throw error;
+
+      toast.success("Department deleted successfully");
+      setDeletingDept(null);
+      refreshDepartments();
+    } catch (error: any) {
+      console.error("Error deleting department:", error);
+      toast.error(error.message || "Failed to delete department");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleReorder = async (newOrder: any[]) => {
+    setOrderedDepts(newOrder);
+    
+    // Update display_order in database for all reordered items
+    try {
+      const updates = newOrder.map((dept, index) => ({
+        id: dept.id,
+        display_order: index + 1,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from("departments")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+      }
+      
+      toast.success("Department order saved");
+    } catch (error: any) {
+      console.error("Error updating order:", error);
+      toast.error("Failed to save order");
+      // Revert on error
+      refreshDepartments();
+    }
+  };
+
   if (authLoading || adminLoading || !isAdmin) {
     return <LoadingState message="Verifying access..." />;
   }
@@ -95,100 +307,175 @@ export default function AdminDepartments() {
     ? getIconGlowStyles(previewStyles.hsl)
     : null;
 
+  // Preview styles for creating
+  const createPreviewStyles = getDepartmentStyles(newDept.color || null, orderedDepts.length);
+  const createPreviewIcon = getDepartmentIcon(newDept.icon || null, newDept.name || "New Department");
+  const createPreviewGlow = getIconGlowStyles(createPreviewStyles.hsl);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
       <PageHeader
         title="Department Management"
-        subtitle="Edit department colors, icons, and names"
+        subtitle="Create, edit, delete, and reorder departments"
         showBack
         icon={<Building2 className="h-6 w-6 text-primary" />}
       />
 
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+        {/* Create Button */}
+        <div className="flex justify-center">
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Department
+          </Button>
+        </div>
+
         {deptLoading ? (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
             <p className="text-sm text-muted-foreground">Loading departments...</p>
           </div>
-        ) : departments.length === 0 ? (
+        ) : orderedDepts.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No departments found</p>
+              <Button onClick={() => setShowCreateDialog(true)} className="mt-4 gap-2">
+                <Plus className="h-4 w-4" />
+                Create First Department
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 max-w-2xl mx-auto">
-            {departments.map((dept, index) => {
-              const styles = getDepartmentStyles((dept as any).color, index);
-              const icon = getDepartmentIcon((dept as any).icon, dept.name);
-              const iconGlow = getIconGlowStyles(styles.hsl);
-              
-              return (
-                <Card 
-                  key={dept.id} 
-                  className="overflow-hidden transition-all hover:shadow-lg"
-                  style={{ borderColor: `${styles.cssHsl}20` }}
-                >
-                  <div 
-                    className="p-4"
-                    style={{ background: styles.bgLight }}
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Icon Preview */}
-                      <div
-                        className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: styles.accentBg,
-                          boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
-                        }}
-                      >
-                        <span
-                          className="text-3xl"
-                          style={{
-                            filter: iconGlow.filter,
-                            textShadow: iconGlow.textShadow,
-                          }}
-                        >
-                          {icon}
-                        </span>
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 
-                          className="font-semibold text-lg text-white"
-                        >
-                          {dept.name}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Palette className="w-3 h-3" />
-                            {(dept as any).color || "Auto"}
-                          </span>
-                          <span>•</span>
-                          <span>Icon: {(dept as any).icon || "Auto"}</span>
-                        </div>
-                      </div>
-
-                      {/* Edit Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(dept)}
-                        className="gap-1.5"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+          <div className="max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground text-center mb-4">
+              Drag and drop to reorder departments
+            </p>
+            <Reorder.Group 
+              axis="y" 
+              values={orderedDepts} 
+              onReorder={handleReorder}
+              className="space-y-4"
+            >
+              {orderedDepts.map((dept, index) => (
+                <DepartmentItem
+                  key={dept.id}
+                  dept={dept}
+                  index={index}
+                  onEdit={handleEdit}
+                  onDelete={setDeletingDept}
+                />
+              ))}
+            </Reorder.Group>
           </div>
         )}
       </main>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Create Department
+            </DialogTitle>
+            <DialogDescription>
+              Add a new department. It will appear in the AFIT PDFs section.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-4">
+            {/* Live Preview */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                Live Preview
+              </Label>
+              <div
+                className="p-4 rounded-xl"
+                style={{ background: createPreviewStyles.bgLight }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: createPreviewStyles.accentBg,
+                      boxShadow: `0 4px 20px ${createPreviewStyles.glowColor}, 0 0 40px ${createPreviewStyles.glowIntense}`,
+                    }}
+                  >
+                    <span
+                      className="text-2xl"
+                      style={{
+                        filter: createPreviewGlow.filter,
+                        textShadow: createPreviewGlow.textShadow,
+                      }}
+                    >
+                      {createPreviewIcon}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">
+                      {newDept.name || "Department Name"}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">View Courses</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newDeptName">Department Name *</Label>
+                <Input
+                  id="newDeptName"
+                  value={newDept.name}
+                  onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
+                  placeholder="e.g., Computer Science"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newDeptColor">
+                  Color
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (name or code, e.g., "emerald", "#10B981")
+                  </span>
+                </Label>
+                <Input
+                  id="newDeptColor"
+                  value={newDept.color}
+                  onChange={(e) => setNewDept({ ...newDept, color: e.target.value })}
+                  placeholder="Leave empty for auto-generated"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newDeptIcon">
+                  Icon
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (emoji, e.g., 💻, 🔒)
+                  </span>
+                </Label>
+                <Input
+                  id="newDeptIcon"
+                  value={newDept.icon}
+                  onChange={(e) => setNewDept({ ...newDept, icon: e.target.value })}
+                  placeholder="Leave empty for auto-assigned"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? "Creating..." : "Create Department"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingDept} onOpenChange={() => setEditingDept(null)}>
@@ -233,9 +520,7 @@ export default function AdminDepartments() {
                       </span>
                     </div>
                     <div>
-                      <h4 
-                        className="font-semibold text-white"
-                      >
+                      <h4 className="font-semibold text-white">
                         {editingDept.name || "Department Name"}
                       </h4>
                       <p className="text-xs text-muted-foreground">View Courses</p>
@@ -299,6 +584,32 @@ export default function AdminDepartments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingDept} onOpenChange={() => setDeletingDept(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Department</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingDept?.name}"? This action cannot be undone.
+              <br /><br />
+              <span className="text-destructive font-medium">
+                Warning: This may affect courses and lecture notes associated with this department.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete Department"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <footer className="mt-auto py-6 border-t border-border/40">
         <div className="container mx-auto px-4 text-center">

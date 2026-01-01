@@ -10,6 +10,146 @@ interface ExportOptions {
   sourceFileName: string;
 }
 
+// Load PDFNest logo as base64
+async function loadLogoAsBase64(): Promise<string | null> {
+  try {
+    const response = await fetch('/pdfnest-logo.png');
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error loading logo:', error);
+    return null;
+  }
+}
+
+// Text replacement map for unsupported characters in standard fonts
+// This handles characters that might not render well in standard PDF fonts
+function sanitizeText(text: string): string {
+  // Replace common problematic Unicode characters with alternatives
+  // Math symbols
+  const replacements: Record<string, string> = {
+    '≈': '~=',
+    '≠': '!=',
+    '≤': '<=',
+    '≥': '>=',
+    '±': '+/-',
+    '÷': '/',
+    '×': 'x',
+    '∞': 'infinity',
+    '√': 'sqrt',
+    '∑': 'SUM',
+    '∏': 'PROD',
+    '∫': 'integral',
+    '∂': 'd',
+    '∆': 'delta',
+    '∇': 'nabla',
+    '∈': 'in',
+    '∉': 'not in',
+    '⊂': 'subset',
+    '⊃': 'superset',
+    '∪': 'union',
+    '∩': 'intersection',
+    '∧': 'AND',
+    '∨': 'OR',
+    '¬': 'NOT',
+    '⇒': '=>',
+    '⇔': '<=>',
+    '∀': 'for all',
+    '∃': 'exists',
+    'α': 'alpha',
+    'β': 'beta',
+    'γ': 'gamma',
+    'δ': 'delta',
+    'ε': 'epsilon',
+    'θ': 'theta',
+    'λ': 'lambda',
+    'μ': 'mu',
+    'π': 'pi',
+    'σ': 'sigma',
+    'φ': 'phi',
+    'ω': 'omega',
+    '→': '->',
+    '←': '<-',
+    '↔': '<->',
+    '°': 'deg',
+  };
+
+  // Common emoji replacements - using text descriptions
+  const emojiReplacements: Record<string, string> = {
+    '✓': '[check]',
+    '✔': '[check]',
+    '✗': '[x]',
+    '✘': '[x]',
+    '★': '[star]',
+    '☆': '[star]',
+    '❤': '[heart]',
+    '♥': '[heart]',
+    '⭐': '[star]',
+    '🔥': '[fire]',
+    '💡': '[idea]',
+    '📌': '[pin]',
+    '📝': '[note]',
+    '📚': '[books]',
+    '📖': '[book]',
+    '✨': '[sparkle]',
+    '🎯': '[target]',
+    '💪': '[strong]',
+    '👍': '[thumbs up]',
+    '👎': '[thumbs down]',
+    '🚀': '[rocket]',
+    '⚡': '[lightning]',
+    '🔑': '[key]',
+    '🔒': '[lock]',
+    '🔓': '[unlock]',
+    '⚠': '[warning]',
+    '❗': '[!]',
+    '❓': '[?]',
+    '💰': '[money]',
+    '📈': '[chart up]',
+    '📉': '[chart down]',
+    '✅': '[done]',
+    '❌': '[x]',
+    '🔴': '[red]',
+    '🟢': '[green]',
+    '🟡': '[yellow]',
+    '🔵': '[blue]',
+    '⬛': '[black]',
+    '⬜': '[white]',
+    '▶': '>',
+    '◀': '<',
+    '▲': '^',
+    '▼': 'v',
+    '◆': '*',
+    '◇': '*',
+    '○': 'o',
+    '●': '*',
+    '□': '[ ]',
+    '■': '[x]',
+  };
+
+  let result = text;
+
+  // Apply replacements
+  for (const [char, replacement] of Object.entries(replacements)) {
+    result = result.split(char).join(replacement);
+  }
+  
+  for (const [emoji, replacement] of Object.entries(emojiReplacements)) {
+    result = result.split(emoji).join(replacement);
+  }
+
+  // Remove remaining emojis that we can't handle
+  // eslint-disable-next-line no-misleading-character-class
+  result = result.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]|[\u{1F100}-\u{1F1FF}]|[\u{1F200}-\u{1F2FF}]|[\u{1FA00}-\u{1FAFF}]/gu, '');
+
+  return result;
+}
+
 // Parse markdown-style formatting and return styled text segments
 function parseContent(text: string): { text: string; bold: boolean; italic: boolean }[] {
   const segments: { text: string; bold: boolean; italic: boolean }[] = [];
@@ -49,6 +189,9 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
   const contentWidth = pageWidth - (margin * 2);
   let yPos = margin;
   
+  // Load logo
+  const logoBase64 = await loadLogoAsBase64();
+  
   // Colors based on type
   const colors = {
     summary: { r: 220, g: 38, b: 38 }, // Red
@@ -57,36 +200,83 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
     chat: { r: 168, g: 85, b: 247 }, // Purple
   };
   
+  const typeLabels = {
+    summary: 'PDF Summary',
+    'study-guide': 'Study Guide',
+    translation: 'Translation',
+    chat: 'Chat Export',
+  };
+  
   const accentColor = colors[type];
   
-  // Header background
+  // Header background with gradient effect (solid color fallback)
   doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-  doc.rect(0, 0, pageWidth, 45, 'F');
+  doc.rect(0, 0, pageWidth, 50, 'F');
+  
+  // Add subtle header overlay for depth
+  doc.setFillColor(0, 0, 0);
+  doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+  doc.rect(0, 40, pageWidth, 10, 'F');
+  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  
+  // Add logo if available
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', pageWidth - margin - 15, 8, 12, 12);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+  
+  // Type badge
+  doc.setFillColor(255, 255, 255);
+  doc.setGState(new (doc as any).GState({ opacity: 0.2 }));
+  doc.roundedRect(margin, 8, 35, 6, 1, 1, 'F');
+  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(typeLabels[type].toUpperCase(), margin + 2, 12);
   
   // Title
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, margin, 20);
+  const sanitizedTitle = sanitizeText(title);
+  const titleLines = doc.splitTextToSize(sanitizedTitle, contentWidth - 20);
+  doc.text(titleLines[0], margin, 25);
   
   // Subtitle
   if (subtitle) {
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(subtitle, margin, 30);
+    doc.text(sanitizeText(subtitle), margin, 33);
   }
   
   // Source file info
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   const truncatedSource = sourceFileName.length > 50 ? sourceFileName.substring(0, 47) + '...' : sourceFileName;
-  doc.text(`Source: ${truncatedSource}`, margin, 38);
+  doc.text(`Source: ${sanitizeText(truncatedSource)}`, margin, 42);
   
-  yPos = 55;
+  // Generation date on right side
+  const dateStr = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+  doc.text(dateStr, pageWidth - margin - doc.getTextWidth(dateStr), 42);
+  
+  yPos = 60;
+  
+  // Decorative line under header
+  doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+  doc.setLineWidth(0.5);
+  doc.line(margin, 55, pageWidth - margin, 55);
   
   // Helper function to add a new page if needed
   const checkPageBreak = (requiredSpace: number = 20) => {
-    if (yPos + requiredSpace > pageHeight - margin) {
+    if (yPos + requiredSpace > pageHeight - 25) {
       doc.addPage();
       yPos = margin;
       return true;
@@ -94,104 +284,164 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
     return false;
   };
   
-  // Helper to wrap and add text
-  const addText = (text: string, fontSize: number, fontStyle: 'normal' | 'bold' | 'italic', lineHeight: number = 1.4) => {
+  // Helper to wrap and add text with improved formatting
+  const addText = (text: string, fontSize: number, fontStyle: 'normal' | 'bold' | 'italic', lineHeight: number = 1.5) => {
+    const sanitized = sanitizeText(text);
     doc.setFontSize(fontSize);
     doc.setFont('helvetica', fontStyle);
     doc.setTextColor(50, 50, 50);
     
-    const lines = doc.splitTextToSize(text, contentWidth);
+    const lines = doc.splitTextToSize(sanitized, contentWidth);
     
     for (const line of lines) {
-      checkPageBreak(fontSize * 0.35 * lineHeight);
+      checkPageBreak(fontSize * 0.4 * lineHeight);
       doc.text(line, margin, yPos);
-      yPos += fontSize * 0.35 * lineHeight;
+      yPos += fontSize * 0.4 * lineHeight;
     }
   };
   
-  // Process content
+  // Process content with improved formatting
   const processContent = (contentStr: string) => {
     const lines = contentStr.split('\n');
     
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const trimmedLine = line.trim();
       
       if (!trimmedLine) {
-        yPos += 4;
+        yPos += 3;
         continue;
       }
       
-      // Headers
+      // Headers with styled backgrounds
       if (trimmedLine.startsWith('### ')) {
         checkPageBreak(15);
-        yPos += 4;
-        addText(trimmedLine.replace('### ', ''), 12, 'bold');
-        yPos += 2;
-      } else if (trimmedLine.startsWith('## ')) {
-        checkPageBreak(18);
-        yPos += 6;
+        yPos += 5;
+        
+        // Small accent bar
         doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-        doc.rect(margin, yPos - 4, 3, 8, 'F');
-        addText(trimmedLine.replace('## ', ''), 14, 'bold');
-        yPos += 3;
-      } else if (trimmedLine.startsWith('# ')) {
+        doc.rect(margin, yPos - 4, 2, 6, 'F');
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(60, 60, 60);
+        doc.text(sanitizeText(trimmedLine.replace('### ', '')), margin + 5, yPos);
+        yPos += 8;
+      } else if (trimmedLine.startsWith('## ')) {
         checkPageBreak(20);
         yPos += 8;
-        addText(trimmedLine.replace('# ', ''), 16, 'bold');
+        
+        // Colored background bar
+        doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+        doc.rect(margin, yPos - 6, contentWidth, 10, 'F');
+        doc.setGState(new (doc as any).GState({ opacity: 1 }));
+        
+        // Accent bar
+        doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.rect(margin, yPos - 6, 3, 10, 'F');
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.text(sanitizeText(trimmedLine.replace('## ', '')), margin + 6, yPos + 1);
+        yPos += 12;
+      } else if (trimmedLine.startsWith('# ')) {
+        checkPageBreak(25);
+        yPos += 10;
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 40, 40);
+        doc.text(sanitizeText(trimmedLine.replace('# ', '')), margin, yPos);
+        yPos += 8;
+        
+        // Underline
+        doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, margin + 40, yPos);
         yPos += 4;
       }
-      // Bullet points
+      // Bullet points with proper styling
       else if (trimmedLine.startsWith('• ') || trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         checkPageBreak(12);
+        
+        // Colored bullet
         doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-        doc.circle(margin + 2, yPos - 1.5, 1, 'F');
+        doc.circle(margin + 2, yPos - 1.5, 1.2, 'F');
+        
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(50, 50, 50);
-        const bulletText = trimmedLine.replace(/^[•\-*]\s*/, '');
-        const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 8);
-        for (let i = 0; i < bulletLines.length; i++) {
-          if (i > 0) checkPageBreak(10);
-          doc.text(bulletLines[i], margin + 6, yPos);
+        const bulletText = sanitizeText(trimmedLine.replace(/^[•\-*]\s*/, ''));
+        const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
+        
+        for (let j = 0; j < bulletLines.length; j++) {
+          if (j > 0) {
+            checkPageBreak(10);
+          }
+          doc.text(bulletLines[j], margin + 7, yPos);
           yPos += 5;
         }
+        yPos += 1;
       }
-      // Numbered items
+      // Numbered items with accent color
       else if (/^\d+\.\s/.test(trimmedLine)) {
         checkPageBreak(12);
+        
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
         const numberMatch = trimmedLine.match(/^(\d+)\./);
         if (numberMatch) {
-          doc.text(numberMatch[1] + '.', margin, yPos);
+          // Number circle background
+          doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+          doc.setGState(new (doc as any).GState({ opacity: 0.15 }));
+          doc.circle(margin + 3, yPos - 1, 3.5, 'F');
+          doc.setGState(new (doc as any).GState({ opacity: 1 }));
+          
+          doc.text(numberMatch[1], margin + 1.5, yPos);
         }
+        
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(50, 50, 50);
-        const numberText = trimmedLine.replace(/^\d+\.\s*/, '');
-        const numberLines = doc.splitTextToSize(numberText, contentWidth - 8);
-        for (let i = 0; i < numberLines.length; i++) {
-          if (i > 0) checkPageBreak(10);
-          doc.text(numberLines[i], margin + 6, yPos);
+        const numberText = sanitizeText(trimmedLine.replace(/^\d+\.\s*/, ''));
+        const numberLines = doc.splitTextToSize(numberText, contentWidth - 12);
+        
+        for (let j = 0; j < numberLines.length; j++) {
+          if (j > 0) {
+            checkPageBreak(10);
+          }
+          doc.text(numberLines[j], margin + 9, yPos);
           yPos += 5;
         }
+        yPos += 1;
       }
       // Section markers (===)
       else if (trimmedLine.startsWith('===') && trimmedLine.endsWith('===')) {
-        checkPageBreak(20);
-        yPos += 8;
-        const sectionTitle = trimmedLine.replace(/=/g, '').trim();
-        doc.setFillColor(240, 240, 240);
-        doc.rect(margin, yPos - 5, contentWidth, 10, 'F');
-        doc.setFontSize(12);
+        checkPageBreak(22);
+        yPos += 10;
+        
+        const sectionTitle = sanitizeText(trimmedLine.replace(/=/g, '').trim());
+        
+        // Full-width section banner
+        doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+        doc.rect(margin, yPos - 6, contentWidth, 12, 'F');
+        
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-        doc.text(sectionTitle, margin + 4, yPos + 1);
-        yPos += 12;
+        doc.setTextColor(255, 255, 255);
+        doc.text(sectionTitle.toUpperCase(), margin + 5, yPos + 2);
+        yPos += 14;
       }
-      // Regular text
+      // Code blocks or special content
+      else if (trimmedLine.startsWith('```')) {
+        // Skip code fence markers
+        continue;
+      }
+      // Regular text with proper paragraph spacing
       else {
-        addText(trimmedLine, 10, 'normal');
+        addText(trimmedLine, 10, 'normal', 1.4);
         yPos += 2;
       }
     }
@@ -199,18 +449,23 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
   
   // Handle array of sections or single content string
   if (Array.isArray(content)) {
-    for (const section of content) {
-      checkPageBreak(25);
-      yPos += 6;
+    for (let i = 0; i < content.length; i++) {
+      const section = content[i];
+      checkPageBreak(30);
       
-      // Section header
+      if (i > 0) {
+        yPos += 8;
+      }
+      
+      // Section header with full styling
       doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.rect(margin, yPos - 4, contentWidth, 8, 'F');
+      doc.rect(margin, yPos - 4, contentWidth, 10, 'F');
+      
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
-      doc.text(section.section.toUpperCase(), margin + 4, yPos + 1);
-      yPos += 12;
+      doc.text(sanitizeText(section.section.toUpperCase()), margin + 5, yPos + 2);
+      yPos += 14;
       
       processContent(section.content);
     }
@@ -218,16 +473,31 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
     processContent(content);
   }
   
-  // Footer on each page
+  // Footer on each page with branding
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
+    
+    // Footer line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18);
+    
+    // PDFNest branding
     doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+    doc.text('PDFNest', margin, pageHeight - 12);
+    
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Generated by PDFNest AI`, margin, pageHeight - 10);
-    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, pageHeight - 10);
-    doc.text(new Date().toLocaleDateString(), pageWidth / 2 - 10, pageHeight - 10);
+    doc.setTextColor(120, 120, 120);
+    doc.text('AI-Powered PDF Tools', margin + 16, pageHeight - 12);
+    
+    // Page number
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    const pageText = `Page ${i} of ${totalPages}`;
+    doc.text(pageText, pageWidth - margin - doc.getTextWidth(pageText), pageHeight - 12);
   }
   
   const blob = doc.output('blob');
@@ -238,7 +508,7 @@ export async function exportToPDF(options: ExportOptions): Promise<{ blob: Blob;
 
 // Get or create the "AI Exports" category for a user
 async function getOrCreateAIExportsCategory(userId: string): Promise<string | null> {
-  const AI_EXPORTS_CATEGORY_NAME = '✨ AI Exports';
+  const AI_EXPORTS_CATEGORY_NAME = 'AI Exports';
   const AI_EXPORTS_CATEGORY_COLOR = '#8B5CF6'; // Purple to match AI theme
   
   try {
