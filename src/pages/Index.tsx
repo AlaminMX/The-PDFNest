@@ -77,6 +77,7 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { NewYearBanner } from "@/components/NewYearBanner";
+import { SparkleBackground } from "@/components/SparkleBackground";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -828,7 +829,8 @@ export default function Index() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <SparkleBackground />
+      <div className="min-h-screen flex w-full relative z-10">
         <AppSidebar 
           categories={categories}
           selectedCategory={selectedCategory}
@@ -850,7 +852,7 @@ export default function Index() {
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
-          <NewYearBanner />
+          <NewYearBanner userName={user?.user_metadata?.full_name || user?.user_metadata?.display_name || user?.email?.split('@')[0]} />
           <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-2 p-4">
               <SidebarTrigger />
