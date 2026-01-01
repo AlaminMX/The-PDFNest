@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/Confetti";
 
@@ -13,7 +13,6 @@ export function NewYearModal({ userName, onClose }: NewYearModalProps) {
   const [showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
-    // Stop confetti after 4 seconds
     const timer = setTimeout(() => setShowConfetti(false), 4000);
     return () => clearTimeout(timer);
   }, []);
@@ -24,130 +23,151 @@ export function NewYearModal({ userName, onClose }: NewYearModalProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-center justify-center"
+        className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8"
       >
-        {/* Backdrop */}
+        {/* Transparent backdrop with blur */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-gradient-to-br from-amber-600 via-orange-500 to-red-600"
-        >
-          {/* Animated stars/sparkles in background */}
-          {[...Array(30)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute"
-              initial={{
-                x: Math.random() * 100 + "%",
-                y: Math.random() * 100 + "%",
-                scale: 0,
-                opacity: 0,
-              }}
-              animate={{
-                scale: [0, 1, 0],
-                opacity: [0, 1, 0],
-              }}
-              transition={{
-                duration: 2 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 3,
-              }}
-            >
-              <Sparkles className="w-4 h-4 text-white/60" />
-            </motion.div>
-          ))}
-
-          {/* Radial glow */}
-          <div className="absolute inset-0 bg-radial-gradient from-yellow-400/20 via-transparent to-transparent" />
-        </motion.div>
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
         {/* Confetti */}
         {showConfetti && <Confetti />}
 
-        {/* Content */}
+        {/* Modal Card */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", duration: 0.8, delay: 0.2 }}
-          className="relative z-10 text-center px-8"
+          initial={{ scale: 0.8, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 20 }}
+          transition={{ type: "spring", duration: 0.6 }}
+          className="relative z-10 w-full max-w-lg mx-auto"
         >
-          {/* Decorative sparkles around text */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2"
-          >
-            <Sparkles className="w-12 h-12 text-yellow-300" />
-          </motion.div>
+          {/* Card with dark glassmorphism */}
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900/95 via-neutral-900/95 to-zinc-950/95 backdrop-blur-xl shadow-2xl">
+            {/* Animated glow border effect */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-rose-500/20 opacity-50" />
+            
+            {/* Inner sparkles */}
+            <div className="absolute inset-0 overflow-hidden rounded-3xl">
+              {[...Array(20)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-amber-400/60"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  }}
+                  animate={{
+                    scale: [0, 1.5, 0],
+                    opacity: [0, 1, 0],
+                  }}
+                  transition={{
+                    duration: 2 + Math.random() * 2,
+                    repeat: Infinity,
+                    delay: Math.random() * 3,
+                  }}
+                />
+              ))}
+            </div>
 
-          {/* Main greeting */}
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-4 drop-shadow-2xl">
-              Happy New Year
-            </h1>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", delay: 0.6 }}
-              className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500 mb-8"
-            >
-              2026
-            </motion.div>
-          </motion.div>
-
-          {/* User name */}
-          {userName && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="mb-12"
-            >
-              <p className="text-2xl md:text-3xl text-white/90 font-light">
-                Welcome,
-              </p>
-              <p className="text-3xl md:text-5xl font-semibold text-white mt-2 drop-shadow-lg">
-                {userName}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Decorative line */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 1 }}
-            className="w-32 h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent mx-auto mb-8"
-          />
-
-          {/* Close button */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.2 }}
-          >
-            <Button
+            {/* Close button */}
+            <button
               onClick={onClose}
-              size="lg"
-              className="bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm text-lg px-8 py-6 rounded-full"
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
             >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Let's Go!
-            </Button>
-          </motion.div>
+              <X className="w-5 h-5 text-white/60" />
+            </button>
 
-          {/* Bottom sparkle */}
-          <motion.div
-            animate={{ y: [0, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="mt-8"
-          >
-            <Sparkles className="w-8 h-8 text-yellow-300/60 mx-auto" />
-          </motion.div>
+            {/* Content */}
+            <div className="relative z-10 px-8 py-12 text-center">
+              {/* Top sparkle */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="mb-6"
+              >
+                <Sparkles className="w-8 h-8 text-amber-400/80 mx-auto" />
+              </motion.div>
+
+              {/* Main greeting */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="text-sm uppercase tracking-[0.3em] text-amber-400/70 mb-2 font-medium">
+                  Welcome to
+                </p>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+                  Happy New Year
+                </h1>
+                <motion.div
+                  initial={{ scale: 0.5 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.3 }}
+                  className="text-6xl md:text-7xl font-black bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400 bg-clip-text text-transparent"
+                >
+                  2026
+                </motion.div>
+              </motion.div>
+
+              {/* Decorative line */}
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.5 }}
+                className="w-24 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent mx-auto my-6"
+              />
+
+              {/* User name */}
+              {userName && (
+                <motion.div
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="mb-8"
+                >
+                  <p className="text-zinc-400 text-sm mb-1">Hey there,</p>
+                  <p className="text-2xl md:text-3xl font-semibold text-white">
+                    {userName}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* CTA Button */}
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.8 }}
+              >
+                <Button
+                  onClick={onClose}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold px-8 py-5 rounded-full text-base shadow-lg shadow-amber-500/20"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Let's Go
+                </Button>
+              </motion.div>
+
+              {/* Bottom decoration */}
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="mt-8 flex justify-center gap-2"
+              >
+                {[...Array(3)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-amber-400/40"
+                    animate={{ opacity: [0.3, 0.8, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
