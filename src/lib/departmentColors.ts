@@ -314,9 +314,9 @@ export function getDepartmentStyles(
     accentBg: `hsla(${h}, ${s}%, ${l}%, 0.15)`,
     accentText: `hsl(${h}, ${Math.min(s + 10, 100)}%, ${textMode === "dark" ? Math.max(l - 15, 25) : Math.min(l + 10, 75)}%)`,
     
-    // Glow effects
-    glowColor: `hsla(${h}, ${s}%, ${l}%, 0.25)`,
-    glowIntense: `hsla(${h}, ${Math.min(s + 20, 100)}%, ${Math.min(l + 15, 75)}%, 0.5)`,
+    // Glow effects - reduced intensity
+    glowColor: `hsla(${h}, ${s}%, ${l}%, 0.15)`,
+    glowIntense: `hsla(${h}, ${Math.min(s + 20, 100)}%, ${Math.min(l + 15, 75)}%, 0.25)`,
     
     // Contrast text
     textOnBg: textMode === "dark" 
@@ -338,13 +338,14 @@ export interface IconGlowStyles {
 
 export function getIconGlowStyles(hsl: HSLColor): IconGlowStyles {
   const { h, s, l } = hsl;
-  const glowColor = `hsla(${h}, ${Math.min(s + 20, 100)}%, ${Math.min(l + 20, 80)}%, 0.6)`;
-  const glowColorLight = `hsla(${h}, ${Math.min(s + 30, 100)}%, ${Math.min(l + 30, 90)}%, 0.4)`;
+  // Reduced glow intensity
+  const glowColor = `hsla(${h}, ${Math.min(s + 20, 100)}%, ${Math.min(l + 20, 80)}%, 0.3)`;
+  const glowColorLight = `hsla(${h}, ${Math.min(s + 30, 100)}%, ${Math.min(l + 30, 90)}%, 0.2)`;
   
   return {
-    filter: `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 2px 4px rgba(0,0,0,0.1))`,
-    textShadow: `0 0 12px ${glowColor}, 0 0 24px ${glowColorLight}, 0 2px 4px rgba(0,0,0,0.15)`,
-    transform: "scale(1.05)",
+    filter: `drop-shadow(0 0 4px ${glowColor}) drop-shadow(0 1px 2px rgba(0,0,0,0.08))`,
+    textShadow: `0 0 6px ${glowColor}, 0 0 12px ${glowColorLight}`,
+    transform: "scale(1.02)",
   };
 }
 

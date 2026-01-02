@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
 import { useMemo } from "react";
+import { useTheme } from "next-themes";
 
 interface DepartmentTileProps {
   id: string;
@@ -22,10 +23,15 @@ export function DepartmentTile({
   onClick,
   subtitle = "View Courses",
 }: DepartmentTileProps) {
+  const { theme } = useTheme();
+  
   // Memoize styles to prevent recalculation
   const styles = useMemo(() => getDepartmentStyles(color, index), [color, index]);
   const displayIcon = useMemo(() => getDepartmentIcon(icon, name), [icon, name]);
   const iconGlow = useMemo(() => getIconGlowStyles(styles.hsl), [styles.hsl]);
+
+  // Theme-aware text color
+  const textColorClass = theme === 'dark' ? 'text-white' : 'text-gray-900';
 
   return (
     <motion.div
@@ -35,7 +41,7 @@ export function DepartmentTile({
     >
       <button
         onClick={onClick}
-        className="w-full text-left p-5 rounded-xl transition-all duration-300 group border border-transparent hover:border-white/10"
+        className="w-full text-left p-5 rounded-xl transition-all duration-300 group border border-transparent hover:border-white/10 dark:hover:border-white/10"
         style={{
           background: styles.bgLight,
         }}
@@ -47,19 +53,18 @@ export function DepartmentTile({
         }}
       >
         <div className="flex items-center gap-4">
-          {/* Icon with glow effect */}
+          {/* Icon with reduced glow effect */}
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105"
             style={{
               background: styles.accentBg,
-              boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
+              boxShadow: `0 2px 10px ${styles.glowColor}`,
             }}
           >
             <span
               className="text-2xl transition-all duration-300"
               style={{
                 filter: iconGlow.filter,
-                textShadow: iconGlow.textShadow,
               }}
             >
               {displayIcon}
@@ -68,9 +73,7 @@ export function DepartmentTile({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h3
-              className="font-semibold mb-0.5 truncate text-white"
-            >
+            <h3 className={`font-semibold mb-0.5 truncate ${textColorClass}`}>
               {name}
             </h3>
             <p className="text-xs text-muted-foreground">{subtitle}</p>
