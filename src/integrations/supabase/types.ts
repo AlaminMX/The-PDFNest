@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_banners: {
+        Row: {
+          banner_type: string
+          created_at: string | null
+          end_date: string | null
+          gradient_from: string | null
+          gradient_to: string | null
+          id: string
+          is_active: boolean | null
+          link_text: string | null
+          link_url: string | null
+          message: string
+          show_on_profile: boolean | null
+          show_profile_dot: boolean | null
+          start_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          banner_type: string
+          created_at?: string | null
+          end_date?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          message: string
+          show_on_profile?: boolean | null
+          show_profile_dot?: boolean | null
+          start_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          banner_type?: string
+          created_at?: string | null
+          end_date?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          message?: string
+          show_on_profile?: boolean | null
+          show_profile_dot?: boolean | null
+          start_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -95,6 +149,7 @@ export type Database = {
           display_order: number | null
           icon: string | null
           id: string
+          is_visible: boolean
           name: string
           slug: string
         }
@@ -104,6 +159,7 @@ export type Database = {
           display_order?: number | null
           icon?: string | null
           id?: string
+          is_visible?: boolean
           name: string
           slug: string
         }
@@ -113,6 +169,7 @@ export type Database = {
           display_order?: number | null
           icon?: string | null
           id?: string
+          is_visible?: boolean
           name?: string
           slug?: string
         }

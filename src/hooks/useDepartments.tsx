@@ -2,27 +2,34 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 
-type Department = Tables<"departments">;
+type Department = Tables<"departments"> & { is_visible?: boolean };
 
-export function useDepartments() {
+interface UseDepartmentsOptions {
+  visibleOnly?: boolean;
+}
+
+export function useDepartments(options?: UseDepartmentsOptions) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchDepartments();
-  }, []);
 
   const fetchDepartments = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from("departments")
         .select("*")
         .order("display_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
+
+      // Filter by visibility if requested
+      if (options?.visibleOnly) {
+        query = query.eq("is_visible", true);
+      }
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
@@ -34,6 +41,10 @@ export function useDepartments() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, [options?.visibleOnly]);
 
   return { departments, loading, error, refresh: fetchDepartments };
 }

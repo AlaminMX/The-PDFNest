@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical } from "lucide-react";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -22,6 +23,7 @@ interface EditingDepartment {
   name: string;
   color: string | null;
   icon: string | null;
+  is_visible: boolean;
 }
 
 interface NewDepartment {
@@ -35,9 +37,10 @@ interface DepartmentItemProps {
   index: number;
   onEdit: (dept: any) => void;
   onDelete: (dept: any) => void;
+  onToggleVisibility: (dept: any) => void;
 }
 
-function DepartmentItem({ dept, index, onEdit, onDelete }: DepartmentItemProps) {
+function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility }: DepartmentItemProps) {
   const dragControls = useDragControls();
   const styles = getDepartmentStyles(dept.color, index);
   const icon = getDepartmentIcon(dept.icon, dept.name);
@@ -52,7 +55,7 @@ function DepartmentItem({ dept, index, onEdit, onDelete }: DepartmentItemProps) 
       className="list-none"
     >
       <Card 
-        className="overflow-hidden transition-all hover:shadow-lg"
+        className={`overflow-hidden transition-all hover:shadow-lg ${!dept.is_visible ? 'opacity-60' : ''}`}
         style={{ borderColor: `${styles.cssHsl}20` }}
       >
         <div 
@@ -89,9 +92,16 @@ function DepartmentItem({ dept, index, onEdit, onDelete }: DepartmentItemProps) 
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-white">
-                {dept.name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-lg text-white">
+                  {dept.name}
+                </h3>
+                {!dept.is_visible && (
+                  <span className="text-xs bg-muted/30 text-muted-foreground px-2 py-0.5 rounded">
+                    Hidden
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Palette className="w-3 h-3" />
@@ -104,6 +114,18 @@ function DepartmentItem({ dept, index, onEdit, onDelete }: DepartmentItemProps) 
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => onToggleVisibility(dept)}
+                title={dept.is_visible ? "Hide from users" : "Show to users"}
+              >
+                {dept.is_visible ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -162,7 +184,24 @@ export default function AdminDepartments() {
       name: dept.name,
       color: dept.color || "",
       icon: dept.icon || "",
+      is_visible: dept.is_visible !== false,
     });
+  };
+
+  const handleToggleVisibility = async (dept: any) => {
+    try {
+      const { error } = await supabase
+        .from("departments")
+        .update({ is_visible: !dept.is_visible })
+        .eq("id", dept.id);
+
+      if (error) throw error;
+      toast.success(dept.is_visible ? "Department hidden from users" : "Department visible to users");
+      refreshDepartments();
+    } catch (error: any) {
+      console.error("Error toggling visibility:", error);
+      toast.error(error.message || "Failed to update visibility");
+    }
   };
 
   const handleSave = async () => {
@@ -181,6 +220,7 @@ export default function AdminDepartments() {
           name: editingDept.name.trim(),
           color: editingDept.color?.trim() || null,
           icon: editingDept.icon?.trim() || null,
+          is_visible: editingDept.is_visible,
         })
         .eq("id", editingDept.id);
 
@@ -227,6 +267,7 @@ export default function AdminDepartments() {
           color: newDept.color?.trim() || null,
           icon: newDept.icon?.trim() || null,
           display_order: maxOrder + 1,
+          is_visible: true,
         });
 
       if (error) throw error;
@@ -349,7 +390,7 @@ export default function AdminDepartments() {
         ) : (
           <div className="max-w-2xl mx-auto">
             <p className="text-sm text-muted-foreground text-center mb-4">
-              Drag and drop to reorder departments
+              Drag and drop to reorder departments. Use the eye icon to show/hide from users.
             </p>
             <Reorder.Group 
               axis="y" 
@@ -364,6 +405,7 @@ export default function AdminDepartments() {
                   index={index}
                   onEdit={handleEdit}
                   onDelete={setDeletingDept}
+                  onToggleVisibility={handleToggleVisibility}
                 />
               ))}
             </Reorder.Group>
@@ -486,7 +528,7 @@ export default function AdminDepartments() {
               Edit Department
             </DialogTitle>
             <DialogDescription>
-              Update department name, color, and icon. Changes apply everywhere.
+              Update department name, color, icon, and visibility.
             </DialogDescription>
           </DialogHeader>
 
@@ -568,6 +610,15 @@ export default function AdminDepartments() {
                     value={editingDept.icon || ""}
                     onChange={(e) => setEditingDept({ ...editingDept, icon: e.target.value })}
                     placeholder="Leave empty for auto-assigned"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <Label htmlFor="deptVisible">Visible to users in signup/selection dropdowns</Label>
+                  <Switch
+                    id="deptVisible"
+                    checked={editingDept.is_visible}
+                    onCheckedChange={(checked) => setEditingDept({ ...editingDept, is_visible: checked })}
                   />
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -10,8 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AvatarUpload } from "./AvatarUpload";
 import { toast } from "sonner";
+import { useDepartments } from "@/hooks/useDepartments";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -19,6 +21,7 @@ interface EditProfileModalProps {
   userId: string;
   currentDisplayName: string;
   currentAvatarUrl?: string | null;
+  currentDepartmentId?: string | null;
   onUpdateComplete: () => void;
 }
 
@@ -28,11 +31,23 @@ export function EditProfileModal({
   userId,
   currentDisplayName,
   currentAvatarUrl,
+  currentDepartmentId,
   onUpdateComplete,
 }: EditProfileModalProps) {
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
+  const [departmentId, setDepartmentId] = useState(currentDepartmentId || "");
   const [saving, setSaving] = useState(false);
+  const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
+
+  // Reset state when modal opens with new values
+  useEffect(() => {
+    if (open) {
+      setDisplayName(currentDisplayName);
+      setAvatarUrl(currentAvatarUrl);
+      setDepartmentId(currentDepartmentId || "");
+    }
+  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId]);
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -42,9 +57,26 @@ export function EditProfileModal({
 
     setSaving(true);
     try {
+      const updateData: Record<string, any> = {
+        display_name: displayName.trim(),
+      };
+
+      // Include department if changed
+      if (departmentId !== (currentDepartmentId || "")) {
+        updateData.department_id = departmentId || null;
+        
+        // Update department cache
+        const deptCacheData = {
+          hasDepartment: !!departmentId,
+          userId: userId,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
+      }
+
       const { error } = await supabase
         .from("profiles")
-        .update({ display_name: displayName.trim() })
+        .update(updateData)
         .eq("id", userId);
 
       if (error) throw error;
@@ -66,7 +98,7 @@ export function EditProfileModal({
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your display name and profile picture
+            Update your display name, profile picture, and department
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-4">
@@ -84,6 +116,26 @@ export function EditProfileModal({
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your display name"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="department">Department</Label>
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger id="department">
+                <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectItem value="">No department</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.icon && <span className="mr-2">{dept.icon}</span>}
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Only select if you are a student of AFIT
+            </p>
           </div>
         </div>
         <div className="flex justify-end gap-2">

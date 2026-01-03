@@ -1,16 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
+const BANNER_DISMISSED_KEY = "pdfnest_dept_banner_dismissed";
+
 interface DepartmentBannerProps {
   onSelectDepartment: () => void;
+  userId?: string;
+  hasDepartment?: boolean;
 }
 
-export function DepartmentBanner({ onSelectDepartment }: DepartmentBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
+export function DepartmentBanner({ onSelectDepartment, userId, hasDepartment }: DepartmentBannerProps) {
+  const [dismissed, setDismissed] = useState(true);
 
-  if (dismissed) return null;
+  useEffect(() => {
+    // Don't show if user has department
+    if (hasDepartment) {
+      setDismissed(true);
+      return;
+    }
+    
+    // Check if already dismissed (using localStorage for persistence)
+    const isDismissed = localStorage.getItem(BANNER_DISMISSED_KEY);
+    setDismissed(!!isDismissed);
+  }, [hasDepartment]);
+
+  const handleDismiss = () => {
+    localStorage.setItem(BANNER_DISMISSED_KEY, "true");
+    setDismissed(true);
+  };
+
+  if (dismissed || hasDepartment) return null;
 
   return (
     <AnimatePresence>
@@ -39,7 +60,7 @@ export function DepartmentBanner({ onSelectDepartment }: DepartmentBannerProps) 
             variant="ghost" 
             size="icon" 
             className="h-8 w-8"
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
           >
             <X className="h-4 w-4" />
           </Button>

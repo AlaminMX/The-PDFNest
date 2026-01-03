@@ -25,7 +25,8 @@ export function DepartmentSelectPrompt({
 }: DepartmentSelectPromptProps) {
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [saving, setSaving] = useState(false);
-  const { departments, loading: loadingDepts } = useDepartments();
+  // Only show visible departments to users
+  const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
 
   const handleSave = async () => {
     if (!selectedDepartment) {
@@ -42,6 +43,18 @@ export function DepartmentSelectPrompt({
 
       if (error) throw error;
 
+      // Clear skip flag and update cache to prevent showing again
+      localStorage.removeItem(SKIP_PROMPT_KEY);
+      
+      // Update department cache immediately
+      const deptCacheData = {
+        hasDepartment: true,
+        userId: userId,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
+      sessionStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
+
       toast.success("Department selected successfully!");
       onOpenChange(false);
       onComplete?.();
@@ -53,7 +66,8 @@ export function DepartmentSelectPrompt({
   };
 
   const handleSkip = () => {
-    sessionStorage.setItem(SKIP_PROMPT_KEY, "true");
+    // Use localStorage for persistent skip across sessions
+    localStorage.setItem(SKIP_PROMPT_KEY, "true");
     onOpenChange(false);
   };
 
@@ -116,10 +130,13 @@ export function useDepartmentPrompt(userId: string | undefined, departmentId: st
     if (!userId) return;
     
     // Don't show if already has department
-    if (departmentId) return;
+    if (departmentId) {
+      setShowPrompt(false);
+      return;
+    }
     
-    // Don't show if user skipped this session
-    if (sessionStorage.getItem(SKIP_PROMPT_KEY)) return;
+    // Don't show if user skipped (now using localStorage for persistence)
+    if (localStorage.getItem(SKIP_PROMPT_KEY)) return;
     
     // Show prompt after a short delay
     const timer = setTimeout(() => {

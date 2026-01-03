@@ -22,11 +22,12 @@ export function SmartBottomNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRep, setIsRep] = useState<boolean | null>(null);
   const [hasDepartment, setHasDepartment] = useState<boolean>(true);
+  const [hasBannerDot, setHasBannerDot] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Try to get cached status immediately
-    const cached = sessionStorage.getItem(REP_STATUS_CACHE_KEY);
+    // Try to get cached status immediately from localStorage (persistent)
+    const cached = localStorage.getItem(REP_STATUS_CACHE_KEY);
     if (cached) {
       try {
         const parsed: CachedRepStatus = JSON.parse(cached);
@@ -37,12 +38,12 @@ export function SmartBottomNav() {
           setIsLoading(false);
         }
       } catch {
-        sessionStorage.removeItem(REP_STATUS_CACHE_KEY);
+        localStorage.removeItem(REP_STATUS_CACHE_KEY);
       }
     }
 
     // Check department cache
-    const deptCached = sessionStorage.getItem(DEPT_STATUS_CACHE_KEY);
+    const deptCached = localStorage.getItem(DEPT_STATUS_CACHE_KEY);
     if (deptCached) {
       try {
         const parsed: CachedDeptStatus = JSON.parse(deptCached);
@@ -50,12 +51,29 @@ export function SmartBottomNav() {
           setHasDepartment(parsed.hasDepartment);
         }
       } catch {
-        sessionStorage.removeItem(DEPT_STATUS_CACHE_KEY);
+        localStorage.removeItem(DEPT_STATUS_CACHE_KEY);
       }
     }
 
     checkUserAndRepStatus();
+    checkBannerDot();
   }, []);
+
+  const checkBannerDot = async () => {
+    try {
+      // Check for active banners with show_profile_dot
+      const { data: banners } = await supabase
+        .from("admin_banners")
+        .select("id")
+        .eq("is_active", true)
+        .eq("show_profile_dot", true)
+        .limit(1);
+
+      setHasBannerDot(banners && banners.length > 0);
+    } catch (error) {
+      console.error("Error checking banner dot:", error);
+    }
+  };
 
   const checkUserAndRepStatus = async () => {
     try {
@@ -66,8 +84,8 @@ export function SmartBottomNav() {
         setIsRep(false);
         setHasDepartment(true);
         setIsLoading(false);
-        sessionStorage.removeItem(REP_STATUS_CACHE_KEY);
-        sessionStorage.removeItem(DEPT_STATUS_CACHE_KEY);
+        localStorage.removeItem(REP_STATUS_CACHE_KEY);
+        localStorage.removeItem(DEPT_STATUS_CACHE_KEY);
         return;
       }
 
@@ -96,20 +114,20 @@ export function SmartBottomNav() {
 
       setIsLoading(false);
 
-      // Cache the results
+      // Cache the results in localStorage for persistence
       const repCacheData: CachedRepStatus = {
         isRep: repStatus,
         userId: user.id,
         timestamp: Date.now(),
       };
-      sessionStorage.setItem(REP_STATUS_CACHE_KEY, JSON.stringify(repCacheData));
+      localStorage.setItem(REP_STATUS_CACHE_KEY, JSON.stringify(repCacheData));
 
       const deptCacheData: CachedDeptStatus = {
         hasDepartment: deptStatus,
         userId: user.id,
         timestamp: Date.now(),
       };
-      sessionStorage.setItem(DEPT_STATUS_CACHE_KEY, JSON.stringify(deptCacheData));
+      localStorage.setItem(DEPT_STATUS_CACHE_KEY, JSON.stringify(deptCacheData));
     } catch (error) {
       console.error("Error checking user status:", error);
       setIsLoading(false);
@@ -127,6 +145,7 @@ export function SmartBottomNav() {
   }
 
   // Regular users and guests get BottomNav
-  // Show notification dot if user is logged in but has no department
-  return <BottomNav isLoggedIn={!!userId} userId={userId || undefined} showProfileDot={!!userId && !hasDepartment} />;
+  // Show notification dot if user is logged in but has no department, or if there's an active banner with dot
+  const showDot = (!!userId && !hasDepartment) || hasBannerDot;
+  return <BottomNav isLoggedIn={!!userId} userId={userId || undefined} showProfileDot={showDot} />;
 }
