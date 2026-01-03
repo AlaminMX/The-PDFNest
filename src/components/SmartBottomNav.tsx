@@ -4,6 +4,7 @@ import { BottomNav } from "./BottomNav";
 import { RepBottomNav } from "./RepBottomNav";
 
 const REP_STATUS_CACHE_KEY = "pdfnest_rep_status";
+const DEPT_STATUS_CACHE_KEY = "pdfnest_dept_status";
 
 interface CachedRepStatus {
   isRep: boolean;
@@ -11,9 +12,16 @@ interface CachedRepStatus {
   timestamp: number;
 }
 
+interface CachedDeptStatus {
+  hasDepartment: boolean;
+  userId: string;
+  timestamp: number;
+}
+
 export function SmartBottomNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRep, setIsRep] = useState<boolean | null>(null);
+  const [hasDepartment, setHasDepartment] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,6 +41,19 @@ export function SmartBottomNav() {
       }
     }
 
+    // Check department cache
+    const deptCached = sessionStorage.getItem(DEPT_STATUS_CACHE_KEY);
+    if (deptCached) {
+      try {
+        const parsed: CachedDeptStatus = JSON.parse(deptCached);
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+          setHasDepartment(parsed.hasDepartment);
+        }
+      } catch {
+        sessionStorage.removeItem(DEPT_STATUS_CACHE_KEY);
+      }
+    }
+
     checkUserAndRepStatus();
   }, []);
 
@@ -43,8 +64,10 @@ export function SmartBottomNav() {
       if (!user) {
         setUserId(null);
         setIsRep(false);
+        setHasDepartment(true);
         setIsLoading(false);
         sessionStorage.removeItem(REP_STATUS_CACHE_KEY);
+        sessionStorage.removeItem(DEPT_STATUS_CACHE_KEY);
         return;
       }
 
@@ -60,15 +83,33 @@ export function SmartBottomNav() {
 
       const repStatus = !!roleData;
       setIsRep(repStatus);
+
+      // Check department
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("department_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const deptStatus = !!profileData?.department_id;
+      setHasDepartment(deptStatus);
+
       setIsLoading(false);
 
-      // Cache the result
-      const cacheData: CachedRepStatus = {
+      // Cache the results
+      const repCacheData: CachedRepStatus = {
         isRep: repStatus,
         userId: user.id,
         timestamp: Date.now(),
       };
-      sessionStorage.setItem(REP_STATUS_CACHE_KEY, JSON.stringify(cacheData));
+      sessionStorage.setItem(REP_STATUS_CACHE_KEY, JSON.stringify(repCacheData));
+
+      const deptCacheData: CachedDeptStatus = {
+        hasDepartment: deptStatus,
+        userId: user.id,
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem(DEPT_STATUS_CACHE_KEY, JSON.stringify(deptCacheData));
     } catch (error) {
       console.error("Error checking user status:", error);
       setIsLoading(false);
@@ -86,5 +127,6 @@ export function SmartBottomNav() {
   }
 
   // Regular users and guests get BottomNav
-  return <BottomNav isLoggedIn={!!userId} userId={userId || undefined} />;
+  // Show notification dot if user is logged in but has no department
+  return <BottomNav isLoggedIn={!!userId} userId={userId || undefined} showProfileDot={!!userId && !hasDepartment} />;
 }

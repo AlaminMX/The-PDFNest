@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles } from "lucide-react";
+import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState, LoadingSpinner } from "@/components/LoadingState";
@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 interface RepProfile {
   id: string;
   display_name: string | null;
+  email: string | null;
   department_id: string | null;
   departments: {
     name: string;
@@ -47,6 +48,12 @@ export default function AdminReps() {
   
   // Dynamic courses list
   const [courses, setCourses] = useState<{ code: string; name: string }[]>([{ code: "", name: "" }]);
+
+  // Edit rep state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingRep, setEditingRep] = useState<RepProfile | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
@@ -96,6 +103,7 @@ export default function AdminReps() {
         .select(`
           id,
           display_name,
+          email,
           department_id,
           departments (
             name
@@ -304,6 +312,41 @@ export default function AdminReps() {
     } catch (error) {
       console.error("Error deleting rep:", error);
       toast.error("Failed to delete rep account");
+    }
+  };
+
+  const handleOpenEditDialog = (rep: RepProfile) => {
+    setEditingRep(rep);
+    setEditDisplayName(rep.display_name || "");
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateRep = async () => {
+    if (!editingRep) return;
+    
+    if (!editDisplayName.trim()) {
+      toast.error("Please enter a display name");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ display_name: editDisplayName.trim() })
+        .eq("id", editingRep.id);
+
+      if (error) throw error;
+
+      toast.success("Rep profile updated successfully");
+      setShowEditDialog(false);
+      setEditingRep(null);
+      fetchReps();
+    } catch (error: any) {
+      console.error("Error updating rep:", error);
+      toast.error(error.message || "Failed to update rep");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -544,7 +587,15 @@ export default function AdminReps() {
                       onClick={() => navigate(`/rep/${rep.id}`)}
                     >
                       <Eye className="h-4 w-4" />
-                      View Profile
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleOpenEditDialog(rep)}
+                    >
+                      <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="destructive"
@@ -561,6 +612,63 @@ export default function AdminReps() {
           </div>
         )}
       </main>
+
+      {/* Edit Rep Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-primary" />
+              Edit Rep Profile
+            </DialogTitle>
+            <DialogDescription>
+              Update the course representative's profile information.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editDisplayName">Display Name</Label>
+              <Input
+                id="editDisplayName"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder="Enter display name"
+              />
+            </div>
+            
+            {editingRep?.email && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Email</Label>
+                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  {editingRep.email}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed here for security reasons.
+                </p>
+              </div>
+            )}
+            
+            {editingRep?.departments?.name && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Department</Label>
+                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  {editingRep.departments.name}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateRep} disabled={updating}>
+              {updating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <footer className="mt-auto py-6 border-t border-border/40">
         <div className="container mx-auto px-4 text-center">

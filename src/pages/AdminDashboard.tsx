@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { useDepartments } from "@/hooks/useDepartments";
 
 interface UserData {
   id: string;
@@ -20,11 +21,13 @@ interface UserData {
   pdfCount: number;
   totalStorage: number;
   createdAt: string;
+  departmentId: string | null;
+  departmentName: string | null;
 }
 
-type SortField = "name" | "storage" | "pdfCount" | "createdAt";
+type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
 type SortOrder = "asc" | "desc";
-type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload";
+type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload" | "noDepartment";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -62,6 +65,8 @@ export default function AdminDashboard() {
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const { departments } = useDepartments();
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -78,10 +83,19 @@ export default function AdminDashboard() {
 
   const fetchAllUsers = async () => {
     try {
-      // Fetch ALL profiles
+      // Fetch ALL profiles with department
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, created_at")
+        .select(`
+          id, 
+          email, 
+          full_name, 
+          created_at,
+          department_id,
+          departments (
+            name
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -123,7 +137,9 @@ export default function AdminDashboard() {
           displayName: getDisplayName(profile.email || "Unknown", profile.full_name),
           pdfCount: pdfStats.count,
           totalStorage: pdfStats.storage,
-          createdAt: profile.created_at
+          createdAt: profile.created_at,
+          departmentId: profile.department_id,
+          departmentName: profile.departments?.name || null,
         };
       });
 
@@ -149,6 +165,15 @@ export default function AdminDashboard() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Apply department filter
+    if (departmentFilter !== "all") {
+      if (departmentFilter === "none") {
+        filtered = filtered.filter(user => !user.departmentId);
+      } else {
+        filtered = filtered.filter(user => user.departmentId === departmentFilter);
+      }
+    }
+
     // Apply additional filters
     switch (filterType) {
       case "withPdfs":
@@ -169,6 +194,9 @@ export default function AdminDashboard() {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         filtered = filtered.filter(user => new Date(user.createdAt) >= sevenDaysAgo);
         break;
+      case "noDepartment":
+        filtered = filtered.filter(user => !user.departmentId);
+        break;
     }
 
     // Sort
@@ -187,6 +215,9 @@ export default function AdminDashboard() {
           break;
         case "createdAt":
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "department":
+          comparison = (a.departmentName || "").localeCompare(b.departmentName || "");
           break;
       }
 
@@ -298,11 +329,12 @@ export default function AdminDashboard() {
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="name">Name</SelectItem>
                   <SelectItem value="storage">Storage Size</SelectItem>
                   <SelectItem value="pdfCount">PDF Count</SelectItem>
                   <SelectItem value="createdAt">Join Date</SelectItem>
+                  <SelectItem value="department">Department</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -310,30 +342,53 @@ export default function AdminDashboard() {
                 <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
               </Button>
 
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="none">No Department</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.icon && <span className="mr-1">{dept.icon}</span>}
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
                 <SelectTrigger className="w-[150px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="all">All Users</SelectItem>
                   <SelectItem value="withPdfs">With PDFs</SelectItem>
                   <SelectItem value="noPdfs">No PDFs</SelectItem>
                   <SelectItem value="over100MB">Over 100MB</SelectItem>
                   <SelectItem value="over1GB">Over 1GB</SelectItem>
                   <SelectItem value="recentUpload">Recently Joined (7 days)</SelectItem>
+                  <SelectItem value="noDepartment">No Department</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           {/* Active filters indicator */}
-          {(filterType !== "all" || searchQuery) && (
+          {(filterType !== "all" || searchQuery || departmentFilter !== "all") && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted-foreground">Active filters:</span>
               {searchQuery && (
                 <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
                   Search: "{searchQuery}" ×
+                </Badge>
+              )}
+              {departmentFilter !== "all" && (
+                <Badge variant="secondary" className="cursor-pointer" onClick={() => setDepartmentFilter("all")}>
+                  Dept: {departmentFilter === "none" ? "None" : departments.find(d => d.id === departmentFilter)?.name} ×
                 </Badge>
               )}
               {filterType !== "all" && (
@@ -343,6 +398,7 @@ export default function AdminDashboard() {
                   {filterType === "over100MB" && "Over 100MB"}
                   {filterType === "over1GB" && "Over 1GB"}
                   {filterType === "recentUpload" && "Recently Joined"}
+                  {filterType === "noDepartment" && "No Department"}
                   {" ×"}
                 </Badge>
               )}
@@ -361,7 +417,8 @@ export default function AdminDashboard() {
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Joined</TableHead>
+                <TableHead className="hidden lg:table-cell">Department</TableHead>
+                <TableHead className="hidden xl:table-cell">Joined</TableHead>
                 <TableHead className="text-center">PDFs</TableHead>
                 <TableHead className="text-right">Total Size</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -370,7 +427,7 @@ export default function AdminDashboard() {
             <TableBody>
               {filteredAndSortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -390,7 +447,16 @@ export default function AdminDashboard() {
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {user.email}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell">
+                      {user.departmentName ? (
+                        <Badge variant="outline" className="font-normal">
+                          {user.departmentName}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Not set</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell text-muted-foreground">
                       {formatDate(user.createdAt)}
                     </TableCell>
                     <TableCell className="text-center">
