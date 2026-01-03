@@ -76,7 +76,8 @@ import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
-import { NewYearBanner } from "@/components/NewYearBanner";
+import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
+import { AdminPopupDisplay } from "@/components/AdminPopupDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
 import { DepartmentBanner } from "@/components/DepartmentBanner";
 import { DepartmentSelectPrompt, useDepartmentPrompt } from "@/components/DepartmentSelectPrompt";
@@ -500,7 +501,9 @@ export default function Index() {
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [viewMode, setViewMode] = useState<"list" | "grid">(
+    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "list"
+  );
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
@@ -538,6 +541,11 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    localStorage.setItem("pdfnest-view-mode", viewMode);
+  }, [viewMode]);
 
   // Track completed checklist items
   useEffect(() => {
@@ -857,7 +865,7 @@ export default function Index() {
         />
         
         <main className="flex-1 flex flex-col w-full min-w-0">
-          <NewYearBanner userName={user?.user_metadata?.full_name || user?.user_metadata?.display_name || user?.email?.split('@')[0]} />
+          <AdminBannerDisplay />
           <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-2 p-4">
               <SidebarTrigger />
@@ -1689,6 +1697,9 @@ export default function Index() {
           onComplete={refreshDepartment}
         />
       )}
+
+      {/* Admin Popup Banners */}
+      <AdminPopupDisplay />
 
       {/* Bottom Navigation */}
       <SmartBottomNav />

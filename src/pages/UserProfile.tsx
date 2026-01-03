@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2 } from "lucide-react";
+import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2 } from "lucide-react";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
+import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
+import { DepartmentSelectPrompt } from "@/components/DepartmentSelectPrompt";
 import { format, formatDistanceToNow } from "date-fns";
 
 interface UserProfileData {
@@ -20,6 +22,7 @@ interface UserProfileData {
   avatar_url: string | null;
   total_storage_used: number | null;
   created_at: string | null;
+  department_id: string | null;
 }
 
 interface RecentFile {
@@ -40,9 +43,11 @@ const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
 export default function UserProfile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
   const [pdfCount, setPdfCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeptPrompt, setShowDeptPrompt] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -63,15 +68,19 @@ export default function UserProfile() {
 
       setUserId(user.id);
 
-      // Fetch profile
+      // Fetch profile with department
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("id, display_name, full_name, email, avatar_url, total_storage_used, created_at")
+        .select(`
+          id, display_name, full_name, email, avatar_url, total_storage_used, created_at, department_id,
+          departments (name)
+        `)
         .eq("id", user.id)
         .single();
 
       if (profileData) {
         setProfile(profileData);
+        setDepartmentName((profileData as any).departments?.name || null);
       }
 
       // Count PDFs
@@ -141,6 +150,13 @@ export default function UserProfile() {
       .slice(0, 2);
   };
 
+  const handleDepartmentComplete = () => {
+    setShowDeptPrompt(false);
+    fetchUserProfile();
+    // Clear department cache to update navigation dot
+    localStorage.removeItem("pdfnest_dept_status");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
@@ -182,6 +198,33 @@ export default function UserProfile() {
       </header>
 
       <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Admin Banners for Profile */}
+        <AdminBannerDisplay showOnProfile />
+
+        {/* Department Banner - only show if no department */}
+        {!profile.department_id && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Complete Your Profile</p>
+                    <p className="text-sm text-muted-foreground">
+                      Select your department to personalize your experience
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => setShowDeptPrompt(true)}>
+                  Select Department
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Profile Card */}
         <Card className="overflow-hidden">
           <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
@@ -197,6 +240,12 @@ export default function UserProfile() {
                 <h2 className="text-2xl font-bold">{displayName}</h2>
                 {profile.email && (
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
+                )}
+                {departmentName && (
+                  <Badge variant="secondary" className="mt-1">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {departmentName}
+                  </Badge>
                 )}
               </div>
               <Button
@@ -371,7 +420,18 @@ export default function UserProfile() {
           userId={userId}
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
+          currentDepartmentId={profile.department_id}
           onUpdateComplete={fetchUserProfile}
+        />
+      )}
+
+      {/* Department Selection Prompt */}
+      {userId && (
+        <DepartmentSelectPrompt
+          open={showDeptPrompt}
+          onOpenChange={setShowDeptPrompt}
+          userId={userId}
+          onComplete={handleDepartmentComplete}
         />
       )}
 

@@ -58,7 +58,7 @@ export default function Auth() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const { departments, loading: loadingDepartments } = useDepartments();
+  const { departments, loading: loadingDepartments } = useDepartments({ visibleOnly: true });
 
   useEffect(() => {
     // Mark that user has visited before
