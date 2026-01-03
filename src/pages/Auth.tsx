@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Confetti } from "@/components/Confetti";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
+import { useDepartments } from "@/hooks/useDepartments";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
@@ -55,6 +57,8 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const { departments, loading: loadingDepartments } = useDepartments();
 
   useEffect(() => {
     // Mark that user has visited before
@@ -152,15 +156,22 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Update profile with terms acceptance
+        // Update profile with terms acceptance and optional department
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          const profileUpdate: Record<string, any> = {
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString(),
+          };
+          
+          // Add department if selected
+          if (selectedDepartment) {
+            profileUpdate.department_id = selectedDepartment;
+          }
+          
           await supabase
             .from("profiles")
-            .update({
-              terms_accepted: true,
-              terms_accepted_at: new Date().toISOString(),
-            })
+            .update(profileUpdate)
             .eq("id", user.id);
         }
         
@@ -383,6 +394,28 @@ export default function Auth() {
                   disabled={loading}
                 />
               </div>
+
+              {/* Department dropdown - only for signup */}
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="department">
+                    Select your department <span className="text-muted-foreground text-xs">(only if you are a student of AFIT)</span>
+                  </Label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger id="department" className="w-full">
+                      <SelectValue placeholder={loadingDepartments ? "Loading..." : "Select department (optional)"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.icon && <span className="mr-2">{dept.icon}</span>}
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>

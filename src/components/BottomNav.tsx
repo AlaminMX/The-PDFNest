@@ -6,19 +6,20 @@ import { cn } from "@/lib/utils";
 interface BottomNavProps {
   isLoggedIn: boolean;
   userId?: string;
+  showProfileDot?: boolean;
 }
 
-export function BottomNav({ isLoggedIn, userId }: BottomNavProps) {
+export function BottomNav({ isLoggedIn, userId, showProfileDot = false }: BottomNavProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
   // For guests: show Home and AI Features (AI features will prompt login)
   // For logged-in users: show Home, AI Features, and Profile (goes to /profile for their own profile)
   const tabs = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: Sparkles, label: "AI Features", path: "/ai-features" },
+    { icon: Home, label: "Home", path: "/", showDot: false },
+    { icon: Sparkles, label: "AI Features", path: "/ai-features", showDot: false },
     ...(isLoggedIn && userId
-      ? [{ icon: User, label: "Profile", path: "/profile" }]
+      ? [{ icon: User, label: "Profile", path: "/profile", showDot: showProfileDot }]
       : []),
   ];
 
@@ -49,7 +50,12 @@ export function BottomNav({ isLoggedIn, userId }: BottomNavProps) {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <Icon className="w-5 h-5" />
+              <div className="relative">
+                <Icon className="w-5 h-5" />
+                {tab.showDot && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
+                )}
+              </div>
               <span className="text-xs font-medium">{tab.label}</span>
             </Link>
           );

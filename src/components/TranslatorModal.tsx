@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight, FileDown } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight, FileDown, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { AIContentRenderer } from "@/components/AIContentRenderer";
 import { exportAndUpload } from "@/lib/exportPDF";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/lib/sessionLogger";
+import { PDFTranslationOverlay } from "@/components/PDFTranslationOverlay";
 
 interface TranslatorModalProps {
   open: boolean;
@@ -39,6 +41,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
   const [originalText, setOriginalText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [note, setNote] = useState("");
+  const [showLiveOverlay, setShowLiveOverlay] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -143,6 +146,23 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
     setExporting(false);
   };
 
+  // If showing live overlay, render that instead
+  if (showLiveOverlay) {
+    return (
+      <PDFTranslationOverlay
+        open={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setShowLiveOverlay(false);
+          }
+          onOpenChange(isOpen);
+        }}
+        fileId={fileId}
+        fileName={fileName}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] p-0 flex flex-col">
@@ -159,12 +179,23 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
                 </DialogDescription>
               </div>
             </div>
-            {loading && (
-              <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-0">
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                Translating
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLiveOverlay(true)}
+                className="gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                Live View
+              </Button>
+              {loading && (
+                <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-0">
+                  <Sparkles className="h-3 w-3 animate-pulse" />
+                  Translating
+                </Badge>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
