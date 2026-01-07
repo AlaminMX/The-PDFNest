@@ -5,7 +5,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity, Building2 } from "lucide-react";
+import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity, Building2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -257,6 +257,10 @@ export default function AdminDashboard() {
               <Button variant="outline" size="sm" onClick={() => navigate("/admin/departments")} className="gap-2">
                 <Building2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Departments</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/banners")} className="gap-2">
+                <Megaphone className="h-4 w-4" />
+                <span className="hidden sm:inline">Banners</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="gap-2">
                 <Activity className="h-4 w-4" />
