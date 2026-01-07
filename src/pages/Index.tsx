@@ -77,11 +77,7 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
-import { AdminPopupDisplay } from "@/components/AdminPopupDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
-import { DepartmentBanner } from "@/components/DepartmentBanner";
-import { DepartmentSelectPrompt, useDepartmentPrompt } from "@/components/DepartmentSelectPrompt";
-import { useUserDepartment } from "@/hooks/useUserDepartment";
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -482,8 +478,7 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
-  const { departmentId, hasDepartment, resolved, refresh: refreshDepartment } = useUserDepartment(user?.id);
-  const { showPrompt: showDeptPrompt, setShowPrompt: setShowDeptPrompt } = useDepartmentPrompt(user?.id, departmentId);
+  
   
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -924,14 +919,6 @@ export default function Index() {
               />
             )}
 
-            {/* Department Banner for users without department - only show after resolved to prevent flash */}
-            {user && resolved && !hasDepartment && (
-              <div className="mb-6">
-                <DepartmentBanner 
-                  onSelectDepartment={() => setShowDeptPrompt(true)} 
-                />
-              </div>
-            )}
 
             <div
               id="upload-area"
@@ -1688,18 +1675,6 @@ export default function Index() {
         onClearCompleted={clearCompleted}
       />
 
-      {/* Department Selection Prompt */}
-      {user && (
-        <DepartmentSelectPrompt
-          open={showDeptPrompt}
-          onOpenChange={setShowDeptPrompt}
-          userId={user.id}
-          onComplete={refreshDepartment}
-        />
-      )}
-
-      {/* Admin Popup Banners */}
-      <AdminPopupDisplay />
 
       {/* Bottom Navigation */}
       <SmartBottomNav />

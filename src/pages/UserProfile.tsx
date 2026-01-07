@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2, Check } from "lucide-react";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
-import { DepartmentSelectPrompt } from "@/components/DepartmentSelectPrompt";
+import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 interface UserProfileData {
   id: string;
@@ -47,10 +49,12 @@ export default function UserProfile() {
   const [pdfCount, setPdfCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeptPrompt, setShowDeptPrompt] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const [savingDept, setSavingDept] = useState(false);
+  const { departments } = useDepartments();
 
   useEffect(() => {
     fetchUserProfile();
@@ -150,11 +154,29 @@ export default function UserProfile() {
       .slice(0, 2);
   };
 
-  const handleDepartmentComplete = () => {
-    setShowDeptPrompt(false);
-    fetchUserProfile();
-    // Clear department cache to update navigation dot
-    localStorage.removeItem("pdfnest_dept_status");
+  const handleSaveDepartment = async () => {
+    if (!selectedDeptId || !userId) return;
+    
+    setSavingDept(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ department_id: selectedDeptId })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      // Clear department cache to update navigation dot
+      localStorage.removeItem("pdfnest_dept_status");
+      
+      toast.success("Department saved successfully!");
+      fetchUserProfile();
+    } catch (error) {
+      console.error("Error saving department:", error);
+      toast.error("Failed to save department");
+    } finally {
+      setSavingDept(false);
+    }
   };
 
   if (loading) {
@@ -203,23 +225,43 @@ export default function UserProfile() {
 
         {/* Department Banner - only show if no department */}
         {!profile.department_id && (
-          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
+            <CardContent className="p-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-3 rounded-xl bg-primary/10 shrink-0">
+                    <Building2 className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium">Complete Your Profile</p>
+                    <p className="font-semibold text-lg">Complete Your Profile</p>
                     <p className="text-sm text-muted-foreground">
                       Select your department to personalize your experience
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => setShowDeptPrompt(true)}>
-                  Select Department
-                </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Select value={selectedDeptId || ""} onValueChange={setSelectedDeptId}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.icon && <span className="mr-1">{dept.icon}</span>}
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    onClick={handleSaveDepartment} 
+                    disabled={!selectedDeptId || savingDept}
+                    size="icon"
+                    className="shrink-0"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -425,15 +467,6 @@ export default function UserProfile() {
         />
       )}
 
-      {/* Department Selection Prompt */}
-      {userId && (
-        <DepartmentSelectPrompt
-          open={showDeptPrompt}
-          onOpenChange={setShowDeptPrompt}
-          userId={userId}
-          onComplete={handleDepartmentComplete}
-        />
-      )}
 
       <SmartBottomNav />
     </div>

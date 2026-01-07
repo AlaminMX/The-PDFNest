@@ -22,7 +22,6 @@ export function SmartBottomNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRep, setIsRep] = useState<boolean | null>(null);
   const [hasDepartment, setHasDepartment] = useState<boolean>(true);
-  const [hasBannerDot, setHasBannerDot] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,24 +55,7 @@ export function SmartBottomNav() {
     }
 
     checkUserAndRepStatus();
-    checkBannerDot();
   }, []);
-
-  const checkBannerDot = async () => {
-    try {
-      // Check for active banners with show_profile_dot
-      const { data: banners } = await supabase
-        .from("admin_banners")
-        .select("id")
-        .eq("is_active", true)
-        .eq("show_profile_dot", true)
-        .limit(1);
-
-      setHasBannerDot(banners && banners.length > 0);
-    } catch (error) {
-      console.error("Error checking banner dot:", error);
-    }
-  };
 
   const checkUserAndRepStatus = async () => {
     try {
@@ -145,7 +127,7 @@ export function SmartBottomNav() {
   }
 
   // Regular users and guests get BottomNav
-  // Show notification dot if user is logged in but has no department, or if there's an active banner with dot
-  const showDot = (!!userId && !hasDepartment) || hasBannerDot;
+  // Show notification dot only if user is logged in but has no department
+  const showDot = !!userId && !hasDepartment;
   return <BottomNav isLoggedIn={!!userId} userId={userId || undefined} showProfileDot={showDot} />;
 }
