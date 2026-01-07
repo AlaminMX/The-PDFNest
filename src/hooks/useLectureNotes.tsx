@@ -141,7 +141,8 @@ export function useLectureNotes(courseId?: string) {
     departmentName: string,
     file: File,
     title: string,
-    displayName: string
+    displayName: string,
+    departmentId?: string
   ) => {
     try {
       setUploading(true);
@@ -199,6 +200,21 @@ export function useLectureNotes(courseId?: string) {
         p_user_id: user.id,
         p_size_delta: file.size,
       });
+
+      // Send notifications to department users (non-blocking)
+      if (departmentId) {
+        supabase.functions.invoke("notify-department-users", {
+          body: {
+            departmentId,
+            courseCode,
+            noteTitle: title,
+            uploadedBy: displayName,
+          },
+        }).catch((err) => {
+          console.error("Failed to send notifications:", err);
+          // Don't throw - notification failure shouldn't block upload success
+        });
+      }
 
       toast.success("Lecture note uploaded successfully!");
       await fetchNotes();

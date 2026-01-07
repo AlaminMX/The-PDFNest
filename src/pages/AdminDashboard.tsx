@@ -5,13 +5,18 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, Activity, Building2, Megaphone } from "lucide-react";
+import { 
+  Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
+  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
+  Menu, X
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useDepartments } from "@/hooks/useDepartments";
+import { cn } from "@/lib/utils";
 
 interface UserData {
   id: string;
@@ -27,7 +32,7 @@ interface UserData {
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
 type SortOrder = "asc" | "desc";
-type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload" | "noDepartment";
+type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -52,6 +57,15 @@ function formatDate(dateString: string): string {
   });
 }
 
+const sidebarItems = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+  { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
+  { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
+  { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
+  { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
+  { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
+];
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
@@ -60,6 +74,8 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [totalPDFs, setTotalPDFs] = useState(0);
   const [totalStorage, setTotalStorage] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
   // Filter and sort states
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -157,7 +173,7 @@ export default function AdminDashboard() {
     navigate("/auth");
   };
 
-  // Filtered and sorted users
+  // Filtered and sorted users - FIXED: proper department filtering
   const filteredAndSortedUsers = useMemo(() => {
     // First apply search filter
     let filtered = users.filter(user =>
@@ -165,7 +181,7 @@ export default function AdminDashboard() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Apply department filter
+    // Apply department filter - FIXED: proper logic
     if (departmentFilter !== "all") {
       if (departmentFilter === "none") {
         filtered = filtered.filter(user => !user.departmentId);
@@ -189,13 +205,10 @@ export default function AdminDashboard() {
         filtered = filtered.filter(user => user.totalStorage > 1024 * 1024 * 1024);
         break;
       case "recentUpload":
-        // Users who uploaded in the last 7 days
+        // Users who joined in the last 7 days
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         filtered = filtered.filter(user => new Date(user.createdAt) >= sevenDaysAgo);
-        break;
-      case "noDepartment":
-        filtered = filtered.filter(user => !user.departmentId);
         break;
     }
 
@@ -217,13 +230,13 @@ export default function AdminDashboard() {
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
         case "department":
-          comparison = (a.departmentName || "").localeCompare(b.departmentName || "");
+          comparison = (a.departmentName || "zzz").localeCompare(b.departmentName || "zzz");
           break;
       }
 
       return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [users, searchQuery, sortField, sortOrder, filterType]);
+  }, [users, searchQuery, sortField, sortOrder, filterType, departmentFilter]);
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === "asc" ? "desc" : "asc");
@@ -241,254 +254,331 @@ export default function AdminDashboard() {
     return null;
   }
 
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Back button */}
+      <div className="p-4 border-b">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2" 
+          onClick={() => navigate("/")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to App
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1">
+        {sidebarItems.map((item) => (
+          <Button
+            key={item.id}
+            variant={item.path === "/admin" ? "secondary" : "ghost"}
+            className="w-full justify-start gap-2"
+            onClick={() => {
+              navigate(item.path);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Button>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t space-y-2">
+        <ThemeToggle />
+        <Button 
+          variant="outline" 
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive" 
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <aside className={cn(
+        "hidden md:flex flex-col border-r bg-card transition-all duration-300",
+        sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+      )}>
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 md:hidden",
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="font-semibold">Admin Menu</span>
+          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <SidebarContent />
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="px-4 md:px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
               <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="h-10 w-10 rounded-lg object-contain" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
                 <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin/departments")} className="gap-2">
-                <Building2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Departments</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin/banners")} className="gap-2">
-                <Megaphone className="h-4 w-4" />
-                <span className="hidden sm:inline">Banners</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin/logs")} className="gap-2">
-                <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">Activity Logs</span>
-              </Button>
-              <ThemeToggle />
-              <Button variant="outline" size="icon" onClick={handleSignOut} title="Sign Out">
-                <LogOut className="h-4 w-4" />
+            <div className="hidden md:flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <Menu className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
+        <div className="p-4 md:p-6 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Users</p>
+                  <p className="text-2xl font-bold">{users.length}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{users.length}</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total PDFs</p>
-                <p className="text-2xl font-bold">{totalPDFs}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <HardDrive className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Storage</p>
-                <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            </Card>
             
-            <div className="flex gap-2 flex-wrap">
-              <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="storage">Storage Size</SelectItem>
-                  <SelectItem value="pdfCount">PDF Count</SelectItem>
-                  <SelectItem value="createdAt">Join Date</SelectItem>
-                  <SelectItem value="department">Department</SelectItem>
-                </SelectContent>
-              </Select>
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total PDFs</p>
+                  <p className="text-2xl font-bold">{totalPDFs}</p>
+                </div>
+              </div>
+            </Card>
 
-              <Button variant="outline" size="icon" onClick={toggleSortOrder} title={sortOrder === "asc" ? "Ascending" : "Descending"}>
-                <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
-              </Button>
-
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <Building2 className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="none">No Department</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.icon && <span className="mr-1">{dept.icon}</span>}
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
-                <SelectTrigger className="w-[150px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  <SelectItem value="all">All Users</SelectItem>
-                  <SelectItem value="withPdfs">With PDFs</SelectItem>
-                  <SelectItem value="noPdfs">No PDFs</SelectItem>
-                  <SelectItem value="over100MB">Over 100MB</SelectItem>
-                  <SelectItem value="over1GB">Over 1GB</SelectItem>
-                  <SelectItem value="recentUpload">Recently Joined (7 days)</SelectItem>
-                  <SelectItem value="noDepartment">No Department</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <HardDrive className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Storage</p>
+                  <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
+                </div>
+              </div>
+            </Card>
           </div>
 
-          {/* Active filters indicator */}
-          {(filterType !== "all" || searchQuery || departmentFilter !== "all") && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Active filters:</span>
-              {searchQuery && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
-                  Search: "{searchQuery}" ×
-                </Badge>
-              )}
-              {departmentFilter !== "all" && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setDepartmentFilter("all")}>
-                  Dept: {departmentFilter === "none" ? "None" : departments.find(d => d.id === departmentFilter)?.name} ×
-                </Badge>
-              )}
-              {filterType !== "all" && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setFilterType("all")}>
-                  {filterType === "withPdfs" && "With PDFs"}
-                  {filterType === "noPdfs" && "No PDFs"}
-                  {filterType === "over100MB" && "Over 100MB"}
-                  {filterType === "over1GB" && "Over 1GB"}
-                  {filterType === "recentUpload" && "Recently Joined"}
-                  {filterType === "noDepartment" && "No Department"}
-                  {" ×"}
-                </Badge>
-              )}
-              <span className="text-sm text-muted-foreground">
-                ({filteredAndSortedUsers.length} of {users.length} users)
-              </span>
-            </div>
-          )}
-        </div>
+          {/* Search and Filters */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="storage">Storage Size</SelectItem>
+                    <SelectItem value="pdfCount">PDF Count</SelectItem>
+                    <SelectItem value="createdAt">Join Date</SelectItem>
+                    <SelectItem value="department">Department</SelectItem>
+                  </SelectContent>
+                </Select>
 
-        {/* User List Table */}
-        <Card className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Department</TableHead>
-                <TableHead className="hidden xl:table-cell">Joined</TableHead>
-                <TableHead className="text-center">PDFs</TableHead>
-                <TableHead className="text-right">Total Size</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedUsers.length === 0 ? (
+                <Button variant="outline" size="icon" onClick={toggleSortOrder} title={sortOrder === "asc" ? "Ascending" : "Descending"}>
+                  <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
+                </Button>
+
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <Building2 className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="none">No Department</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.icon && <span className="mr-1">{dept.icon}</span>}
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
+                  <SelectTrigger className="w-[150px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="withPdfs">With PDFs</SelectItem>
+                    <SelectItem value="noPdfs">No PDFs</SelectItem>
+                    <SelectItem value="over100MB">Over 100MB</SelectItem>
+                    <SelectItem value="over1GB">Over 1GB</SelectItem>
+                    <SelectItem value="recentUpload">Recently Joined (7 days)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Active filters indicator */}
+            {(filterType !== "all" || searchQuery || departmentFilter !== "all") && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Active filters:</span>
+                {searchQuery && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
+                    Search: "{searchQuery}" ×
+                  </Badge>
+                )}
+                {departmentFilter !== "all" && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setDepartmentFilter("all")}>
+                    Dept: {departmentFilter === "none" ? "None" : departments.find(d => d.id === departmentFilter)?.name} ×
+                  </Badge>
+                )}
+                {filterType !== "all" && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setFilterType("all")}>
+                    {filterType === "withPdfs" && "With PDFs"}
+                    {filterType === "noPdfs" && "No PDFs"}
+                    {filterType === "over100MB" && "Over 100MB"}
+                    {filterType === "over1GB" && "Over 1GB"}
+                    {filterType === "recentUpload" && "Recently Joined"}
+                    {" ×"}
+                  </Badge>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  ({filteredAndSortedUsers.length} of {users.length} users)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* User List Table */}
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No users found
-                  </TableCell>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="hidden xl:table-cell">Joined</TableHead>
+                  <TableHead className="text-center">PDFs</TableHead>
+                  <TableHead className="text-right">Total Size</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
-              ) : (
-                filteredAndSortedUsers.map((user, index) => (
-                  <TableRow 
-                    key={user.id} 
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => navigate(`/admin/user/${user.id}`)}
-                  >
-                    <TableCell className="font-medium text-muted-foreground">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {user.displayName}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">
-                      {user.email}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {user.departmentName ? (
-                        <Badge variant="outline" className="font-normal">
-                          {user.departmentName}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Not set</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-muted-foreground">
-                      {formatDate(user.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={user.pdfCount > 0 ? "default" : "secondary"}>
-                        {user.pdfCount}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatBytes(user.totalStorage)}
-                    </TableCell>
-                    <TableCell>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      No users found
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-      </main>
-
-      <footer className="mt-auto py-6 border-t border-border/40">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            Made with love ❤️ by Nexel
-          </p>
+                ) : (
+                  filteredAndSortedUsers.map((user, index) => (
+                    <TableRow 
+                      key={user.id} 
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/admin/user/${user.id}`)}
+                    >
+                      <TableCell className="font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {user.displayName}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {user.email}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {user.departmentName ? (
+                          <Badge variant="outline" className="font-normal">
+                            {user.departmentName}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not set</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">
+                        {formatDate(user.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={user.pdfCount > 0 ? "default" : "secondary"}>
+                          {user.pdfCount}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatBytes(user.totalStorage)}
+                      </TableCell>
+                      <TableCell>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
         </div>
-      </footer>
+
+        <footer className="py-6 border-t border-border/40">
+          <div className="px-4 md:px-6 text-center">
+            <p className="text-xs text-muted-foreground/60">
+              Made with love ❤️ by Nexel
+            </p>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
