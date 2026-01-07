@@ -46,14 +46,18 @@ export function DepartmentSelectPrompt({
       // Clear skip flag and update cache to prevent showing again
       localStorage.removeItem(SKIP_PROMPT_KEY);
       
-      // Update department cache immediately
+      // Find the selected department name for cache
+      const selectedDept = departments.find(d => d.id === selectedDepartment);
+      
+      // Update department cache immediately with full data
       const deptCacheData = {
         hasDepartment: true,
+        departmentId: selectedDepartment,
+        departmentName: selectedDept?.name || null,
         userId: userId,
         timestamp: Date.now(),
       };
       localStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
-      sessionStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
 
       toast.success("Department selected successfully!");
       onOpenChange(false);

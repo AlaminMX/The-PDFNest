@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useDepartments } from "@/hooks/useDepartments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,10 +29,19 @@ interface RepProfile {
   last_upload: string | null;
 }
 
+interface Course {
+  id?: string;
+  code: string;
+  name: string;
+  isNew?: boolean;
+  isDeleted?: boolean;
+}
+
 export default function AdminReps() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
+  const { departments } = useDepartments();
   const [reps, setReps] = useState<RepProfile[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -40,19 +51,20 @@ export default function AdminReps() {
   const [newRepEmail, setNewRepEmail] = useState("");
   const [newRepPassword, setNewRepPassword] = useState("");
   const [newRepDisplayName, setNewRepDisplayName] = useState("");
-  
-  // Dynamic department input (free text)
   const [newDepartmentName, setNewDepartmentName] = useState("");
   const [newDepartmentColor, setNewDepartmentColor] = useState("");
   const [newDepartmentIcon, setNewDepartmentIcon] = useState("");
-  
-  // Dynamic courses list
   const [courses, setCourses] = useState<{ code: string; name: string }[]>([{ code: "", name: "" }]);
 
-  // Edit rep state
+  // Edit rep state - FULL editing capability
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingRep, setEditingRep] = useState<RepProfile | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [editDisplayName, setEditDisplayName] = useState("");
+  const [editDepartmentId, setEditDepartmentId] = useState("");
+  const [editCourses, setEditCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
@@ -85,10 +97,7 @@ export default function AdminReps() {
         .select("user_id")
         .eq("role", "rep");
 
-      if (rolesError) {
-        console.error("Error fetching rep roles:", rolesError);
-        throw rolesError;
-      }
+      if (rolesError) throw rolesError;
 
       if (!repRoles || repRoles.length === 0) {
         setReps([]);
@@ -111,10 +120,7 @@ export default function AdminReps() {
         `)
         .in("id", repUserIds);
 
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
-      }
+      if (profilesError) throw profilesError;
 
       const repsWithStats = await Promise.all(
         (profiles || []).map(async (profile) => {
@@ -148,6 +154,30 @@ export default function AdminReps() {
     }
   };
 
+  const fetchCoursesForDepartment = async (departmentId: string) => {
+    if (!departmentId) {
+      setEditCourses([]);
+      return;
+    }
+    
+    setLoadingCourses(true);
+    try {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, code, name")
+        .eq("department_id", departmentId)
+        .order("name");
+
+      if (error) throw error;
+      setEditCourses(data?.map(c => ({ id: c.id, code: c.code, name: c.name })) || []);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      toast.error("Failed to load courses");
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
   const addCourse = () => {
     setCourses([...courses, { code: "", name: "" }]);
   };
@@ -162,6 +192,30 @@ export default function AdminReps() {
     const updated = [...courses];
     updated[index][field] = value;
     setCourses(updated);
+  };
+
+  // Edit dialog course management
+  const addEditCourse = () => {
+    setEditCourses([...editCourses, { code: "", name: "", isNew: true }]);
+  };
+
+  const removeEditCourse = (index: number) => {
+    const course = editCourses[index];
+    if (course.id) {
+      // Mark existing course for deletion
+      const updated = [...editCourses];
+      updated[index] = { ...course, isDeleted: true };
+      setEditCourses(updated);
+    } else {
+      // Remove new course entirely
+      setEditCourses(editCourses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateEditCourse = (index: number, field: "code" | "name", value: string) => {
+    const updated = [...editCourses];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditCourses(updated);
   };
 
   const generateSlug = (name: string): string => {
@@ -182,7 +236,6 @@ export default function AdminReps() {
       return;
     }
 
-    // Validate at least one course with name
     const validCourses = courses.filter(c => c.name.trim());
     if (validCourses.length === 0) {
       toast.error("Please add at least one course");
@@ -191,7 +244,6 @@ export default function AdminReps() {
 
     setCreating(true);
     try {
-      // Step 1: Check if department exists or create new one
       const deptSlug = generateSlug(newDepartmentName.trim());
       
       let { data: existingDept } = await supabase
@@ -205,7 +257,6 @@ export default function AdminReps() {
       if (existingDept) {
         departmentId = existingDept.id;
       } else {
-        // Create new department
         const { data: newDept, error: deptError } = await supabase
           .from("departments")
           .insert({
@@ -221,24 +272,15 @@ export default function AdminReps() {
         departmentId = newDept.id;
       }
 
-      // Step 2: Create courses under this department
       const coursesToInsert = validCourses.map(c => ({
         department_id: departmentId,
         code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
         name: c.name.trim(),
-        level: 100, // Default level
+        level: 100,
       }));
 
-      const { error: coursesError } = await supabase
-        .from("courses")
-        .insert(coursesToInsert);
+      await supabase.from("courses").insert(coursesToInsert);
 
-      if (coursesError) {
-        console.error("Error creating courses:", coursesError);
-        // Continue anyway - courses might already exist
-      }
-
-      // Step 3: Create rep account via edge function
       const response = await supabase.functions.invoke("create-rep-account", {
         body: {
           email: newRepEmail,
@@ -252,7 +294,7 @@ export default function AdminReps() {
         throw new Error(response.error.message || "Failed to create rep account");
       }
 
-      toast.success("Rep account created successfully with department and courses");
+      toast.success("Rep account created successfully");
       resetForm();
       fetchReps();
     } catch (error: any) {
@@ -275,7 +317,7 @@ export default function AdminReps() {
   };
 
   const handleDeleteRep = async (repId: string, displayName: string) => {
-    if (!confirm(`Are you sure you want to delete rep "${displayName}"? This will remove their account and all uploaded content.`)) {
+    if (!confirm(`Are you sure you want to delete rep "${displayName}"? This will remove their role and all uploaded content.`)) {
       return;
     }
 
@@ -291,12 +333,7 @@ export default function AdminReps() {
         const filePaths = notes.map(n => n.file_path);
         await supabase.storage.from("school_pdfs").remove(filePaths);
 
-        const { error: deleteNotesError } = await supabase
-          .from("lecture_notes")
-          .delete()
-          .eq("uploaded_by", repId);
-
-        if (deleteNotesError) throw deleteNotesError;
+        await supabase.from("lecture_notes").delete().eq("uploaded_by", repId);
       }
 
       const { error: roleError } = await supabase
@@ -315,10 +352,24 @@ export default function AdminReps() {
     }
   };
 
-  const handleOpenEditDialog = (rep: RepProfile) => {
+  const handleOpenEditDialog = async (rep: RepProfile) => {
     setEditingRep(rep);
+    setEditEmail(rep.email || "");
+    setEditPassword("");
     setEditDisplayName(rep.display_name || "");
+    setEditDepartmentId(rep.department_id || "");
     setShowEditDialog(true);
+    
+    if (rep.department_id) {
+      await fetchCoursesForDepartment(rep.department_id);
+    } else {
+      setEditCourses([]);
+    }
+  };
+
+  const handleDepartmentChange = async (newDeptId: string) => {
+    setEditDepartmentId(newDeptId);
+    await fetchCoursesForDepartment(newDeptId);
   };
 
   const handleUpdateRep = async () => {
@@ -331,14 +382,57 @@ export default function AdminReps() {
 
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ display_name: editDisplayName.trim() })
-        .eq("id", editingRep.id);
+      // Use edge function for email/password/profile updates
+      const response = await supabase.functions.invoke("update-rep-account", {
+        body: {
+          repId: editingRep.id,
+          email: editEmail !== editingRep.email ? editEmail : undefined,
+          password: editPassword || undefined,
+          displayName: editDisplayName.trim(),
+          departmentId: editDepartmentId || null,
+        },
+      });
 
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to update rep");
+      }
 
-      toast.success("Rep profile updated successfully");
+      // Handle course changes for the department
+      if (editDepartmentId) {
+        // Delete removed courses
+        const toDelete = editCourses.filter(c => c.id && c.isDeleted);
+        if (toDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from("courses")
+            .delete()
+            .in("id", toDelete.map(c => c.id!));
+          if (deleteError) console.error("Error deleting courses:", deleteError);
+        }
+
+        // Update existing courses
+        const toUpdate = editCourses.filter(c => c.id && !c.isNew && !c.isDeleted);
+        for (const course of toUpdate) {
+          await supabase
+            .from("courses")
+            .update({ code: course.code, name: course.name })
+            .eq("id", course.id!);
+        }
+
+        // Insert new courses
+        const toInsert = editCourses.filter(c => c.isNew && !c.isDeleted && c.name.trim());
+        if (toInsert.length > 0) {
+          await supabase.from("courses").insert(
+            toInsert.map(c => ({
+              department_id: editDepartmentId,
+              code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
+              name: c.name.trim(),
+              level: 100,
+            }))
+          );
+        }
+      }
+
+      toast.success("Rep updated successfully");
       setShowEditDialog(false);
       setEditingRep(null);
       fetchReps();
@@ -362,6 +456,8 @@ export default function AdminReps() {
   if (authLoading || adminLoading || !isAdmin) {
     return <LoadingState message="Verifying access..." />;
   }
+
+  const visibleEditCourses = editCourses.filter(c => !c.isDeleted);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
@@ -480,13 +576,7 @@ export default function AdminReps() {
                       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                         Courses Offered
                       </h3>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addCourse}
-                        className="gap-1"
-                      >
+                      <Button type="button" variant="outline" size="sm" onClick={addCourse} className="gap-1">
                         <Plus className="h-3.5 w-3.5" />
                         Add Course
                       </Button>
@@ -524,16 +614,14 @@ export default function AdminReps() {
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Add all courses this department offers. You can add unlimited courses.
+                      Add all courses this department offers.
                     </p>
                   </div>
                 </div>
               </ScrollArea>
 
               <DialogFooter className="px-6 py-4 border-t">
-                <Button variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={resetForm}>Cancel</Button>
                 <Button onClick={handleCreateRep} disabled={creating}>
                   {creating ? "Creating..." : "Create Rep & Department"}
                 </Button>
@@ -613,56 +701,151 @@ export default function AdminReps() {
         )}
       </main>
 
-      {/* Edit Rep Dialog */}
+      {/* Edit Rep Dialog - FULL editing */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <Edit2 className="h-5 w-5 text-primary" />
               Edit Rep Profile
             </DialogTitle>
             <DialogDescription>
-              Update the course representative's profile information.
+              Update the course representative's credentials, profile, and manage department courses.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editDisplayName">Display Name</Label>
-              <Input
-                id="editDisplayName"
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                placeholder="Enter display name"
-              />
-            </div>
-            
-            {editingRep?.email && (
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Email</Label>
-                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                  {editingRep.email}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Email cannot be changed here for security reasons.
-                </p>
+          <ScrollArea className="max-h-[60vh] px-6 py-4">
+            <div className="space-y-6">
+              {/* Credentials Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Credentials
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email</Label>
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editPassword">New Password</Label>
+                    <Input
+                      id="editPassword"
+                      type="password"
+                      placeholder="Leave blank to keep current"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Only fill to change password</p>
+                  </div>
+                </div>
               </div>
-            )}
-            
-            {editingRep?.departments?.name && (
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Department</Label>
-                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                  {editingRep.departments.name}
-                </p>
-              </div>
-            )}
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
+              {/* Profile Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Profile
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="editDisplayName">Display Name</Label>
+                  <Input
+                    id="editDisplayName"
+                    value={editDisplayName}
+                    onChange={(e) => setEditDisplayName(e.target.value)}
+                    placeholder="Enter display name"
+                  />
+                </div>
+              </div>
+
+              {/* Department Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Department
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="editDepartment">Assigned Department</Label>
+                  <Select value={editDepartmentId} onValueChange={handleDepartmentChange}>
+                    <SelectTrigger id="editDepartment">
+                      <SelectValue placeholder="Select a department" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.icon && <span className="mr-2">{dept.icon}</span>}
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Courses Section */}
+              {editDepartmentId && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Department Courses
+                    </h3>
+                    <Button type="button" variant="outline" size="sm" onClick={addEditCourse} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Course
+                    </Button>
+                  </div>
+                  
+                  {loadingCourses ? (
+                    <div className="py-4 text-center text-muted-foreground">Loading courses...</div>
+                  ) : visibleEditCourses.length === 0 ? (
+                    <div className="py-4 text-center text-muted-foreground">
+                      No courses yet. Add courses for this department.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {editCourses.map((course, index) => 
+                        !course.isDeleted && (
+                          <div key={course.id || `new-${index}`} className="flex gap-3 items-start">
+                            <div className="flex-1 grid grid-cols-3 gap-3">
+                              <Input
+                                placeholder="Code"
+                                value={course.code}
+                                onChange={(e) => updateEditCourse(index, "code", e.target.value)}
+                                className="col-span-1"
+                              />
+                              <Input
+                                placeholder="Course Name"
+                                value={course.name}
+                                onChange={(e) => updateEditCourse(index, "name", e.target.value)}
+                                className="col-span-2"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeEditCourse(index)}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Manage courses for this department. Changes will be saved when you click Save.
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
             <Button onClick={handleUpdateRep} disabled={updating}>
               {updating ? "Saving..." : "Save Changes"}
             </Button>

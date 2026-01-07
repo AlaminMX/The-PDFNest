@@ -482,7 +482,7 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
-  const { departmentId, hasDepartment, refresh: refreshDepartment } = useUserDepartment(user?.id);
+  const { departmentId, hasDepartment, resolved, refresh: refreshDepartment } = useUserDepartment(user?.id);
   const { showPrompt: showDeptPrompt, setShowPrompt: setShowDeptPrompt } = useDepartmentPrompt(user?.id, departmentId);
   
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -924,8 +924,8 @@ export default function Index() {
               />
             )}
 
-            {/* Department Banner for users without department */}
-            {user && !hasDepartment && (
+            {/* Department Banner for users without department - only show after resolved to prevent flash */}
+            {user && resolved && !hasDepartment && (
               <div className="mb-6">
                 <DepartmentBanner 
                   onSelectDepartment={() => setShowDeptPrompt(true)} 
