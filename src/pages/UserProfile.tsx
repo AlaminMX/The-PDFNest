@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,11 @@ import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
+import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface UserProfileData {
   id: string;
@@ -25,6 +27,8 @@ interface UserProfileData {
   total_storage_used: number | null;
   created_at: string | null;
   department_id: string | null;
+  department_name: string | null;
+  pdf_count: number;
 }
 
 interface RecentFile {
@@ -42,45 +46,44 @@ interface Category {
 
 const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
 
+// Cache key for localStorage
+const PROFILE_CACHE_KEY = "pdfnest_profile_cache";
+
 export default function UserProfile() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [pdfCount, setPdfCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showEditModal, setShowEditModal] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [savingDept, setSavingDept] = useState(false);
   const { departments } = useDepartments();
 
-  useEffect(() => {
-    fetchUserProfile();
+  // Get cached profile from localStorage for instant render
+  const cachedProfile = useMemo(() => {
+    try {
+      const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+      if (cached) return JSON.parse(cached) as UserProfileData;
+    } catch {}
+    return null;
   }, []);
 
-  const fetchUserProfile = async () => {
-    try {
-      setLoading(true);
+  // Fetch profile with React Query for caching and background revalidation
+  const { data: profileData, isLoading, refetch } = useQuery({
+    queryKey: ["user-profile"],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         navigate("/auth");
-        return;
+        return null;
       }
 
-      setUserId(user.id);
-
-      // Fetch profile summary with single optimized query
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .rpc("get_user_profile_summary", { p_user_id: user.id });
 
-      if (profileError) throw profileError;
+      if (error) throw error;
 
-      if (profileData && profileData.length > 0) {
-        const summary = profileData[0];
-        setProfile({
+      if (data && data.length > 0) {
+        const summary = data[0];
+        const profile: UserProfileData = {
           id: summary.id,
           display_name: summary.display_name,
           full_name: summary.full_name,
@@ -89,48 +92,65 @@ export default function UserProfile() {
           total_storage_used: summary.total_storage_used,
           created_at: summary.created_at,
           department_id: summary.department_id,
-        });
-        setDepartmentName(summary.department_name);
-        setPdfCount(Number(summary.pdf_count));
+          department_name: summary.department_name,
+          pdf_count: Number(summary.pdf_count),
+        };
+        
+        // Cache to localStorage
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+        return profile;
       }
+      return null;
+    },
+    staleTime: 60_000, // 1 minute
+    gcTime: 5 * 60_000, // 5 minutes
+    placeholderData: cachedProfile,
+  });
 
-      // Load recent files from localStorage
-      const storedRecent = localStorage.getItem(`recent-files-${user.id}`);
-      if (storedRecent) {
-        try {
-          setRecentFiles(JSON.parse(storedRecent));
-        } catch (e) {
-          console.error("Failed to parse recent files:", e);
-        }
-      }
+  // Use fetched data or cached data
+  const profile = profileData || cachedProfile;
+  const userId = profile?.id || null;
 
-      // Load categories with file counts
+  // Fetch recent files from localStorage (instant)
+  const recentFiles = useMemo(() => {
+    if (!userId) return [];
+    try {
+      const stored = localStorage.getItem(`recent-files-${userId}`);
+      if (stored) return JSON.parse(stored) as RecentFile[];
+    } catch {}
+    return [];
+  }, [userId]);
+
+  // Fetch categories with React Query
+  const { data: categories = [] } = useQuery({
+    queryKey: ["user-categories", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
       const { data: categoriesData } = await supabase
         .from("categories")
         .select("id, name, color")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
-      if (categoriesData) {
-        // Get file counts for each category
-        const categoriesWithCounts = await Promise.all(
-          categoriesData.map(async (cat) => {
-            const { count: fileCount } = await supabase
-              .from("pdf_files")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .eq("category_id", cat.id);
-            return { ...cat, file_count: fileCount || 0 };
-          })
-        );
-        setCategories(categoriesWithCounts);
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!categoriesData) return [];
+
+      // Get file counts in parallel
+      const categoriesWithCounts = await Promise.all(
+        categoriesData.map(async (cat) => {
+          const { count } = await supabase
+            .from("pdf_files")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("category_id", cat.id);
+          return { ...cat, file_count: count || 0 };
+        })
+      );
+      return categoriesWithCounts as Category[];
+    },
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
 
   const formatStorageSize = (bytes: number | null) => {
     if (!bytes) return "0 MB";
@@ -167,9 +187,10 @@ export default function UserProfile() {
 
       // Clear department cache to update navigation dot
       localStorage.removeItem("pdfnest_dept_status");
+      localStorage.removeItem(PROFILE_CACHE_KEY);
       
       toast.success("Department saved successfully!");
-      fetchUserProfile();
+      refetch();
     } catch (error) {
       console.error("Error saving department:", error);
       toast.error("Failed to save department");
@@ -178,12 +199,9 @@ export default function UserProfile() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading profile...</div>
-      </div>
-    );
+  // Show skeleton immediately if no cached data
+  if (isLoading && !profile) {
+    return <ProfileSkeleton />;
   }
 
   if (!profile) {
@@ -197,6 +215,8 @@ export default function UserProfile() {
   const displayName = profile.display_name || profile.full_name || "User";
   const storageUsed = profile.total_storage_used || 0;
   const storagePercentage = getStoragePercentage(storageUsed);
+  const departmentName = profile.department_name;
+  const pdfCount = profile.pdf_count;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24 md:pb-8">
@@ -462,7 +482,10 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
-          onUpdateComplete={fetchUserProfile}
+          onUpdateComplete={() => {
+            localStorage.removeItem(PROFILE_CACHE_KEY);
+            refetch();
+          }}
         />
       )}
 

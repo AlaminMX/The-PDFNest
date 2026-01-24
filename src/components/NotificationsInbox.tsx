@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationsSkeleton } from "./NotificationsSkeleton";
 
 export function NotificationsInbox() {
   const { user } = useAuth();
@@ -29,7 +30,8 @@ export function NotificationsInbox() {
       return `New lecture note: ${metadata.note_title || "Untitled"}`;
     }
     if (notification_type === "timetable_update") {
-      return `Timetable updated: ${metadata.course_code || ""}`;
+      const changeMessage = metadata.change_message || "Timetable updated";
+      return `${changeMessage}: ${metadata.course_code || ""}`;
     }
     return "Notification";
   };
@@ -40,7 +42,8 @@ export function NotificationsInbox() {
       return `${metadata.course_code || ""} • ${metadata.department_name || ""}`;
     }
     if (notification_type === "timetable_update") {
-      return `${metadata.department_name || ""} department`;
+      const changedBy = metadata.changed_by ? `by ${metadata.changed_by}` : "";
+      return `${metadata.course_name || ""} • ${metadata.department_name || ""} ${changedBy}`.trim();
     }
     return "";
   };
@@ -53,12 +56,9 @@ export function NotificationsInbox() {
     return acc;
   }, {} as Record<string, Notification[]>);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-pulse text-muted-foreground">Loading notifications...</div>
-      </div>
-    );
+  // Show skeleton during initial load
+  if (loading && notifications.length === 0) {
+    return <NotificationsSkeleton />;
   }
 
   return (

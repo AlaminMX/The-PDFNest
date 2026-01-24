@@ -1,14 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "./BottomNav";
 import { RepBottomNav } from "./RepBottomNav";
 
+// Cache key for user status
+const USER_STATUS_CACHE_KEY = "pdfnest_user_status_cache";
+const CACHE_TTL = 30_000; // 30 seconds
+
+interface CachedUserStatus {
+  userId: string | null;
+  isRep: boolean;
+  hasDepartment: boolean;
+  unreadNotifications: number;
+  timestamp: number;
+}
+
 export function SmartBottomNav() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isRep, setIsRep] = useState<boolean | null>(null);
-  const [hasDepartment, setHasDepartment] = useState<boolean>(true);
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
+  // Get cached status immediately for instant render
+  const cachedStatus = useMemo((): CachedUserStatus | null => {
+    try {
+      const cached = localStorage.getItem(USER_STATUS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as CachedUserStatus;
+        // Only use cache if not expired
+        if (Date.now() - parsed.timestamp < CACHE_TTL) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return null;
+  }, []);
+
+  const [userId, setUserId] = useState<string | null>(cachedStatus?.userId ?? null);
+  const [isRep, setIsRep] = useState<boolean | null>(cachedStatus?.isRep ?? null);
+  const [hasDepartment, setHasDepartment] = useState<boolean>(cachedStatus?.hasDepartment ?? true);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(cachedStatus?.unreadNotifications ?? 0);
+  const [isLoading, setIsLoading] = useState(!cachedStatus);
 
   useEffect(() => {
     checkUserAndRepStatus();
@@ -19,6 +46,14 @@ export function SmartBottomNav() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        const newStatus: CachedUserStatus = {
+          userId: null,
+          isRep: false,
+          hasDepartment: true,
+          unreadNotifications: 0,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(USER_STATUS_CACHE_KEY, JSON.stringify(newStatus));
         setUserId(null);
         setIsRep(false);
         setHasDepartment(true);
@@ -52,6 +87,16 @@ export function SmartBottomNav() {
       const repStatus = !!(roleData.data);
       const deptStatus = !!(profileData.data?.department_id);
       const unreadCount = notifData.count || 0;
+
+      // Cache the status
+      const newStatus: CachedUserStatus = {
+        userId: user.id,
+        isRep: repStatus,
+        hasDepartment: deptStatus,
+        unreadNotifications: unreadCount,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(USER_STATUS_CACHE_KEY, JSON.stringify(newStatus));
 
       setIsRep(repStatus);
       setHasDepartment(deptStatus);
@@ -93,11 +138,7 @@ export function SmartBottomNav() {
     };
   }, [userId]);
 
-  // Keep layout stable: render a non-personalized nav while status loads.
-  if (isLoading) {
-    return <BottomNav isLoggedIn={false} showProfileDot={false} unreadNotifications={0} />;
-  }
-
+  // Render immediately with cached data or stable default
   // Rep users get RepBottomNav
   if (isRep && userId) {
     return <RepBottomNav repUserId={userId} unreadNotifications={unreadNotifications} />;
