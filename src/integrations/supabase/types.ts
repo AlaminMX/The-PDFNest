@@ -107,10 +107,56 @@ export type Database = {
           },
         ]
       }
+      course_timetable_slots: {
+        Row: {
+          course_id: string
+          created_at: string
+          day_of_week: string
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          day_of_week: string
+          end_time: string
+          id?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          day_of_week?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_timetable_slots_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_timetable_slots_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_with_note_counts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           code: string
           created_at: string | null
+          credit_units: number
           department_id: string
           id: string
           level: number
@@ -119,6 +165,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string | null
+          credit_units?: number
           department_id: string
           id?: string
           level?: number
@@ -127,6 +174,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string | null
+          credit_units?: number
           department_id?: string
           id?: string
           level?: number
@@ -215,6 +263,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecture_notes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_with_note_counts"
             referencedColumns: ["id"]
           },
           {
@@ -590,6 +645,27 @@ export type Database = {
       }
     }
     Views: {
+      courses_with_note_counts: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          credit_units: number | null
+          department_id: string | null
+          id: string | null
+          level: number | null
+          name: string | null
+          note_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_rep_profiles: {
         Row: {
           avatar_url: string | null

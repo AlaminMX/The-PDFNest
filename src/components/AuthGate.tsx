@@ -31,16 +31,9 @@ export function AuthGate({ children }: AuthGateProps) {
     checkAuth();
   }, [navigate, location]);
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/10">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Checking access...</p>
-        </div>
-      </div>
-    );
-  }
+  // Avoid rendering a full-screen intermediary UI which can cause perceived flicker.
+  // If unauthenticated, we redirect immediately; if authenticated, children render.
+  if (checking) return null;
 
   return isAuthenticated ? <>{children}</> : null;
 }

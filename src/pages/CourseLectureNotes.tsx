@@ -253,18 +253,8 @@ function CourseLectureNotesContent() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-sm text-muted-foreground">Loading lecture notes...</p>
-        </motion.div>
-      </div>
-    );
+    // Avoid an intermediate full-screen loader which can flash between routes.
+    return null;
   }
 
   if (!currentDept || !currentCourse) {

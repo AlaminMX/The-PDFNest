@@ -12,21 +12,6 @@ function AFITPDFsContent() {
   const navigate = useNavigate();
   const { departments, loading } = useDepartments();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-sm text-muted-foreground">Loading departments...</p>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       {/* Header */}
@@ -72,17 +57,24 @@ function AFITPDFsContent() {
 
         {/* Department Cards */}
         <div className="grid gap-3 max-w-xl mx-auto">
-          {departments.map((dept, index) => (
-            <DepartmentTile
-              key={dept.id}
-              id={dept.id}
-              name={dept.name}
-              color={(dept as any).color}
-              icon={(dept as any).icon}
-              index={index}
-              onClick={() => navigate(`/afit-pdfs/${dept.slug}`)}
-            />
-          ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-5 rounded-xl bg-muted/30 border border-border/30">
+                  <div className="h-4 w-1/3 bg-muted/50 rounded mb-2" />
+                  <div className="h-3 w-2/3 bg-muted/50 rounded" />
+                </div>
+              ))
+            : departments.map((dept, index) => (
+                <DepartmentTile
+                  key={dept.id}
+                  id={dept.id}
+                  name={dept.name}
+                  color={(dept as any).color}
+                  icon={(dept as any).icon}
+                  index={index}
+                  onClick={() => navigate(`/afit-pdfs/${dept.slug}`)}
+                />
+              ))}
 
           {/* School Store Tile */}
           <motion.div
@@ -112,7 +104,7 @@ function AFITPDFsContent() {
           </motion.div>
         </div>
 
-        {departments.length === 0 && (
+          {!loading && departments.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

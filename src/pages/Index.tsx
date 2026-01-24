@@ -566,14 +566,8 @@ export default function Index() {
   }, [authLoading, repLoading, isRep, user?.id, navigate]);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your files...</p>
-        </div>
-      </div>
-    );
+    // Avoid rendering an intermediate full-screen loader which can feel like a page flash.
+    return null;
   }
 
   if (!user) {

@@ -3,21 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "./BottomNav";
 import { RepBottomNav } from "./RepBottomNav";
 
-const REP_STATUS_CACHE_KEY = "pdfnest_rep_status";
-const DEPT_STATUS_CACHE_KEY = "pdfnest_dept_status";
-
-interface CachedRepStatus {
-  isRep: boolean;
-  userId: string;
-  timestamp: number;
-}
-
-interface CachedDeptStatus {
-  hasDepartment: boolean;
-  userId: string;
-  timestamp: number;
-}
-
 export function SmartBottomNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRep, setIsRep] = useState<boolean | null>(null);
@@ -25,35 +10,6 @@ export function SmartBottomNav() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Try to get cached status immediately from localStorage (persistent)
-    const cached = localStorage.getItem(REP_STATUS_CACHE_KEY);
-    if (cached) {
-      try {
-        const parsed: CachedRepStatus = JSON.parse(cached);
-        // Cache valid for 5 minutes
-        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-          setUserId(parsed.userId);
-          setIsRep(parsed.isRep);
-          setIsLoading(false);
-        }
-      } catch {
-        localStorage.removeItem(REP_STATUS_CACHE_KEY);
-      }
-    }
-
-    // Check department cache
-    const deptCached = localStorage.getItem(DEPT_STATUS_CACHE_KEY);
-    if (deptCached) {
-      try {
-        const parsed: CachedDeptStatus = JSON.parse(deptCached);
-        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-          setHasDepartment(parsed.hasDepartment);
-        }
-      } catch {
-        localStorage.removeItem(DEPT_STATUS_CACHE_KEY);
-      }
-    }
-
     checkUserAndRepStatus();
   }, []);
 
@@ -66,8 +22,6 @@ export function SmartBottomNav() {
         setIsRep(false);
         setHasDepartment(true);
         setIsLoading(false);
-        localStorage.removeItem(REP_STATUS_CACHE_KEY);
-        localStorage.removeItem(DEPT_STATUS_CACHE_KEY);
         return;
       }
 
@@ -95,30 +49,15 @@ export function SmartBottomNav() {
       setHasDepartment(deptStatus);
 
       setIsLoading(false);
-
-      // Cache the results in localStorage for persistence
-      const repCacheData: CachedRepStatus = {
-        isRep: repStatus,
-        userId: user.id,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(REP_STATUS_CACHE_KEY, JSON.stringify(repCacheData));
-
-      const deptCacheData: CachedDeptStatus = {
-        hasDepartment: deptStatus,
-        userId: user.id,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(DEPT_STATUS_CACHE_KEY, JSON.stringify(deptCacheData));
     } catch (error) {
       console.error("Error checking user status:", error);
       setIsLoading(false);
     }
   };
 
-  // Don't render anything while loading to prevent flash
+  // Keep layout stable: render a non-personalized nav while status loads.
   if (isLoading) {
-    return null;
+    return <BottomNav isLoggedIn={false} showProfileDot={false} />;
   }
 
   // Rep users get RepBottomNav
