@@ -4,14 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useDepartmentCategories } from "@/hooks/useDepartmentCategories";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -24,12 +27,14 @@ interface EditingDepartment {
   color: string | null;
   icon: string | null;
   is_visible: boolean;
+  category_id: string | null;
 }
 
 interface NewDepartment {
   name: string;
   color: string;
   icon: string;
+  category_id: string;
 }
 
 interface DepartmentItemProps {
@@ -38,9 +43,10 @@ interface DepartmentItemProps {
   onEdit: (dept: any) => void;
   onDelete: (dept: any) => void;
   onToggleVisibility: (dept: any) => void;
+  categoryName?: string;
 }
 
-function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility }: DepartmentItemProps) {
+function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, categoryName }: DepartmentItemProps) {
   const dragControls = useDragControls();
   const styles = getDepartmentStyles(dept.color, index);
   const icon = getDepartmentIcon(dept.icon, dept.name);
@@ -92,7 +98,7 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility }: D
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-lg text-white">
                   {dept.name}
                 </h3>
@@ -100,6 +106,12 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility }: D
                   <span className="text-xs bg-muted/30 text-muted-foreground px-2 py-0.5 rounded">
                     Hidden
                   </span>
+                )}
+                {categoryName && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Tag className="w-3 h-3" />
+                    {categoryName}
+                  </Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -156,11 +168,12 @@ export default function AdminDepartments() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { departments, loading: deptLoading, refresh: refreshDepartments } = useDepartments();
+  const { categories } = useDepartmentCategories();
   
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "" });
+  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "" });
   const [creating, setCreating] = useState(false);
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -185,6 +198,7 @@ export default function AdminDepartments() {
       color: dept.color || "",
       icon: dept.icon || "",
       is_visible: dept.is_visible !== false,
+      category_id: dept.category_id || null,
     });
   };
 
@@ -221,6 +235,7 @@ export default function AdminDepartments() {
           color: editingDept.color?.trim() || null,
           icon: editingDept.icon?.trim() || null,
           is_visible: editingDept.is_visible,
+          category_id: editingDept.category_id || null,
         })
         .eq("id", editingDept.id);
 
@@ -268,13 +283,14 @@ export default function AdminDepartments() {
           icon: newDept.icon?.trim() || null,
           display_order: maxOrder + 1,
           is_visible: true,
+          category_id: newDept.category_id?.trim() || null,
         });
 
       if (error) throw error;
 
       toast.success("Department created successfully");
       setShowCreateDialog(false);
-      setNewDept({ name: "", color: "", icon: "" });
+      setNewDept({ name: "", color: "", icon: "", category_id: "" });
       refreshDepartments();
     } catch (error: any) {
       console.error("Error creating department:", error);
@@ -398,16 +414,20 @@ export default function AdminDepartments() {
               onReorder={handleReorder}
               className="space-y-4"
             >
-              {orderedDepts.map((dept, index) => (
-                <DepartmentItem
-                  key={dept.id}
-                  dept={dept}
-                  index={index}
-                  onEdit={handleEdit}
-                  onDelete={setDeletingDept}
-                  onToggleVisibility={handleToggleVisibility}
-                />
-              ))}
+              {orderedDepts.map((dept, index) => {
+                const category = categories.find(c => c.id === dept.category_id);
+                return (
+                  <DepartmentItem
+                    key={dept.id}
+                    dept={dept}
+                    index={index}
+                    onEdit={handleEdit}
+                    onDelete={setDeletingDept}
+                    categoryName={category?.name}
+                    onToggleVisibility={handleToggleVisibility}
+                  />
+                );
+              })}
             </Reorder.Group>
           </div>
         )}
@@ -504,6 +524,32 @@ export default function AdminDepartments() {
                   onChange={(e) => setNewDept({ ...newDept, icon: e.target.value })}
                   placeholder="Leave empty for auto-assigned"
                 />
+              </div>
+
+              {/* Category Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="newDeptCategory">
+                  Category
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (for signup page grouping)
+                  </span>
+                </Label>
+                <Select
+                  value={newDept.category_id}
+                  onValueChange={(value) => setNewDept({ ...newDept, category_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger id="newDeptCategory">
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -620,6 +666,32 @@ export default function AdminDepartments() {
                     checked={editingDept.is_visible}
                     onCheckedChange={(checked) => setEditingDept({ ...editingDept, is_visible: checked })}
                   />
+                </div>
+
+                {/* Category Selector */}
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="editDeptCategory">
+                    Category
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (for signup page grouping)
+                    </span>
+                  </Label>
+                  <Select
+                    value={editingDept.category_id || "none"}
+                    onValueChange={(value) => setEditingDept({ ...editingDept, category_id: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger id="editDeptCategory">
+                      <SelectValue placeholder="No category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

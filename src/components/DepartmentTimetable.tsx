@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDepartmentTimetable, type TimetableCourse, type TimetableSlot } from "@/hooks/useDepartmentTimetable";
+import { useAuth } from "@/hooks/useAuth";
 
 type RowId = string;
 
@@ -89,6 +90,7 @@ export function DepartmentTimetable({
   departmentId: string;
   canEdit: boolean;
 }) {
+  const { user } = useAuth();
   const [level, setLevel] = useState<number>(100);
   const { data, isLoading, isFetching, refetch } = useDepartmentTimetable(departmentId, level);
 
@@ -286,6 +288,84 @@ export function DepartmentTimetable({
           .delete()
           .in("id", deletedSlotIds);
         if (error) throw error;
+      }
+
+      // Send timetable change notifications (fire and forget)
+      const hasChanges = slotInserts.length > 0 || slotUpdates.length > 0 || deletedSlotIds.length > 0;
+      if (hasChanges) {
+        // Get user's display name for the notification
+        let changedBy = "Unknown";
+        if (user?.id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name, full_name")
+            .eq("id", user.id)
+            .single();
+          changedBy = profile?.display_name || profile?.full_name || "Unknown";
+        }
+
+        // Send notifications for each type of change
+        const notificationPromises: Promise<any>[] = [];
+        
+        // Group by course for more informative notifications
+        const affectedCourses = new Map<string, { code: string; name: string }>();
+        
+        for (const slot of slotInserts) {
+          const row = rows.find(r => r.courseId === slot.course_id);
+          if (row) affectedCourses.set(slot.course_id, { code: row.courseCode, name: row.courseName });
+        }
+        for (const slot of slotUpdates) {
+          const row = rows.find(r => r.slotId === slot.id);
+          if (row) affectedCourses.set(row.courseId, { code: row.courseCode, name: row.courseName });
+        }
+        for (const slotId of deletedSlotIds) {
+          const row = initialRows.find(r => r.slotId === slotId);
+          if (row) affectedCourses.set(row.courseId, { code: row.courseCode, name: row.courseName });
+        }
+
+        // Send one notification per course with changes
+        for (const [courseId, course] of affectedCourses) {
+          const courseInserts = slotInserts.filter(s => s.course_id === courseId).length;
+          const courseUpdates = slotUpdates.filter(s => {
+            const row = rows.find(r => r.slotId === s.id);
+            return row?.courseId === courseId;
+          }).length;
+          const courseDeletes = deletedSlotIds.filter(id => {
+            const row = initialRows.find(r => r.slotId === id);
+            return row?.courseId === courseId;
+          }).length;
+
+          // Determine primary change type
+          let changeType: "slot_added" | "slot_updated" | "slot_removed" = "slot_updated";
+          let slotsAffected = 1;
+          
+          if (courseInserts > 0) {
+            changeType = "slot_added";
+            slotsAffected = courseInserts;
+          } else if (courseDeletes > 0) {
+            changeType = "slot_removed";
+            slotsAffected = courseDeletes;
+          } else if (courseUpdates > 0) {
+            changeType = "slot_updated";
+            slotsAffected = courseUpdates;
+          }
+
+          notificationPromises.push(
+            supabase.functions.invoke("notify-timetable-change", {
+              body: {
+                departmentId,
+                changeType,
+                courseCode: course.code,
+                courseName: course.name,
+                changedBy,
+                slotsAffected,
+              },
+            }).catch(err => console.error("Failed to send timetable notification:", err))
+          );
+        }
+
+        // Fire and forget - don't block on notification sending
+        Promise.all(notificationPromises).catch(console.error);
       }
 
       toast.success("Timetable saved");

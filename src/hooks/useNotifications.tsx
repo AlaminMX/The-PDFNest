@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 export interface Notification {
   id: string;
-  notification_type: string;
+  user_id: string;
   department_id: string | null;
+  notification_type: string;
   metadata: Record<string, any>;
   is_read: boolean;
   created_at: string;
@@ -16,7 +16,7 @@ export function useNotifications(userId: string | undefined) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const loadNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
@@ -28,23 +28,25 @@ export function useNotifications(userId: string | undefined) {
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
 
       setNotifications((data || []) as Notification[]);
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
-    } catch (error: any) {
-      console.error("Error loading notifications:", error);
+      setUnreadCount((data || []).filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    loadNotifications();
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-    // Subscribe to realtime updates
+  // Subscribe to real-time updates
+  useEffect(() => {
     if (!userId) return;
 
     const channel = supabase
@@ -58,7 +60,7 @@ export function useNotifications(userId: string | undefined) {
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          loadNotifications();
+          fetchNotifications();
         }
       )
       .subscribe();
@@ -66,29 +68,39 @@ export function useNotifications(userId: string | undefined) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, fetchNotifications]);
 
-  const markAsRead = async (notificationId: string) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n
+      )
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+
     try {
       const { error } = await supabase
         .from("user_notifications")
         .update({ is_read: true })
         .eq("id", notificationId);
 
-      if (error) throw error;
-
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error: any) {
-      toast.error("Failed to mark notification as read");
+      if (error) {
+        // Revert on error
+        fetchNotifications();
+        throw error;
+      }
+    } catch (error) {
       console.error("Error marking notification as read:", error);
     }
-  };
+  }, [fetchNotifications]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     if (!userId) return;
+
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
 
     try {
       const { error } = await supabase
@@ -97,16 +109,15 @@ export function useNotifications(userId: string | undefined) {
         .eq("user_id", userId)
         .eq("is_read", false);
 
-      if (error) throw error;
-
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-      toast.success("All notifications marked as read");
-    } catch (error: any) {
-      toast.error("Failed to mark all as read");
-      console.error("Error marking all as read:", error);
+      if (error) {
+        // Revert on error
+        fetchNotifications();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
     }
-  };
+  }, [userId, fetchNotifications]);
 
   return {
     notifications,
@@ -114,6 +125,6 @@ export function useNotifications(userId: string | undefined) {
     loading,
     markAsRead,
     markAllAsRead,
-    refreshNotifications: loadNotifications,
+    refresh: fetchNotifications,
   };
 }
