@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
-  Menu, X
+  Menu, X, FolderTree
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -60,6 +60,7 @@ function formatDate(dateString: string): string {
 const sidebarItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
   { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
+  { id: "categories", label: "Categories", icon: FolderTree, path: "/admin/categories" },
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },

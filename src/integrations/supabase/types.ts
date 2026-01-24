@@ -190,8 +190,30 @@ export type Database = {
           },
         ]
       }
+      department_categories: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
+          category_id: string | null
           color: string | null
           created_at: string | null
           display_order: number | null
@@ -202,6 +224,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          category_id?: string | null
           color?: string | null
           created_at?: string | null
           display_order?: number | null
@@ -212,6 +235,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          category_id?: string | null
           color?: string | null
           created_at?: string | null
           display_order?: number | null
@@ -221,7 +245,15 @@ export type Database = {
           name?: string
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "departments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "department_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lecture_notes: {
         Row: {
@@ -583,6 +615,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notifications: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          id: string
+          is_read: boolean | null
+          metadata: Json | null
+          notification_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          metadata?: Json | null
+          notification_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          metadata?: Json | null
+          notification_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -710,6 +780,22 @@ export type Database = {
           department_id: string
           display_name: string
           id: string
+        }[]
+      }
+      get_user_profile_summary: {
+        Args: { p_user_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          department_id: string
+          department_name: string
+          display_name: string
+          email: string
+          full_name: string
+          id: string
+          pdf_count: number
+          total_storage_used: number
+          unread_notification_count: number
         }[]
       }
       has_role: {

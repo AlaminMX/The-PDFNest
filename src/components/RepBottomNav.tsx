@@ -1,17 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Upload, User } from "lucide-react";
+import { Home, Upload, User, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "./ui/badge";
 
 interface RepBottomNavProps {
   repUserId: string;
+  unreadNotifications?: number;
 }
 
-export function RepBottomNav({ repUserId }: RepBottomNavProps) {
+export function RepBottomNav({ repUserId, unreadNotifications = 0 }: RepBottomNavProps) {
   const location = useLocation();
   
   const tabs = [
     { icon: Home, label: "Home", path: "/" },
     { icon: Upload, label: "Upload", path: "/rep/upload" },
+    { icon: Bell, label: "Notifications", path: "/notifications", badge: unreadNotifications },
     { icon: User, label: "Profile", path: `/rep/${repUserId}` },
   ];
 
@@ -33,7 +36,17 @@ export function RepBottomNav({ repUserId }: RepBottomNavProps) {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <Icon className="w-5 h-5" />
+              <div className="relative">
+                <Icon className="w-5 h-5" />
+                {(tab as any).badge > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center p-0 text-[10px] leading-none"
+                  >
+                    {(tab as any).badge > 9 ? "9+" : (tab as any).badge}
+                  </Badge>
+                )}
+              </div>
               <span className="text-xs font-medium">{tab.label}</span>
             </Link>
           );

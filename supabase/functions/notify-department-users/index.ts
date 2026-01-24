@@ -80,20 +80,20 @@ Deno.serve(async (req) => {
     // This creates an activity log entry that can be used later
     const notifications = users.map(user => ({
       user_id: user.id,
-      action: "new_lecture_note",
-      metadata: JSON.stringify({
-        department_id: departmentId,
+      notification_type: "new_lecture_note",
+      department_id: departmentId,
+      metadata: {
         department_name: departmentName,
         course_code: courseCode,
         note_title: noteTitle,
         uploaded_by: uploadedBy,
-        notified_at: new Date().toISOString(),
-      }),
+      },
+      is_read: false,
     }));
 
-    // Insert notification records into activity logs
+    // Insert notification records into user_notifications
     const { error: logError } = await supabase
-      .from("user_activity_logs")
+      .from("user_notifications")
       .insert(notifications);
 
     if (logError) {
