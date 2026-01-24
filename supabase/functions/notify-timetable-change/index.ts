@@ -23,12 +23,52 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Validate authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create client with user's auth context to validate token
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: authError } = await userSupabase.auth.getUser(token);
+
+    if (authError || !claims?.user) {
+      console.error("[notify-timetable-change] Auth validation failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify caller has rep or admin role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", claims.user.id);
+
+    const hasPermission = userRoles?.some(r => r.role === "rep" || r.role === "admin");
+    if (!hasPermission) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: requires rep or admin role" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const payload: TimetableChangePayload = await req.json();
     const { departmentId, changeType, courseCode, courseName, changedBy, slotsAffected = 1 } = payload;
 
-    console.log(`[notify-timetable-change] Processing ${changeType} for ${courseCode} in department ${departmentId}`);
+    console.log(`[notify-timetable-change] Processing ${changeType} for ${courseCode} in department ${departmentId} by user ${claims.user.id}`);
 
     if (!departmentId || !changeType || !courseCode) {
       return new Response(
