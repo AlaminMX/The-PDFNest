@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminReps from "./pages/AdminReps";
 import AdminDepartments from "./pages/AdminDepartments";
 import AdminBanners from "./pages/AdminBanners";
+import AdminCategories from "./pages/AdminCategories";
 import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminSessionLogs from "./pages/AdminSessionLogs";
 import AFITPDFs from "./pages/AFITPDFs";
@@ -24,6 +25,7 @@ import RepUpload from "./pages/RepUpload";
 import RepProfile from "./pages/RepProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,7 @@ const App = () => (
             <Route path="/admin/reps" element={<AdminReps />} />
             <Route path="/admin/departments" element={<AdminDepartments />} />
             <Route path="/admin/banners" element={<AdminBanners />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/logs" element={<AdminSessionLogs />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
@@ -56,6 +59,7 @@ const App = () => (
             <Route path="/rep/:userId" element={<RepProfile />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/ai-features" element={<AIFeatures />} />
+            <Route path="/notifications" element={<Notifications />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

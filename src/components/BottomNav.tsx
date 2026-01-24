@@ -1,15 +1,22 @@
-import { Home, Sparkles, User } from "lucide-react";
+import { Home, Sparkles, User, Bell } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Badge } from "./ui/badge";
 
 interface BottomNavProps {
   isLoggedIn: boolean;
   userId?: string;
   showProfileDot?: boolean;
+  unreadNotifications?: number;
 }
 
-export function BottomNav({ isLoggedIn, userId, showProfileDot = false }: BottomNavProps) {
+export function BottomNav({ 
+  isLoggedIn, 
+  userId, 
+  showProfileDot = false,
+  unreadNotifications = 0,
+}: BottomNavProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -18,6 +25,9 @@ export function BottomNav({ isLoggedIn, userId, showProfileDot = false }: Bottom
   const tabs = [
     { icon: Home, label: "Home", path: "/", showDot: false },
     { icon: Sparkles, label: "AI Features", path: "/ai-features", showDot: false },
+    ...(isLoggedIn && userId
+      ? [{ icon: Bell, label: "Notifications", path: "/notifications", showDot: false, badge: unreadNotifications }]
+      : []),
     ...(isLoggedIn && userId
       ? [{ icon: User, label: "Profile", path: "/profile", showDot: showProfileDot }]
       : []),
@@ -54,6 +64,14 @@ export function BottomNav({ isLoggedIn, userId, showProfileDot = false }: Bottom
                 <Icon className="w-5 h-5" />
                 {tab.showDot && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
+                )}
+                {(tab as any).badge > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-4 min-w-4 flex items-center justify-center p-0 text-[10px] leading-none"
+                  >
+                    {(tab as any).badge > 9 ? "9+" : (tab as any).badge}
+                  </Badge>
                 )}
               </div>
               <span className="text-xs font-medium">{tab.label}</span>

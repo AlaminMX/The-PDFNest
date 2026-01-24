@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useDepartmentCategories } from "@/hooks/useDepartmentCategories";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
@@ -58,7 +59,14 @@ export default function Auth() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const { departments, loading: loadingDepartments } = useDepartments({ visibleOnly: true });
+  const { categories, loading: loadingCategories } = useDepartmentCategories();
+
+  // Filter departments by selected category
+  const filteredDepartments = selectedCategory && selectedCategory !== "all"
+    ? departments.filter(dept => (dept as any).category_id === selectedCategory)
+    : departments;
 
   useEffect(() => {
     // Mark that user has visited before
@@ -397,16 +405,42 @@ export default function Auth() {
 
               {/* Department dropdown - only for signup */}
               {!isLogin && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">
+                      Select category <span className="text-muted-foreground text-xs">(optional - helps narrow down departments)</span>
+                    </Label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger id="category" className="w-full">
+                        <SelectValue placeholder={loadingCategories ? "Loading..." : "All categories"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="all">All categories</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="department">
                     Select your department <span className="text-muted-foreground text-xs">(only if you are a student of AFIT)</span>
                   </Label>
                   <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                     <SelectTrigger id="department" className="w-full">
-                      <SelectValue placeholder={loadingDepartments ? "Loading..." : "Select department (optional)"} />
+                      <SelectValue placeholder={
+                        loadingDepartments 
+                          ? "Loading..." 
+                          : selectedCategory && filteredDepartments.length === 0
+                            ? "No departments in this category"
+                            : "Select department (optional)"
+                      } />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {departments.map((dept) => (
+                      {filteredDepartments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.icon && <span className="mr-2">{dept.icon}</span>}
                           {dept.name}
@@ -415,6 +449,7 @@ export default function Auth() {
                     </SelectContent>
                   </Select>
                 </div>
+                </>
               )}
 
               <div className="space-y-2">

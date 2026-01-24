@@ -72,28 +72,27 @@ export default function UserProfile() {
 
       setUserId(user.id);
 
-      // Fetch profile with department
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select(`
-          id, display_name, full_name, email, avatar_url, total_storage_used, created_at, department_id,
-          departments (name)
-        `)
-        .eq("id", user.id)
-        .single();
+      // Fetch profile summary with single optimized query
+      const { data: profileData, error: profileError } = await supabase
+        .rpc("get_user_profile_summary", { p_user_id: user.id });
 
-      if (profileData) {
-        setProfile(profileData);
-        setDepartmentName((profileData as any).departments?.name || null);
+      if (profileError) throw profileError;
+
+      if (profileData && profileData.length > 0) {
+        const summary = profileData[0];
+        setProfile({
+          id: summary.id,
+          display_name: summary.display_name,
+          full_name: summary.full_name,
+          email: summary.email,
+          avatar_url: summary.avatar_url,
+          total_storage_used: summary.total_storage_used,
+          created_at: summary.created_at,
+          department_id: summary.department_id,
+        });
+        setDepartmentName(summary.department_name);
+        setPdfCount(Number(summary.pdf_count));
       }
-
-      // Count PDFs
-      const { count } = await supabase
-        .from("pdf_files")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      setPdfCount(count || 0);
 
       // Load recent files from localStorage
       const storedRecent = localStorage.getItem(`recent-files-${user.id}`);
