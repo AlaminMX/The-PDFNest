@@ -21,7 +21,48 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+
+    // Validate authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create client with user's auth context to validate token
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: authError } = await userSupabase.auth.getUser(token);
+
+    if (authError || !claims?.user) {
+      console.error("Auth validation failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify caller has rep or admin role
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", claims.user.id);
+
+    const hasPermission = userRoles?.some(r => r.role === "rep" || r.role === "admin");
+    if (!hasPermission) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: requires rep or admin role" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!lovableApiKey) {
       console.log("LOVABLE_API_KEY not configured, skipping notifications");
@@ -30,8 +71,6 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { departmentId, courseCode, noteTitle, uploadedBy }: NotifyRequest = await req.json();
 
