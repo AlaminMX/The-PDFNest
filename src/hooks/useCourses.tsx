@@ -4,20 +4,20 @@ import { Tables } from "@/integrations/supabase/types";
 
 type Course = Tables<"courses">;
 
+// From the DB view `public.courses_with_note_counts`
 interface CourseWithNoteCount extends Course {
   note_count: number;
+  credit_units: number;
 }
 
-export function useCourses(departmentId?: string) {
+export function useCourses(departmentId?: string, level: number = 100) {
   const [courses, setCourses] = useState<CourseWithNoteCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (departmentId) {
-      fetchCourses();
-    }
-  }, [departmentId]);
+    if (departmentId) fetchCourses();
+  }, [departmentId, level]);
 
   const fetchCourses = async () => {
     if (!departmentId) return;
@@ -26,31 +26,16 @@ export function useCourses(departmentId?: string) {
       setLoading(true);
       setError(null);
 
+      // Use view to avoid N+1 note-count queries.
       const { data: coursesData, error: fetchError } = await supabase
-        .from("courses")
+        .from("courses_with_note_counts")
         .select("*")
         .eq("department_id", departmentId)
-        .eq("level", 100)
+        .eq("level", level)
         .order("code");
 
       if (fetchError) throw fetchError;
-
-      // Fetch note counts for each course
-      const coursesWithCounts = await Promise.all(
-        (coursesData || []).map(async (course) => {
-          const { count } = await supabase
-            .from("lecture_notes")
-            .select("*", { count: "exact", head: true })
-            .eq("course_id", course.id);
-
-          return {
-            ...course,
-            note_count: count || 0,
-          };
-        })
-      );
-
-      setCourses(coursesWithCounts);
+      setCourses((coursesData as CourseWithNoteCount[]) || []);
     } catch (err) {
       console.error("Error fetching courses:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch courses");
