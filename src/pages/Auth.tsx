@@ -376,18 +376,19 @@ export default function Auth() {
           ) : (
             <form onSubmit={handleAuth} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="name"
+                />
+              </div>
               )}
 
               <div className="space-y-2">
@@ -400,6 +401,7 @@ export default function Auth() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
 
@@ -461,6 +463,7 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
                 {!isLogin && <PasswordStrengthIndicator password={password} show={password.length > 0} />}
               </div>
@@ -475,6 +478,7 @@ export default function Auth() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading}
+                    autoComplete="new-password"
                   />
                 </div>
               )}

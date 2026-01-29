@@ -3,8 +3,12 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, ...props }, ref) => {
+interface PasswordInputProps extends React.ComponentProps<"input"> {
+  autoComplete?: string;
+}
+
+const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
+  ({ className, autoComplete = "current-password", ...props }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false);
 
     return (
@@ -13,6 +17,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"i
           type={showPassword ? "text" : "password"}
           className={cn("pr-10", className)}
           ref={ref}
+          autoComplete={autoComplete}
           {...props}
         />
         <button
