@@ -38,6 +38,7 @@ export function BottomNav({
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex items-center justify-around h-16 px-2">
         {tabs.map((tab) => {
@@ -49,7 +50,7 @@ export function BottomNav({
               key={tab.path}
               to={tab.path}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors relative",
+                "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors relative min-h-[48px]",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >

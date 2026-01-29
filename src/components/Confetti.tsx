@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Particle {
   id: number;
@@ -7,6 +7,7 @@ interface Particle {
   color: string;
   delay: number;
   rotation: number;
+  duration: number;
 }
 
 const COLORS = [
@@ -19,6 +20,7 @@ const COLORS = [
 
 export function Confetti() {
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const newParticles: Particle[] = [];
@@ -29,40 +31,54 @@ export function Confetti() {
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
         delay: Math.random() * 0.5,
         rotation: Math.random() * 360,
+        duration: 2.5 + Math.random(),
       });
     }
     setParticles(newParticles);
+
+    // Schedule visibility off after all animations complete
+    const maxDuration = 3.5 + 0.5; // max duration + max delay
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+    }, maxDuration * 1000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          initial={{
-            left: `${particle.x}%`,
-            top: "-5%",
-            rotate: 0,
-            opacity: 1,
-          }}
-          animate={{
-            top: "110%",
-            rotate: particle.rotation + 720,
-            opacity: [1, 1, 0],
-          }}
-          transition={{
-            duration: 2.5 + Math.random(),
-            delay: particle.delay,
-            ease: [0.25, 0.1, 0.25, 1],
-          }}
-          className="absolute"
-        >
-          <div
-            className="w-3 h-3 rounded-sm"
-            style={{ backgroundColor: particle.color }}
-          />
-        </motion.div>
-      ))}
-    </div>
+    <AnimatePresence>
+      {isVisible && (
+        <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
+          {particles.map((particle) => (
+            <motion.div
+              key={particle.id}
+              initial={{
+                left: `${particle.x}%`,
+                top: "-5%",
+                rotate: 0,
+                opacity: 1,
+              }}
+              animate={{
+                top: "110%",
+                rotate: particle.rotation + 720,
+                opacity: [1, 1, 0],
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: particle.duration,
+                delay: particle.delay,
+                ease: [0.25, 0.1, 0.25, 1],
+              }}
+              className="absolute"
+            >
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: particle.color }}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

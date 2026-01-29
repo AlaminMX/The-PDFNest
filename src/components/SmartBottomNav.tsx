@@ -5,7 +5,7 @@ import { RepBottomNav } from "./RepBottomNav";
 
 // Cache key for user status
 const USER_STATUS_CACHE_KEY = "pdfnest_user_status_cache";
-const CACHE_TTL = 30_000; // 30 seconds
+const CACHE_TTL = 60_000; // 60 seconds (increased from 30s for consistency)
 
 interface CachedUserStatus {
   userId: string | null;
@@ -27,7 +27,9 @@ export function SmartBottomNav() {
           return parsed;
         }
       }
-    } catch {}
+    } catch {
+      // Ignore parse errors
+    }
     return null;
   }, []);
 
@@ -103,7 +105,9 @@ export function SmartBottomNav() {
       setUnreadNotifications(unreadCount);
       setIsLoading(false);
     } catch (error) {
-      console.error("Error checking user status:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error checking user status:", error);
+      }
       setIsLoading(false);
     }
   };

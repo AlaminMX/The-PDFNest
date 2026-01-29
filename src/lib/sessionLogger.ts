@@ -5,6 +5,12 @@ const SESSION_KEY = "pdfnest_session_id";
 const LAST_ACTIVITY_KEY = "pdfnest_last_activity";
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
+// Only log in development mode
+const isDev = import.meta.env.DEV;
+const log = (...args: unknown[]) => {
+  if (isDev) console.log(...args);
+};
+
 export type ActivityType = 
   | "page_view"
   | "upload_pdf"
@@ -106,10 +112,10 @@ export async function startSession(): Promise<string | null> {
     setCurrentSessionId(sessionId);
     updateLastActivity();
 
-    console.log("Session started:", sessionId);
+    log("Session started:", sessionId);
     return sessionId;
   } catch (error) {
-    console.error("Failed to start session:", error);
+    if (isDev) console.error("Failed to start session:", error);
     return null;
   }
 }
@@ -157,9 +163,9 @@ export async function endSession(): Promise<void> {
     }
 
     clearCurrentSessionId();
-    console.log("Session ended:", sessionId);
+    log("Session ended:", sessionId);
   } catch (error) {
-    console.error("Failed to end session:", error);
+    if (isDev) console.error("Failed to end session:", error);
     clearCurrentSessionId();
   }
 }
@@ -235,7 +241,7 @@ export async function logActivity(
 
     updateLastActivity();
   } catch (error) {
-    console.error("Failed to log activity:", error);
+    if (isDev) console.error("Failed to log activity:", error);
   }
 }
 
@@ -293,7 +299,7 @@ export function setupIdleDetection(): () => void {
 
   const checkIdle = async () => {
     if (isSessionIdle() && getCurrentSessionId()) {
-      console.log("Session idle timeout reached, ending session");
+      log("Session idle timeout reached, ending session");
       await endSession();
     }
   };
