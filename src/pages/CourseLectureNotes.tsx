@@ -53,6 +53,7 @@ import { StudyGuideModal } from "@/components/StudyGuideModal";
 import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
+import { PDFViewer } from "@/components/PDFViewer";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
@@ -90,7 +91,11 @@ function CourseLectureNotesContent() {
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [translatorModalOpen, setTranslatorModalOpen] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<{ id: string; title: string; filePath: string } | null>(null);
+  const [selectedNote, setSelectedNote] = useState<{ id: string; title: string; filePath: string; fileSize?: number } | null>(null);
+
+  // PDF Viewer state
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [viewerPdfUrl, setViewerPdfUrl] = useState<string>("");
 
   const loading = deptLoading || coursesLoading || notesLoading;
 
@@ -109,12 +114,14 @@ function CourseLectureNotesContent() {
     });
   }, [notes, searchQuery]);
 
-  const handleView = async (noteId: string, filePath: string, title: string) => {
+  const handleView = async (noteId: string, filePath: string, title: string, fileSize?: number) => {
     try {
       await incrementViews(noteId);
       const url = await getSignedUrl(filePath);
       if (url) {
-        window.open(url, "_blank");
+        setSelectedNote({ id: noteId, title, filePath, fileSize });
+        setViewerPdfUrl(url);
+        setPdfViewerOpen(true);
       } else {
         toast.error("Failed to load PDF");
       }
@@ -469,7 +476,7 @@ function CourseLectureNotesContent() {
                   size="sm"
                   variant="secondary"
                   className="flex-1 md:flex-none h-8 text-xs"
-                  onClick={() => handleView(note.id, note.file_path, note.title)}
+                  onClick={() => handleView(note.id, note.file_path, note.title, note.file_size)}
                 >
                   <Eye className="w-3.5 h-3.5 mr-1.5" />
                   View
@@ -673,6 +680,15 @@ function CourseLectureNotesContent() {
           />
         </>
       )}
+
+      {/* PDF Viewer */}
+      <PDFViewer
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+        pdfUrl={viewerPdfUrl}
+        fileName={selectedNote?.title || ""}
+        fileSize={selectedNote?.fileSize}
+      />
 
       {/* Download Progress */}
       <DownloadProgress

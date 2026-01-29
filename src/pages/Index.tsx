@@ -63,7 +63,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { SimplePDFPreview } from "@/components/SimplePDFPreview";
+import { PDFViewer } from "@/components/PDFViewer";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { StorageIndicator } from "@/components/StorageIndicator";
 import { PDFSummaryModal } from "@/components/PDFSummaryModal";
@@ -1547,14 +1547,12 @@ export default function Index() {
         </main>
       </div>
 
-      <SimplePDFPreview
+      <PDFViewer
         isOpen={!!previewPdf}
         onClose={() => setPreviewPdf(null)}
         pdfUrl={previewPdf?.url || ""}
         fileName={previewPdf?.name || ""}
         fileSize={previewPdf?.fileSize}
-        createdAt={previewPdf?.createdAt}
-        thumbnailUrl={previewPdf?.thumbnailUrl}
       />
 
       <NavigationTutorial 
