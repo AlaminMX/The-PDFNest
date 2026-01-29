@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getDocument } from "https://esm.sh/pdfjs-serverless@0.3.2";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,36 +117,92 @@ serve(async (req) => {
     }
 
     const arrayBuffer = await pdfData.arrayBuffer();
+    const fileSizeBytes = arrayBuffer.byteLength;
+    const maxVisionSize = 5 * 1024 * 1024; // 5MB limit for vision fallback
     
     // Use pdfjs-serverless which works perfectly in Deno
-    const pdf = await getDocument({
-      data: new Uint8Array(arrayBuffer),
-      useSystemFonts: true,
-    }).promise;
     let fullText = '';
+    let useVisionFallback = false;
+    let pdfBase64 = '';
+    
+    try {
+      const pdf = await getDocument({
+        data: new Uint8Array(arrayBuffer),
+        useSystemFonts: true,
+      }).promise;
 
-    for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += pageText + '\n\n';
+      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+      
+      // If text extraction got less than 100 chars, try vision fallback for small files
+      if (fullText.trim().length < 100) {
+        if (fileSizeBytes <= maxVisionSize) {
+          console.log("Text extraction insufficient, using vision fallback for small file");
+          pdfBase64 = base64Encode(arrayBuffer);
+          useVisionFallback = true;
+        } else {
+          console.log("Text extraction insufficient and file too large for vision fallback");
+          return new Response(JSON.stringify({ 
+            error: 'This PDF appears to be a scanned document without selectable text. Scanned PDFs larger than 5MB cannot be summarized. Please try a different PDF or use a PDF with selectable text.' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    } catch (extractError) {
+      console.log("Text extraction failed:", extractError);
+      if (fileSizeBytes <= maxVisionSize) {
+        console.log("Using vision fallback for small file");
+        pdfBase64 = base64Encode(arrayBuffer);
+        useVisionFallback = true;
+      } else {
+        return new Response(JSON.stringify({ 
+          error: 'Failed to extract text from this PDF. The file may be corrupted or in an unsupported format.' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
-    if (fullText.length < 100) {
-      return new Response(JSON.stringify({ error: 'PDF appears to be empty or unreadable' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Call Lovable AI for summarization
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Build AI request based on whether we need vision fallback
+    let aiRequestBody;
+    
+    if (useVisionFallback) {
+      console.log("Using vision model to analyze scanned PDF");
+      // Use vision-capable model with PDF as data URL
+      aiRequestBody = {
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at summarizing documents. Analyze the PDF document image and provide a clear, concise summary highlighting key points, main arguments, and conclusions. Use bullet points for better readability.'
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Please analyze and summarize this PDF document:'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${pdfBase64}`
+                }
+              }
+            ]
+          }
+        ],
+      };
+    } else {
+      // Use text-based summarization
+      aiRequestBody = {
         model: 'google/gemini-2.5-flash',
         messages: [
           {
@@ -157,7 +214,17 @@ serve(async (req) => {
             content: `Please summarize the following document:\n\n${fullText.substring(0, 50000)}`
           }
         ],
-      }),
+      };
+    }
+
+    // Call Lovable AI for summarization
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(aiRequestBody),
     });
 
     if (!aiResponse.ok) {
