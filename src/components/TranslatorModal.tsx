@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, Copy, Download, Sparkles, Languages, ArrowRight, FileDown, Eye } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AIContentRenderer } from "@/components/AIContentRenderer";
@@ -43,6 +44,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
   const [note, setNote] = useState("");
   const [showLiveOverlay, setShowLiveOverlay] = useState(false);
   const { user } = useAuth();
+  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open && fileId) {
@@ -92,6 +94,11 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
       setTranslatedText(data.translatedText);
       setNote(data.note || "");
       setTotalPages(data.totalPages);
+      
+      // Scroll to results after a brief delay
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
       
       // Log activity
       await logActivity("ai_translate", { fileName, fileId, targetLanguage, startPage: start, endPage: end });
@@ -281,7 +288,7 @@ export function TranslatorModal({ open, onOpenChange, fileId, fileName }: Transl
             </div>
           </div>
         ) : (originalText || translatedText) ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div ref={resultRef} className="flex-1 flex flex-col overflow-hidden">
             <ScrollArea className="flex-1 px-6 py-4" style={{ maxHeight: "calc(85vh - 280px)" }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="p-4 bg-muted/20 border-border/30">
