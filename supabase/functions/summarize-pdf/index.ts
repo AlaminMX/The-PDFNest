@@ -131,7 +131,11 @@ serve(async (req) => {
         useSystemFonts: true,
       }).promise;
 
-      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+      const totalPages = pdf.numPages;
+      const maxPages = Math.min(totalPages, 100); // Process up to 100 pages
+      console.log(`Processing ${maxPages} of ${totalPages} total pages`);
+
+      for (let i = 1; i <= maxPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items.map((item: any) => item.str).join(' ');
@@ -201,17 +205,25 @@ serve(async (req) => {
         ],
       };
     } else {
-      // Use text-based summarization
+      // Use text-based summarization with chunking for large documents
+      // Gemini can handle ~1M tokens, but we'll use 100k chars for efficiency
+      const maxChars = 100000;
+      const truncatedText = fullText.length > maxChars 
+        ? fullText.substring(0, maxChars) + '\n\n[Document truncated for processing...]'
+        : fullText;
+      
+      console.log(`Text length: ${fullText.length}, using: ${truncatedText.length} chars`);
+      
       aiRequestBody = {
         model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at summarizing documents. Provide a clear, concise summary highlighting key points, main arguments, and conclusions. Use bullet points for better readability.'
+            content: 'You are an expert at summarizing documents. Provide a comprehensive summary highlighting key points, main arguments, important details, and conclusions. Structure your summary with clear sections and use bullet points for better readability. For longer documents, ensure you capture the full scope of the content.'
           },
           {
             role: 'user',
-            content: `Please summarize the following document:\n\n${fullText.substring(0, 50000)}`
+            content: `Please provide a thorough summary of the following document:\n\n${truncatedText}`
           }
         ],
       };
