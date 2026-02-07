@@ -142,91 +142,79 @@ function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border/60">
+      {/* Header with subtle gradient accent */}
+      <SidebarHeader className="pb-0">
         <div className="flex items-center gap-3 px-3 py-4">
-          <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="size-10 rounded-xl shadow-md object-contain" />
+          <div className="relative">
+            <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="size-10 rounded-xl shadow-md object-contain ring-1 ring-border/30" />
+            <div className="absolute -bottom-0.5 -right-0.5 size-3 bg-green-500 rounded-full border-2 border-sidebar-background" />
+          </div>
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
-              <span className="font-bold text-lg">PDFNest</span>
-              <span className="text-xs text-muted-foreground">Organize PDFs</span>
+              <span className="font-bold text-base tracking-tight">PDFNest</span>
+              <span className="text-[11px] text-muted-foreground/70">Smart PDF Manager</span>
             </div>
           )}
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="px-2">
-        {/* AI Features Section - Collapsible */}
+      <SidebarContent className="px-2 gap-0">
+        {/* AI Features Section */}
         <Collapsible open={aiSectionOpen} onOpenChange={setAiSectionOpen}>
-          <SidebarGroup id="ai-features-section">
+          <SidebarGroup className="py-1">
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">AI Features</span>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-primary/5 dark:hover:bg-primary/10 rounded-lg px-2.5 py-2 transition-all duration-200 flex items-center justify-between group">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-6 rounded-md bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/30 dark:to-primary/10 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="font-semibold text-xs uppercase tracking-wider text-foreground/70">AI Features</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${aiSectionOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 ${aiSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarGroupContent className="mt-1">
+              <SidebarGroupContent className="mt-0.5 space-y-0.5">
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => onOpenAIFeature('summary')} className="py-2">
-                      <FileText className="w-5 h-5" />
-                      {open && <span>Summarize PDF</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => onOpenAIFeature('study-guide')} className="py-2">
-                      <BookOpen className="w-5 h-5" />
-                      {open && <span>Study Guide</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => onOpenAIFeature('voice')} className="py-2">
-                      <Volume2 className="w-5 h-5" />
-                      {open && <span>Voice Reader</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => onOpenAIFeature('translate')} className="py-2">
-                      <Languages className="w-5 h-5" />
-                      {open && <span>Translate</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => onOpenAIFeature('chat')} className="py-2">
-                      <MessageSquare className="w-5 h-5" />
-                      {open && <span>Chat with PDF</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {[
+                    { key: 'summary' as const, icon: FileText, label: 'Summarize PDF', color: 'text-blue-500 dark:text-blue-400' },
+                    { key: 'study-guide' as const, icon: BookOpen, label: 'Study Guide', color: 'text-emerald-500 dark:text-emerald-400' },
+                    { key: 'voice' as const, icon: Volume2, label: 'Voice Reader', color: 'text-violet-500 dark:text-violet-400' },
+                    { key: 'translate' as const, icon: Languages, label: 'Translate', color: 'text-amber-500 dark:text-amber-400' },
+                    { key: 'chat' as const, icon: MessageSquare, label: 'Chat with PDF', color: 'text-rose-500 dark:text-rose-400' },
+                  ].map(({ key, icon: Icon, label, color }) => (
+                    <SidebarMenuItem key={key}>
+                      <SidebarMenuButton 
+                        onClick={() => onOpenAIFeature(key)} 
+                        className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5"
+                      >
+                        <Icon className={`w-4.5 h-4.5 ${color}`} />
+                        {open && <span className="text-sm">{label}</span>}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
 
-        {/* Divider */}
-        <div className="my-2 border-t border-border/50" />
-
         {/* AFIT Resources */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-2 py-1.5 flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-primary" />
-            <span className="font-semibold">AFIT Resources</span>
+        <SidebarGroup className="py-1">
+          <SidebarGroupLabel className="px-2.5 py-2 flex items-center gap-2.5">
+            <div className="size-6 rounded-md bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/30 dark:to-primary/10 flex items-center justify-center">
+              <GraduationCap className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <span className="font-semibold text-xs uppercase tracking-wider text-foreground/70">AFIT Resources</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="py-2">
+                <SidebarMenuButton asChild className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to="/afit-pdfs">
-                    <Folder className="w-5 h-5" />
-                    {open && <span>AFIT PDFs</span>}
+                    <Folder className="w-4.5 h-4.5 text-primary/70" />
+                    {open && <span className="text-sm">AFIT PDFs</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -235,59 +223,61 @@ function AppSidebar({
         </SidebarGroup>
 
         {isAdmin && (
-          <>
-            <div className="my-2 border-t border-border/50" />
-            <SidebarGroup>
-              <SidebarGroupLabel className="px-2 py-1.5 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                <span className="font-semibold">Admin Tools</span>
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="py-2">
-                      <Link to="/admin/reps">
-                        <Users className="w-5 h-5" />
-                        {open && <span>Reps Profile</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
+          <SidebarGroup className="py-1">
+            <SidebarGroupLabel className="px-2.5 py-2 flex items-center gap-2.5">
+              <div className="size-6 rounded-md bg-gradient-to-br from-amber-500/20 to-amber-500/5 dark:from-amber-400/30 dark:to-amber-400/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span className="font-semibold text-xs uppercase tracking-wider text-foreground/70">Admin Tools</span>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+                    <Link to="/admin/reps">
+                      <Users className="w-4.5 h-4.5 text-amber-600/70 dark:text-amber-400/70" />
+                      {open && <span className="text-sm">Reps Profile</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
-        {/* Divider */}
-        <div className="my-2 border-t border-border/50" />
+        {/* Subtle separator */}
+        <div className="mx-3 my-1.5 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
 
-        {/* Recent Files - Collapsible */}
+        {/* Recent Files */}
         <Collapsible open={recentSectionOpen} onOpenChange={setRecentSectionOpen}>
-          <SidebarGroup>
+          <SidebarGroup className="py-1">
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-semibold">Recent Files</span>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/40 rounded-lg px-2.5 py-2 transition-all duration-200 flex items-center justify-between group">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-6 rounded-md bg-muted/80 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </div>
+                  <span className="font-semibold text-xs uppercase tracking-wider text-foreground/70">Recent Files</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${recentSectionOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarGroupContent className="mt-1">
+              <SidebarGroupContent className="mt-0.5">
                 <SidebarMenu>
                   {recentFiles.length === 0 ? (
                     <SidebarMenuItem>
-                      <SidebarMenuButton disabled className="py-2">
-                        <span className="text-xs text-muted-foreground">No recent files</span>
-                      </SidebarMenuButton>
+                      <div className="px-3 py-3 text-center">
+                        <FileText className="w-8 h-8 text-muted-foreground/20 mx-auto mb-1.5" />
+                        <span className="text-[11px] text-muted-foreground/50">No recent files yet</span>
+                      </div>
                     </SidebarMenuItem>
                   ) : (
                     recentFiles.map((file) => (
                       <SidebarMenuItem key={file.id}>
-                        <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)} className="py-2">
-                          <FileText className="w-5 h-5" />
-                          <span className="truncate">{file.name}</span>
+                        <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)} className="py-1.5 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+                          <FileText className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                          <span className="truncate text-sm">{file.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))
@@ -298,33 +288,39 @@ function AppSidebar({
           </SidebarGroup>
         </Collapsible>
 
-        {/* Divider */}
-        <div className="my-2 border-t border-border/50" />
+        {/* Subtle separator */}
+        <div className="mx-3 my-1.5 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
 
-        {/* Files Section - Collapsible */}
+        {/* Files / Categories Section */}
         <Collapsible open={filesSectionOpen} onOpenChange={setFilesSectionOpen}>
-          <SidebarGroup>
+          <SidebarGroup className="py-1">
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/50 rounded-lg px-2 py-1.5 transition-colors flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Folder className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-semibold">Files</span>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/40 rounded-lg px-2.5 py-2 transition-all duration-200 flex items-center justify-between group">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-6 rounded-md bg-muted/80 flex items-center justify-center">
+                    <Folder className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </div>
+                  <span className="font-semibold text-xs uppercase tracking-wider text-foreground/70">Files</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${filesSectionOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarGroupContent className="mt-1">
+              <SidebarGroupContent className="mt-0.5">
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       isActive={selectedCategory === "all"}
                       onClick={() => onSelectCategory("all")}
-                      className="py-2"
+                      className="py-2 rounded-lg transition-all duration-150"
                     >
-                      <Folder className="w-5 h-5" />
-                      <span>All Files</span>
-                      {open && <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">{files.length}</span>}
+                      <Folder className="w-4.5 h-4.5" />
+                      <span className="text-sm">All Files</span>
+                      {open && (
+                        <span className="ml-auto text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                          {files.length}
+                        </span>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
@@ -340,19 +336,23 @@ function AppSidebar({
                         <SidebarMenuButton 
                           isActive={selectedCategory === category.id}
                           onClick={() => onSelectCategory(category.id)}
-                          className="py-2"
+                          className="py-2 rounded-lg transition-all duration-150"
                         >
                           {category.id === "favorites" ? (
-                            <Star className="w-5 h-5" />
+                            <Star className="w-4.5 h-4.5 text-amber-500" />
                           ) : (
-                            <Folder className="w-5 h-5" />
+                            <Folder className="w-4.5 h-4.5" />
                           )}
-                          <span className="truncate">{category.name}</span>
-                          {open && <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">{count}</span>}
+                          <span className="truncate text-sm">{category.name}</span>
+                          {open && count > 0 && (
+                            <span className="ml-auto text-[11px] font-medium bg-muted/80 text-muted-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                              {count}
+                            </span>
+                          )}
                         </SidebarMenuButton>
                         {category.id !== "uncategorized" && category.id !== "favorites" && (
-                          <SidebarMenuAction onClick={() => onDeleteCategory(category.id)}>
-                            <Trash2 className="w-4 h-4" />
+                          <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </SidebarMenuAction>
                         )}
                       </SidebarMenuItem>
@@ -364,20 +364,21 @@ function AppSidebar({
               <SidebarGroupContent className="mt-2 px-1">
                 {!showNewCategoryForm ? (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="w-full"
+                    className="w-full justify-start text-muted-foreground/70 hover:text-foreground border border-dashed border-border/60 hover:border-primary/30 transition-colors"
                     onClick={() => setShowNewCategoryForm(true)}
                   >
-                    <Plus className="w-5 h-5 mr-2" />
-                    {open && "Add Category"}
+                    <Plus className="w-4 h-4 mr-2" />
+                    {open && <span className="text-sm">New Category</span>}
                   </Button>
                 ) : (
-                  <div className="space-y-2 p-2">
+                  <div className="space-y-2 p-2 bg-muted/30 rounded-lg border border-border/40">
                     <Input
                       value={newCategoryName}
                       onChange={(e) => onNewCategoryNameChange(e.target.value)}
                       placeholder="Category name"
+                      className="h-8 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleAddCategoryLocal();
                         if (e.key === "Escape") {
@@ -387,17 +388,18 @@ function AppSidebar({
                       }}
                       autoFocus
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <Button 
                         size="sm" 
-                        className="flex-1"
+                        className="flex-1 h-7 text-xs"
                         onClick={handleAddCategoryLocal}
                       >
-                        Save
+                        Create
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
+                        className="h-7 text-xs"
                         onClick={() => {
                           onNewCategoryNameChange("");
                           setShowNewCategoryForm(false);
@@ -414,27 +416,27 @@ function AppSidebar({
         </Collapsible>
       </SidebarContent>
       
-      <SidebarFooter className="px-2">
+      <SidebarFooter className="px-2 pb-3">
         <div id="storage-indicator">
           <StorageIndicator storageUsed={storageUsed} />
         </div>
-        <div className="my-2 border-t border-border/50" />
+        <div className="mx-2 my-1 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
         <SidebarMenu>
           {isRep && (
             <>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="py-2">
+                <SidebarMenuButton asChild className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to="/rep/upload">
-                    <Upload className="w-5 h-5" />
-                    {open && <span>Upload Lecture Notes</span>}
+                    <Upload className="w-4.5 h-4.5 text-emerald-500 dark:text-emerald-400" />
+                    {open && <span className="text-sm">Upload Lecture Notes</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="py-2">
+                <SidebarMenuButton asChild className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to={`/rep/${repUserId}`}>
-                    <Users className="w-5 h-5" />
-                    {open && <span>My Profile</span>}
+                    <Users className="w-4.5 h-4.5 text-blue-500 dark:text-blue-400" />
+                    {open && <span className="text-sm">My Profile</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -442,27 +444,27 @@ function AppSidebar({
           )}
           
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onOpenTutorial} className="py-2">
-              <HelpCircle className="w-5 h-5" />
-              {open && <span>Help & Tutorial</span>}
+            <SidebarMenuButton onClick={onOpenTutorial} className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+              <HelpCircle className="w-4.5 h-4.5 text-muted-foreground/60" />
+              {open && <span className="text-sm text-muted-foreground">Help & Tutorial</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
           
           {isAdmin && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="py-2">
+              <SidebarMenuButton asChild className="py-2 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                 <Link to="/admin">
-                  <Shield className="w-5 h-5" />
-                  {open && <span>Admin Dashboard</span>}
+                  <Shield className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
+                  {open && <span className="text-sm">Admin Dashboard</span>}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
           
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="py-2">
-              <LogOut className="w-5 h-5" />
-              {open && <span>Sign Out</span>}
+            <SidebarMenuButton onClick={onSignOut} className="py-2 rounded-lg transition-all duration-150 hover:bg-destructive/10 hover:text-destructive">
+              <LogOut className="w-4.5 h-4.5" />
+              {open && <span className="text-sm">Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
