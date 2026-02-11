@@ -63,6 +63,9 @@ export default function ResetPassword() {
 
       if (error) throw error;
 
+      // Sign out to prevent auto-login after reset
+      await supabase.auth.signOut();
+
       navigate("/reset-password-success");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");

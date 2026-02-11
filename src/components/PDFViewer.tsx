@@ -154,12 +154,26 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
     }
   }, [pdfDoc, scale]);
 
-  // Render when page or scale changes
+  // Preload adjacent pages for smoother navigation
+  const preloadPage = useCallback(async (pageNum: number) => {
+    if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
+    try {
+      // Just fetch the page data to warm the cache
+      await pdfDoc.getPage(pageNum);
+    } catch {
+      // ignore preload errors
+    }
+  }, [pdfDoc, totalPages]);
+
+  // Render when page or scale changes, and preload adjacent
   useEffect(() => {
     if (pdfDoc && currentPage > 0) {
       renderPage(currentPage);
+      // Preload next and previous pages
+      preloadPage(currentPage + 1);
+      preloadPage(currentPage - 1);
     }
-  }, [pdfDoc, currentPage, scale, renderPage]);
+  }, [pdfDoc, currentPage, scale, renderPage, preloadPage]);
 
   // Cleanup on close
   useEffect(() => {

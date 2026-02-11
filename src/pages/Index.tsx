@@ -5,6 +5,7 @@ import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
+import { uploadManager } from "@/lib/uploadManager";
 import { useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
 
@@ -483,7 +484,7 @@ export default function Index() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdminStatus();
   const { isRep, loading: repLoading } = useRepStatus();
-  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles } = usePDFFiles(user?.id);
+  const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
@@ -595,10 +596,8 @@ export default function Index() {
       return;
     }
 
-    for (const file of pdfFiles) {
-      await uploadFile(file, selectedCategory === "all" ? null : selectedCategory);
-    }
-
+    // Use upload manager for batch uploads
+    uploadManager.addFiles(pdfFiles, selectedCategory === "all" ? null : selectedCategory);
     e.target.value = "";
   };
 
@@ -800,9 +799,8 @@ export default function Index() {
       return;
     }
 
-    for (const file of droppedFiles) {
-      await uploadFile(file, selectedCategory === "all" ? null : selectedCategory);
-    }
+    // Use upload manager for batch uploads
+    uploadManager.addFiles(droppedFiles, selectedCategory === "all" ? null : selectedCategory);
   };
 
   const storageUsed = files.reduce((total, file) => total + (file.file_size || 0), 0);
@@ -991,7 +989,15 @@ export default function Index() {
                         />
                       </div>
                       {progress.status === "error" && (
-                        <p className="text-xs text-destructive mt-1">Upload failed</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-destructive">Upload failed</p>
+                          <button
+                            onClick={() => retryUpload(id)}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Retry
+                          </button>
+                        </div>
                       )}
                       {progress.status === "complete" && (
                         <p className="text-xs text-green-600 mt-1">Upload complete!</p>
@@ -1061,10 +1067,17 @@ export default function Index() {
                 </div>
               </div>
 
-              {filesLoading ? (
-                <div className="text-center py-12">
-                  <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading files...</p>
+              {filesLoading && files.length === 0 ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border animate-pulse">
+                      <div className="w-10 h-12 bg-muted rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-muted rounded w-2/3" />
+                        <div className="h-3 bg-muted rounded w-1/4" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : searchFilteredFiles.length === 0 ? (
                 <div className="text-center py-12">
@@ -1549,6 +1562,15 @@ export default function Index() {
                 </div>
               )}
                 </>
+              )}
+
+              {/* Load More */}
+              {hasMore && !filesLoading && files.length > 0 && (
+                <div className="text-center pt-6">
+                  <Button variant="outline" onClick={loadMore} disabled={filesLoading}>
+                    {filesLoading ? "Loading..." : "Load More"}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
