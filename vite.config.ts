@@ -48,6 +48,41 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            // Cache PDF files from Supabase storage for offline access
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/sign\/pdfs\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pdf-files-cache",
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              matchOptions: {
+                ignoreSearch: false,
+              },
+            },
+          },
+          {
+            // Cache PDF thumbnails
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/sign\/pdf-thumbnails\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pdf-thumbnails-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
     }),
   ].filter(Boolean),
