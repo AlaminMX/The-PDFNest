@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/sessionLogger";
+import { uploadManager, UploadItem } from "@/lib/uploadManager";
+import { cachePDF, getCachedPDF, getAllCachedIds, removeCachedPDF, isOffline } from "@/lib/offlineStorage";
 
 export interface PDFFile {
   id: string;
@@ -14,6 +16,7 @@ export interface PDFFile {
   is_favorite: boolean;
   thumbnail_url: string | null;
   url?: string;
+  isOfflineAvailable?: boolean;
 }
 
 export interface UploadProgress {
@@ -22,284 +25,160 @@ export interface UploadProgress {
   status: "uploading" | "complete" | "error" | "cancelled";
 }
 
+const PAGE_SIZE = 30;
+
 export function usePDFFiles(userId: string | undefined) {
   const [files, setFiles] = useState<PDFFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map());
-  const [uploadIntervals, setUploadIntervals] = useState<Map<string, NodeJS.Timeout>>(new Map());
+  const [hasMore, setHasMore] = useState(true);
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
+  const [cachedIds, setCachedIds] = useState<Set<string>>(new Set());
+  const pageRef = useRef(0);
+  const allLoadedRef = useRef(false);
 
-  const loadFiles = async () => {
+  // Subscribe to upload manager
+  useEffect(() => {
+    if (userId) {
+      uploadManager.setUserId(userId);
+      uploadManager.setOnComplete(() => {
+        // Reset and reload after upload completes
+        resetAndLoad();
+      });
+    }
+    const unsub = uploadManager.subscribe(setUploadItems);
+    return unsub;
+  }, [userId]);
+
+  // Load cached IDs on mount
+  useEffect(() => {
+    getAllCachedIds().then(setCachedIds);
+  }, []);
+
+  const loadFiles = useCallback(async (page: number, append: boolean = false) => {
     if (!userId) return;
 
     try {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       const { data, error } = await supabase
         .from("pdf_files")
         .select("*")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
-      // Get signed URLs for each file
+      const records = data || [];
+      const moreAvailable = records.length === PAGE_SIZE;
+      setHasMore(moreAvailable);
+
+      // Get signed URLs in parallel
       const filesWithUrls = await Promise.all(
-        (data || []).map(async (file) => {
+        records.map(async (file) => {
           const { data: urlData } = await supabase.storage
             .from("pdfs")
             .createSignedUrl(file.storage_path, 3600);
 
-          // Get thumbnail URL if it exists
-          let thumbnailUrl = null;
-          if (file.thumbnail_url) {
-            const { data: thumbData } = await supabase.storage
-              .from("pdf-thumbnails")
-              .createSignedUrl(file.thumbnail_url, 3600);
-            thumbnailUrl = thumbData?.signedUrl;
-          }
-
           return {
             ...file,
             url: urlData?.signedUrl,
-            thumbnail_url: thumbnailUrl,
+            thumbnail_url: null as string | null,
+            isOfflineAvailable: cachedIds.has(file.id),
           };
         })
       );
 
-      setFiles(filesWithUrls);
+      if (append) {
+        setFiles((prev) => [...prev, ...filesWithUrls]);
+      } else {
+        setFiles(filesWithUrls);
+      }
     } catch (error: any) {
-      toast.error("Failed to load files");
+      if (!isOffline()) {
+        toast.error("Failed to load files");
+      }
       console.error("Error loading files:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, cachedIds]);
 
+  const resetAndLoad = useCallback(async () => {
+    pageRef.current = 0;
+    allLoadedRef.current = false;
+    setHasMore(true);
+    await loadFiles(0, false);
+  }, [loadFiles]);
+
+  // Initial load
   useEffect(() => {
-    loadFiles();
-  }, [userId]);
+    if (userId) {
+      pageRef.current = 0;
+      loadFiles(0, false);
+    }
+  }, [userId, loadFiles]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loading) return;
+    pageRef.current += 1;
+    setLoading(true);
+    await loadFiles(pageRef.current, true);
+  }, [hasMore, loading, loadFiles]);
 
   const uploadFile = async (file: File, categoryId: string | null) => {
-    if (!userId) return;
+    uploadManager.addFiles([file], categoryId);
+  };
 
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      toast.error('Only PDF files are allowed');
-      return;
-    }
+  const uploadFiles = async (fileList: File[], categoryId: string | null) => {
+    uploadManager.addFiles(fileList, categoryId);
+  };
 
-    // Validate file size (50MB limit)
-    const MAX_SIZE = 50 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      toast.error('File size must be under 50MB');
-      return;
-    }
-
-    // Check storage limit (300MB)
-    const STORAGE_LIMIT = 300 * 1024 * 1024;
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("total_storage_used")
-      .eq("id", userId)
-      .single();
-
-    const currentUsage = profileData?.total_storage_used || 0;
-    if (currentUsage + file.size > STORAGE_LIMIT) {
-      const remainingMB = Math.max(0, (STORAGE_LIMIT - currentUsage) / (1024 * 1024)).toFixed(1);
-      toast.error(`Storage limit exceeded. You have ${remainingMB}MB remaining.`);
-      return;
-    }
-
-    // Sanitize filename
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const uploadId = `${Date.now()}-${sanitizedFileName}`;
-
-    // Initialize upload progress
-    setUploadProgress(prev => new Map(prev).set(uploadId, {
-      fileName: sanitizedFileName,
-      progress: 0,
-      status: "uploading"
-    }));
-
+  // Cache a PDF for offline access
+  const cacheForOffline = useCallback(async (fileId: string, url: string, fileName: string) => {
     try {
-      const fileName = `${Date.now()}-${sanitizedFileName}`;
-      const filePath = `${userId}/${fileName}`;
+      // Check if already cached
+      const existing = await getCachedPDF(fileId);
+      if (existing) return;
 
-      // Simulate upload progress (Supabase storage doesn't provide real progress callbacks)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          const current = prev.get(uploadId);
-          if (current && current.status === "uploading" && current.progress < 90) {
-            const newProgress = new Map(prev);
-            newProgress.set(uploadId, { ...current, progress: current.progress + 10 });
-            return newProgress;
-          }
-          return prev;
-        });
-      }, 200);
-
-      setUploadIntervals(prev => new Map(prev).set(uploadId, progressInterval));
-
-      // Upload file to storage
-      const { error: uploadError } = await supabase.storage
-        .from("pdfs")
-        .upload(filePath, file);
-
-      clearInterval(progressInterval);
-      setUploadIntervals(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(uploadId);
-        return newMap;
-      });
-
-      // Check if cancelled
-      const currentProgress = uploadProgress.get(uploadId);
-      if (currentProgress?.status === "cancelled") {
-        return;
-      }
-
-      if (uploadError) throw uploadError;
-
-      // Update progress to 95%
-      setUploadProgress(prev => {
-        const newProgress = new Map(prev);
-        const current = prev.get(uploadId);
-        if (current && current.status !== "cancelled") {
-          newProgress.set(uploadId, { ...current, progress: 95 });
-        }
-        return newProgress;
-      });
-
-      // Create database record
-      const { error: dbError } = await supabase.from("pdf_files").insert({
-        user_id: userId,
-        name: file.name,
-        file_name: fileName,
-        file_size: file.size,
-        storage_path: filePath,
-        category_id: categoryId === "uncategorized" ? null : categoryId,
-        thumbnail_url: null,
-      });
-
-      if (dbError) throw dbError;
-
-      // Update storage usage
-      await supabase.rpc('update_user_storage', {
-        p_user_id: userId,
-        p_size_delta: file.size
-      });
-
-      // Complete upload
-      setUploadProgress(prev => {
-        const newProgress = new Map(prev);
-        const current = prev.get(uploadId);
-        if (current && current.status !== "cancelled") {
-          newProgress.set(uploadId, { ...current, progress: 100, status: "complete" });
-        }
-        return newProgress;
-      });
-
-      // Remove from progress after 2 seconds
-      setTimeout(() => {
-        setUploadProgress(prev => {
-          const newProgress = new Map(prev);
-          newProgress.delete(uploadId);
-          return newProgress;
-        });
-      }, 2000);
-
-      // Log activity
-      await logActivity("upload_pdf", { fileName: file.name, fileSize: file.size });
-
-      await loadFiles();
-      toast.success("File uploaded successfully");
-    } catch (error: any) {
-      const currentProgress = uploadProgress.get(uploadId);
-      if (currentProgress?.status === "cancelled") {
-        return;
-      }
-
-      setUploadProgress(prev => {
-        const newProgress = new Map(prev);
-        const current = prev.get(uploadId);
-        if (current) {
-          newProgress.set(uploadId, { ...current, status: "error" });
-        }
-        return newProgress;
-      });
-
-      toast.error("Failed to upload file");
-      console.error("Error uploading file:", error);
-
-      // Remove from progress after 3 seconds
-      setTimeout(() => {
-        setUploadProgress(prev => {
-          const newProgress = new Map(prev);
-          newProgress.delete(uploadId);
-          return newProgress;
-        });
-      }, 3000);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      await cachePDF(fileId, blob, fileName);
+      
+      setCachedIds((prev) => new Set(prev).add(fileId));
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId ? { ...f, isOfflineAvailable: true } : f
+        )
+      );
+    } catch (err) {
+      console.warn("Failed to cache PDF for offline:", err);
     }
-  };
-
-  const cancelUpload = (uploadId: string) => {
-    // Clear interval
-    const interval = uploadIntervals.get(uploadId);
-    if (interval) {
-      clearInterval(interval);
-      setUploadIntervals(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(uploadId);
-        return newMap;
-      });
-    }
-
-    // Mark as cancelled
-    setUploadProgress(prev => {
-      const newProgress = new Map(prev);
-      const current = prev.get(uploadId);
-      if (current) {
-        newProgress.set(uploadId, { ...current, status: "cancelled" });
-      }
-      return newProgress;
-    });
-
-    toast.info("Upload cancelled");
-
-    // Remove after 2 seconds
-    setTimeout(() => {
-      setUploadProgress(prev => {
-        const newProgress = new Map(prev);
-        newProgress.delete(uploadId);
-        return newProgress;
-      });
-    }, 2000);
-  };
+  }, []);
 
   const deleteFile = async (fileId: string, storagePath: string) => {
     if (!userId) return;
 
     try {
-      // Get the file record to find thumbnail path and size
       const { data: fileData } = await supabase
         .from("pdf_files")
         .select("thumbnail_url, file_size")
         .eq("id", fileId)
         .single();
 
-      // Delete from storage
       const { error: storageError } = await supabase.storage
         .from("pdfs")
         .remove([storagePath]);
 
       if (storageError) throw storageError;
 
-      // Delete thumbnail if it exists
       if (fileData?.thumbnail_url) {
         await supabase.storage
           .from("pdf-thumbnails")
           .remove([fileData.thumbnail_url]);
       }
 
-      // Delete from database
       const { error: dbError } = await supabase
         .from("pdf_files")
         .delete()
@@ -307,18 +186,25 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (dbError) throw dbError;
 
-      // Log activity
       await logActivity("delete_pdf", { fileName: storagePath });
 
-      // Update storage usage
       if (fileData?.file_size) {
-        await supabase.rpc('update_user_storage', {
+        await supabase.rpc("update_user_storage", {
           p_user_id: userId,
-          p_size_delta: -fileData.file_size
+          p_size_delta: -fileData.file_size,
         });
       }
 
-      await loadFiles();
+      // Remove from offline cache
+      await removeCachedPDF(fileId);
+      setCachedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+
+      // Remove from local state immediately
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
       toast.success("File deleted");
     } catch (error: any) {
       toast.error("Failed to delete file");
@@ -337,10 +223,15 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (error) throw error;
 
-      await loadFiles();
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId
+            ? { ...f, category_id: categoryId === "uncategorized" ? null : categoryId }
+            : f
+        )
+      );
     } catch (error: any) {
       toast.error("Failed to update file category");
-      console.error("Error updating file category:", error);
     }
   };
 
@@ -355,14 +246,14 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (error) throw error;
 
-      // Log activity
       await logActivity("rename_pdf", { fileId, newName });
 
-      await loadFiles();
+      setFiles((prev) =>
+        prev.map((f) => (f.id === fileId ? { ...f, name: newName } : f))
+      );
       toast.success("File renamed successfully");
     } catch (error: any) {
       toast.error("Failed to rename file");
-      console.error("Error renaming file:", error);
     }
   };
 
@@ -377,13 +268,56 @@ export function usePDFFiles(userId: string | undefined) {
 
       if (error) throw error;
 
-      await loadFiles();
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId ? { ...f, is_favorite: !currentState } : f
+        )
+      );
       toast.success(currentState ? "Removed from favorites" : "Added to favorites");
     } catch (error: any) {
       toast.error("Failed to update favorite");
-      console.error("Error updating favorite:", error);
     }
   };
 
-  return { files, loading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, refreshFiles: loadFiles };
+  // Convert legacy uploadProgress format for backward compat
+  const uploadProgress = new Map<string, UploadProgress>();
+  for (const item of uploadItems) {
+    uploadProgress.set(item.id, {
+      fileName: item.fileName,
+      progress: item.progress,
+      status:
+        item.status === "success"
+          ? "complete"
+          : item.status === "failed"
+          ? "error"
+          : "uploading",
+    });
+  }
+
+  const cancelUpload = (id: string) => {
+    uploadManager.remove(id);
+    toast.info("Upload removed from queue");
+  };
+
+  const retryUpload = (id: string) => {
+    uploadManager.retry(id);
+  };
+
+  return {
+    files,
+    loading,
+    hasMore,
+    loadMore,
+    uploadFile,
+    uploadFiles,
+    deleteFile,
+    updateFileCategory,
+    renameFile,
+    toggleFavorite,
+    uploadProgress,
+    cancelUpload,
+    retryUpload,
+    refreshFiles: resetAndLoad,
+    cacheForOffline,
+  };
 }
