@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -487,8 +487,8 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
-  
-  
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -499,7 +499,7 @@ export default function Index() {
   const [isDragging, setIsDragging] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string; fileSize?: number; createdAt?: string; thumbnailUrl?: string | null } | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string; fileSize?: number; fileId?: string; createdAt?: string; thumbnailUrl?: string | null } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"delete" | "move" | null>(null);
@@ -545,6 +545,18 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // Online/offline listener
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   // Persist viewMode to localStorage
   useEffect(() => {
@@ -652,11 +664,11 @@ export default function Index() {
       url: file.url!, 
       name: file.name,
       fileSize: file.file_size,
+      fileId: file.id,
       createdAt: file.created_at,
       thumbnailUrl: file.thumbnail_url
     });
     trackRecentFile(file.id, file.name);
-    // Log activity
     logActivity("view_pdf", { fileName: file.name, fileId: file.id });
   };
 
@@ -861,6 +873,12 @@ export default function Index() {
         
         <main className="flex-1 flex flex-col w-full min-w-0">
           <AdminBannerDisplay />
+          {!isOnline && (
+            <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-300">You're offline — only cached PDFs are available</p>
+            </div>
+          )}
           <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-2 p-4">
               <SidebarTrigger />
@@ -919,94 +937,54 @@ export default function Index() {
               />
             )}
 
+            {/* Hidden file input for FAB */}
+            <Input
+              id="file-input"
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
 
-            <div
-              id="upload-area"
-              className={`bg-card rounded-xl shadow-sm border-2 border-dashed transition-colors p-8 mb-6 ${
-                isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-                  <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Upload PDF Files</h3>
-                <p className="text-muted-foreground mb-4">
-                  Drag and drop your files here, or click to browse
-                </p>
-                <Input
-                  id="file-input"
-                  type="file"
-                  accept="application/pdf"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button onClick={() => document.getElementById("file-input")?.click()}>
-                  Choose Files
-                </Button>
-              </div>
-
-              {uploadProgress.size > 0 && (
-                <div className="mt-6 space-y-3">
-                  <h4 className="text-sm font-medium">Uploading files...</h4>
-                  {Array.from(uploadProgress.entries()).map(([id, progress]) => (
-                    <div key={id} className="bg-muted/30 rounded-lg p-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                        <span className="text-sm truncate max-w-full overflow-hidden">{progress.fileName}</span>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-sm text-muted-foreground">
-                            {progress.progress}%
-                          </span>
-                          {progress.status === "uploading" && (
-                            <button
-                              onClick={() => cancelUpload(id)}
-                              className="p-1 hover:bg-destructive/10 rounded text-destructive"
-                              title="Cancel upload"
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            progress.status === "error" 
-                              ? "bg-destructive" 
-                              : progress.status === "complete"
-                              ? "bg-green-500"
-                              : "bg-primary"
-                          }`}
-                          style={{ width: `${progress.progress}%` }}
-                        />
-                      </div>
-                      {progress.status === "error" && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-destructive">Upload failed</p>
-                          <button
-                            onClick={() => retryUpload(id)}
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Retry
+            {/* Upload progress */}
+            {uploadProgress.size > 0 && (
+              <div className="bg-card rounded-xl shadow-sm border border-border/50 p-4 mb-6 space-y-3">
+                <h4 className="text-sm font-medium">Uploading files...</h4>
+                {Array.from(uploadProgress.entries()).map(([id, progress]) => (
+                  <div key={id} className="bg-muted/30 rounded-lg p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <span className="text-sm truncate max-w-full overflow-hidden">{progress.fileName}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-sm text-muted-foreground">{progress.progress}%</span>
+                        {progress.status === "uploading" && (
+                          <button onClick={() => cancelUpload(id)} className="p-1 hover:bg-destructive/10 rounded text-destructive" title="Cancel upload">
+                            <X className="w-4 h-4" />
                           </button>
-                        </div>
-                      )}
-                      {progress.status === "complete" && (
-                        <p className="text-xs text-green-600 mt-1">Upload complete!</p>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          progress.status === "error" ? "bg-destructive" : progress.status === "complete" ? "bg-green-500" : "bg-primary"
+                        }`}
+                        style={{ width: `${progress.progress}%` }}
+                      />
+                    </div>
+                    {progress.status === "error" && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-destructive">Upload failed</p>
+                        <button onClick={() => retryUpload(id)} className="text-xs text-primary hover:underline">Retry</button>
+                      </div>
+                    )}
+                    {progress.status === "complete" && (
+                      <p className="text-xs text-green-600 mt-1">Upload complete!</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="bg-card rounded-xl shadow-sm border border-border/50 p-4 md:p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
@@ -1211,6 +1189,18 @@ export default function Index() {
                                       <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
                                     </svg>
                                   </button>
+                                  <button
+                                    onClick={() => {
+                                      if (!file.isOfflineAvailable && file.url) {
+                                        cacheForOffline(file.id, file.url, file.name);
+                                        toast.success("Saved for offline access");
+                                      }
+                                    }}
+                                    className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
+                                    title={file.isOfflineAvailable ? "Available offline" : "Save offline"}
+                                  >
+                                    {file.isOfflineAvailable ? <CheckCircle className="w-5 h-5" /> : <CloudDownload className="w-5 h-5" />}
+                                  </button>
                                </>
                              )}
                              <DropdownMenu>
@@ -1316,6 +1306,15 @@ export default function Index() {
                                    </DropdownMenuItem>
                                  </>
                                )}
+                               <DropdownMenuItem onClick={() => {
+                                 if (!file.isOfflineAvailable && file.url) {
+                                   cacheForOffline(file.id, file.url, file.name);
+                                   toast.success("Saved for offline access");
+                                 }
+                               }}>
+                                 {file.isOfflineAvailable ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <CloudDownload className="w-4 h-4 mr-2" />}
+                                 {file.isOfflineAvailable ? "Saved Offline" : "Save Offline"}
+                               </DropdownMenuItem>
                                <DropdownMenuSeparator />
                                <DropdownMenuSub>
                                  <DropdownMenuSubTrigger>
@@ -1472,6 +1471,20 @@ export default function Index() {
                         >
                           <Star className={`w-3 h-3 ${file.is_favorite ? "fill-yellow-400 text-yellow-400" : ""}`} />
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (!file.isOfflineAvailable && file.url) {
+                              cacheForOffline(file.id, file.url, file.name);
+                              toast.success("Saved for offline access");
+                            }
+                          }}
+                          className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
+                          title={file.isOfflineAvailable ? "Available offline" : "Save offline"}
+                        >
+                          {file.isOfflineAvailable ? <CheckCircle className="w-3 h-3" /> : <CloudDownload className="w-3 h-3" />}
+                        </Button>
                         
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1583,6 +1596,7 @@ export default function Index() {
         pdfUrl={previewPdf?.url || ""}
         fileName={previewPdf?.name || ""}
         fileSize={previewPdf?.fileSize}
+        fileId={previewPdf?.fileId}
       />
 
       <NavigationTutorial 
@@ -1687,7 +1701,6 @@ export default function Index() {
       {/* Floating Action Button for quick upload */}
       <FloatingActionButton 
         onUpload={() => document.getElementById("file-input")?.click()}
-        onAIFeatures={() => navigate("/ai-features")}
       />
 
       {/* Download Progress */}
