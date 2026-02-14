@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
 import { 
   X, 
   Download, 
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
+import { getCachedPDF } from "@/lib/offlineStorage";
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -26,9 +26,10 @@ interface PDFViewerProps {
   pdfUrl: string;
   fileName: string;
   fileSize?: number;
+  fileId?: string;
 }
 
-export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFViewerProps) {
+export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId }: PDFViewerProps) {
   const [pdfDoc, setPdfDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -37,12 +38,13 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialRenderDone, setInitialRenderDone] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<pdfjs.RenderTask | null>(null);
 
-  // Load PDF document with progress tracking
+  // Load PDF document - check offline cache first, then network with range requests
   useEffect(() => {
     if (!isOpen || !pdfUrl) return;
 
@@ -54,15 +56,29 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
       setLoadingProgress(0);
       setCurrentPage(1);
       setPdfDoc(null);
+      setInitialRenderDone(false);
 
       try {
-        const loadingTask = pdfjs.getDocument({
-          url: pdfUrl,
-          // Enable range requests for faster initial page load
-          rangeChunkSize: 65536,
-          disableAutoFetch: false,
-          disableStream: false,
-        });
+        // Try offline cache first
+        let source: any;
+        if (fileId) {
+          const cachedBlob = await getCachedPDF(fileId);
+          if (cachedBlob) {
+            const arrayBuffer = await cachedBlob.arrayBuffer();
+            source = { data: new Uint8Array(arrayBuffer) };
+          }
+        }
+
+        if (!source) {
+          source = {
+            url: pdfUrl,
+            rangeChunkSize: 32768,
+            disableAutoFetch: true,
+            disableStream: false,
+          };
+        }
+
+        const loadingTask = pdfjs.getDocument(source);
 
         loadingTask.onProgress = (progress) => {
           if (progress.total > 0) {
@@ -97,13 +113,12 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
         renderTaskRef.current.cancel();
       }
     };
-  }, [isOpen, pdfUrl]);
+  }, [isOpen, pdfUrl, fileId]);
 
-  // Render current page
+  // Render current page - use 1x DPI on first render for speed, then re-render at full quality
   const renderPage = useCallback(async (pageNum: number) => {
     if (!pdfDoc || !canvasRef.current || !containerRef.current) return;
 
-    // Cancel any ongoing render
     if (renderTaskRef.current) {
       renderTaskRef.current.cancel();
       renderTaskRef.current = null;
@@ -117,7 +132,6 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Calculate scale to fit container width with some padding
       const containerWidth = containerRef.current.clientWidth - 32;
       const viewport = page.getViewport({ scale: 1 });
       const fitScale = containerWidth / viewport.width;
@@ -125,8 +139,8 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
       
       const scaledViewport = page.getViewport({ scale: adjustedScale });
 
-      // Set canvas dimensions for high DPI displays
-      const outputScale = window.devicePixelRatio || 1;
+      // Use 1x on first render for speed, full DPI after
+      const outputScale = initialRenderDone ? (window.devicePixelRatio || 1) : 1;
       canvas.width = Math.floor(scaledViewport.width * outputScale);
       canvas.height = Math.floor(scaledViewport.height * outputScale);
       canvas.style.width = `${Math.floor(scaledViewport.width)}px`;
@@ -146,19 +160,23 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
       await renderTaskRef.current.promise;
       renderTaskRef.current = null;
       setRendering(false);
+
+      // After first render at 1x, schedule a full-quality re-render
+      if (!initialRenderDone) {
+        setInitialRenderDone(true);
+      }
     } catch (err: any) {
       if (err?.name !== "RenderingCancelledException") {
         console.error("Error rendering page:", err);
         setRendering(false);
       }
     }
-  }, [pdfDoc, scale]);
+  }, [pdfDoc, scale, initialRenderDone]);
 
-  // Preload adjacent pages for smoother navigation
+  // Preload adjacent pages
   const preloadPage = useCallback(async (pageNum: number) => {
     if (!pdfDoc || pageNum < 1 || pageNum > totalPages) return;
     try {
-      // Just fetch the page data to warm the cache
       await pdfDoc.getPage(pageNum);
     } catch {
       // ignore preload errors
@@ -169,7 +187,6 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
   useEffect(() => {
     if (pdfDoc && currentPage > 0) {
       renderPage(currentPage);
-      // Preload next and previous pages
       preloadPage(currentPage + 1);
       preloadPage(currentPage - 1);
     }
@@ -184,24 +201,15 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
   }, [isOpen, pdfDoc]);
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
+    if (currentPage > 1) setCurrentPage(prev => prev - 1);
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
+    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
   };
 
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.25, 3));
-  };
-
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.25, 0.5));
-  };
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
 
   const handleDownload = async () => {
     try {
@@ -221,14 +229,11 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
     }
   };
 
-  const handleOpenExternal = () => {
-    window.open(pdfUrl, "_blank");
-  };
+  const handleOpenExternal = () => window.open(pdfUrl, "_blank");
 
   const handleRetry = () => {
     setError(null);
     setLoading(true);
-    // Re-trigger load by toggling the effect dependencies
     setPdfDoc(null);
   };
 
@@ -241,12 +246,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={onClose}>
               <X className="h-5 w-5" />
             </Button>
             <div className="min-w-0">
@@ -258,37 +258,22 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
               )}
             </div>
           </div>
-          
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={handleOpenExternal}
-              title="Open in new tab"
-            >
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleOpenExternal} title="Open in new tab">
               <ExternalLink className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={handleDownload}
-              title="Download"
-            >
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleDownload} title="Download">
               <Download className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
         {/* Content */}
-        <div 
-          ref={containerRef}
-          className="flex-1 overflow-auto bg-muted/30 flex flex-col items-center py-4"
-        >
+        <div ref={containerRef} className="flex-1 overflow-auto bg-muted/30 flex flex-col items-center py-4">
           {loading ? (
             <div className="flex flex-col items-center justify-center flex-1 gap-4 px-4 w-full max-w-md">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              {/* Skeleton placeholder */}
+              <div className="w-full max-w-sm aspect-[3/4] bg-muted rounded-lg animate-pulse" />
               <div className="w-full space-y-2">
                 <Progress value={loadingProgress} className="h-2" />
                 <p className="text-sm text-center text-muted-foreground">
@@ -323,10 +308,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               )}
-              <canvas 
-                ref={canvasRef} 
-                className="shadow-lg rounded-lg max-w-full"
-              />
+              <canvas ref={canvasRef} className="shadow-lg rounded-lg max-w-full" />
             </div>
           )}
         </div>
@@ -335,52 +317,25 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize }: PDFVi
         {!loading && !error && (
           <div className="border-t border-border/50 px-4 py-3 bg-background">
             <div className="flex items-center justify-between gap-4">
-              {/* Page Navigation */}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handlePrevPage}
-                  disabled={currentPage <= 1}
-                >
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={handlePrevPage} disabled={currentPage <= 1}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm font-medium min-w-[80px] text-center">
                   {currentPage} / {totalPages}
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleNextPage}
-                  disabled={currentPage >= totalPages}
-                >
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleNextPage} disabled={currentPage >= totalPages}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-
-              {/* Zoom Controls */}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleZoomOut}
-                  disabled={scale <= 0.5}
-                >
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleZoomOut} disabled={scale <= 0.5}>
                   <ZoomOut className="h-4 w-4" />
                 </Button>
                 <span className="text-xs font-medium min-w-[45px] text-center text-muted-foreground">
                   {Math.round(scale * 100)}%
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleZoomIn}
-                  disabled={scale >= 3}
-                >
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleZoomIn} disabled={scale >= 3}>
                   <ZoomIn className="h-4 w-4" />
                 </Button>
               </div>
