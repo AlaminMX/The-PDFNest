@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2, Activity } from "lucide-react";
+import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2, Activity, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { getActivityDisplayName } from "@/lib/sessionLogger";
+import { PDFPreviewModal } from "@/components/PDFPreviewModal";
 
 interface PDFFile {
   id: string;
@@ -66,6 +67,7 @@ export default function AdminUserDetail() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
 
   const filteredPdfs = useMemo(() => {
     let filtered = pdfs.filter(pdf => 
@@ -396,6 +398,18 @@ export default function AdminUserDetail() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={async () => {
+                                const { data } = await supabase.storage.from("pdfs").createSignedUrl(pdf.storage_path, 3600);
+                                if (data?.signedUrl) setPreviewPdf({ url: data.signedUrl, name: pdf.name });
+                                else toast.error("Failed to generate preview URL");
+                              }}
+                              title="Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleDownload(pdf)}
                               disabled={downloadingId === pdf.id}
                               title="Download"
@@ -428,6 +442,15 @@ export default function AdminUserDetail() {
           </CardContent>
         </Card>
       </main>
+
+      {previewPdf && (
+        <PDFPreviewModal
+          isOpen={!!previewPdf}
+          onClose={() => setPreviewPdf(null)}
+          pdfUrl={previewPdf.url}
+          fileName={previewPdf.name}
+        />
+      )}
 
       <footer className="mt-auto py-6 border-t border-border/40">
         <div className="container mx-auto px-4 text-center">
