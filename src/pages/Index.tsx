@@ -659,9 +659,9 @@ export default function Index() {
   };
 
   const handleOpenPreview = (file: any) => {
-    if (!file.url) return;
+    if (!file.url && !file.isOfflineAvailable) return;
     setPreviewPdf({ 
-      url: file.url!, 
+      url: file.url || '', 
       name: file.name,
       fileSize: file.file_size,
       fileId: file.id,
@@ -1169,7 +1169,7 @@ export default function Index() {
                                 <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
                               </svg>
                             </button>
-                            {file.url && (
+                            {(file.url || file.isOfflineAvailable) && (
                               <>
                                  <button
                                    onClick={() => handleOpenPreview(file)}
@@ -1180,15 +1180,17 @@ export default function Index() {
                                      <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
                                     </svg>
                                   </button>
-                                  <button
-                                    onClick={() => handleFileDownload(file)}
-                                    className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
-                                    title="Download file"
-                                  >
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                    </svg>
-                                  </button>
+                                  {file.url && (
+                                    <button
+                                      onClick={() => handleFileDownload(file)}
+                                      className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
+                                      title="Download file"
+                                    >
+                                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                      </svg>
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => {
                                       if (!file.isOfflineAvailable && file.url) {
@@ -1290,7 +1292,7 @@ export default function Index() {
                                   ))}
                                 </DropdownMenuSubContent>
                               </DropdownMenuSub>
-                                {file.url && (
+                                {(file.url || file.isOfflineAvailable) && (
                                   <>
                                   <DropdownMenuItem onClick={() => handleOpenPreview(file)}>
                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -1298,14 +1300,16 @@ export default function Index() {
                                     </svg>
                                     Preview
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleFileDownload(file)}>
-                                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                       <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
-                                     </svg>
-                                      Download
-                                   </DropdownMenuItem>
+                                  {file.url && (
+                                    <DropdownMenuItem onClick={() => handleFileDownload(file)}>
+                                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                         <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+                                       </svg>
+                                        Download
+                                     </DropdownMenuItem>
+                                  )}
                                  </>
-                               )}
+                                )}
                                <DropdownMenuItem onClick={() => {
                                  if (!file.isOfflineAvailable && file.url) {
                                    cacheForOffline(file.id, file.url, file.name);
