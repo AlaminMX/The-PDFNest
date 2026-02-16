@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/sessionLogger";
 import { uploadManager, UploadItem } from "@/lib/uploadManager";
-import { cachePDF, getCachedPDF, getAllCachedIds, removeCachedPDF, isOffline } from "@/lib/offlineStorage";
+import { cachePDF, getCachedPDF, getAllCachedIds, removeCachedPDF, isOffline, saveFileListForOffline, getOfflineFileList, type OfflineFileMetadata } from "@/lib/offlineStorage";
 
 export interface PDFFile {
   id: string;
@@ -57,6 +57,22 @@ export function usePDFFiles(userId: string | undefined) {
   const loadFiles = useCallback(async (page: number, append: boolean = false) => {
     if (!userId) return;
 
+    // If offline, load from cached metadata
+    if (isOffline()) {
+      const offlineFiles = getOfflineFileList();
+      const filesWithOfflineFlag: PDFFile[] = offlineFiles
+        .filter((f) => cachedIds.has(f.id))
+        .map((f) => ({
+          ...f,
+          url: undefined,
+          isOfflineAvailable: true,
+        }));
+      setFiles(filesWithOfflineFlag);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
+
     try {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -91,13 +107,32 @@ export function usePDFFiles(userId: string | undefined) {
       );
 
       if (append) {
-        setFiles((prev) => [...prev, ...filesWithUrls]);
+        setFiles((prev) => {
+          const combined = [...prev, ...filesWithUrls];
+          // Persist metadata for offline use
+          saveFileListForOffline(combined.map(({ url, isOfflineAvailable, ...rest }) => rest));
+          return combined;
+        });
       } else {
         setFiles(filesWithUrls);
+        // Persist metadata for offline use
+        saveFileListForOffline(filesWithUrls.map(({ url, isOfflineAvailable, ...rest }) => rest));
       }
     } catch (error: any) {
       if (!isOffline()) {
         toast.error("Failed to load files");
+      } else {
+        // Fallback to offline list on network error
+        const offlineFiles = getOfflineFileList();
+        const filesWithOfflineFlag: PDFFile[] = offlineFiles
+          .filter((f) => cachedIds.has(f.id))
+          .map((f) => ({
+            ...f,
+            url: undefined,
+            isOfflineAvailable: true,
+          }));
+        setFiles(filesWithOfflineFlag);
+        setHasMore(false);
       }
       console.error("Error loading files:", error);
     } finally {
@@ -140,9 +175,19 @@ export function usePDFFiles(userId: string | undefined) {
     try {
       // Check if already cached
       const existing = await getCachedPDF(fileId);
-      if (existing) return;
+      if (existing) {
+        // Already cached - make sure UI reflects it
+        setCachedIds((prev) => new Set(prev).add(fileId));
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId ? { ...f, isOfflineAvailable: true } : f
+          )
+        );
+        return;
+      }
 
       const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       await cachePDF(fileId, blob, fileName);
       
@@ -154,6 +199,7 @@ export function usePDFFiles(userId: string | undefined) {
       );
     } catch (err) {
       console.warn("Failed to cache PDF for offline:", err);
+      toast.error("Failed to save PDF offline");
     }
   }, []);
 

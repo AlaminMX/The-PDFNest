@@ -203,3 +203,37 @@ async function enforceCacheLimit(incomingSize: number): Promise<void> {
 export function isOffline(): boolean {
   return !navigator.onLine;
 }
+
+// --- Offline file metadata persistence ---
+
+const FILE_LIST_KEY = "pdfnest-offline-file-list";
+
+export interface OfflineFileMetadata {
+  id: string;
+  name: string;
+  file_name: string;
+  file_size: number;
+  storage_path: string;
+  category_id: string | null;
+  created_at: string;
+  is_favorite: boolean;
+  thumbnail_url: string | null;
+}
+
+export function saveFileListForOffline(files: OfflineFileMetadata[]): void {
+  try {
+    localStorage.setItem(FILE_LIST_KEY, JSON.stringify(files));
+  } catch {
+    // Storage full or unavailable
+  }
+}
+
+export function getOfflineFileList(): OfflineFileMetadata[] {
+  try {
+    const stored = localStorage.getItem(FILE_LIST_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}

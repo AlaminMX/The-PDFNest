@@ -46,7 +46,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
 
   // Load PDF document - check offline cache first, then network with range requests
   useEffect(() => {
-    if (!isOpen || !pdfUrl) return;
+    if (!isOpen || (!pdfUrl && !fileId)) return;
 
     let cancelled = false;
     
@@ -70,6 +70,11 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
         }
 
         if (!source) {
+          if (!pdfUrl) {
+            setError("This PDF is not available offline. Save it for offline access while connected.");
+            setLoading(false);
+            return;
+          }
           source = {
             url: pdfUrl,
             rangeChunkSize: 32768,
