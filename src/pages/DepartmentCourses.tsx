@@ -91,43 +91,42 @@ function DepartmentCoursesContent() {
               </p>
             </motion.div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {coursesLoading
                 ? Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-muted/30">
-                      <div className="h-4 w-1/3 bg-muted/50 rounded mb-2" />
-                      <div className="h-3 w-2/3 bg-muted/50 rounded" />
+                    <div key={i} className="p-4 rounded-xl bg-muted/30 aspect-[4/3]">
+                      <div className="h-4 w-2/3 bg-muted/50 rounded mb-3" />
+                      <div className="h-3 w-full bg-muted/50 rounded mb-2" />
+                      <div className="h-3 w-1/2 bg-muted/50 rounded" />
                     </div>
                   ))
-                : courses.map((course) => (
+                : courses.map((course, i) => (
                     <motion.div
                       key={course.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.18 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2, delay: i * 0.03 }}
                     >
                       <button
                         onClick={() => navigate(`/afit-pdfs/${deptSlug}/${course.code}`)}
-                        className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
+                        className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group flex flex-col justify-between min-h-[120px]"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-md bg-primary/5 flex items-center justify-center shrink-0">
-                            <FileText className="w-4 h-4 text-primary/70" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-medium text-sm text-primary">{course.code}</span>
-                              <Badge
-                                variant={course.note_count > 0 ? "secondary" : "outline"}
-                                className="text-[10px] px-1.5 py-0"
-                              >
-                                {course.note_count} {course.note_count === 1 ? "note" : "notes"}
-                              </Badge>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-primary/70" />
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">{course.name}</p>
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-muted-foreground/60 group-hover:translate-x-0.5 transition-all" />
                           </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                          <p className="font-semibold text-sm text-primary leading-tight">{course.code}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">{course.name}</p>
                         </div>
+                        <Badge
+                          variant={course.note_count > 0 ? "secondary" : "outline"}
+                          className="text-[10px] px-1.5 py-0 mt-2 w-fit"
+                        >
+                          {course.note_count} {course.note_count === 1 ? "note" : "notes"}
+                        </Badge>
                       </button>
                     </motion.div>
                   ))}
