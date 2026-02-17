@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AvatarUpload } from "./AvatarUpload";
 import { toast } from "sonner";
 import { useDepartments } from "@/hooks/useDepartments";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -37,17 +38,40 @@ export function EditProfileModal({
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
   const [departmentId, setDepartmentId] = useState(currentDepartmentId || "");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [school, setSchool] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
   const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
 
-  // Reset state when modal opens with new values
+  // Fetch extra profile fields when modal opens
   useEffect(() => {
     if (open) {
       setDisplayName(currentDisplayName);
       setAvatarUrl(currentAvatarUrl);
       setDepartmentId(currentDepartmentId || "");
+      
+      const fetchExtraFields = async () => {
+        setLoadingFields(true);
+        try {
+          const { data } = await supabase
+            .from("profiles")
+            .select("phone_number, nickname, school")
+            .eq("id", userId)
+            .single();
+          if (data) {
+            setPhoneNumber((data as any).phone_number || "");
+            setNickname((data as any).nickname || "");
+            setSchool((data as any).school || "");
+          }
+        } catch {} finally {
+          setLoadingFields(false);
+        }
+      };
+      fetchExtraFields();
     }
-  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId]);
+  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId, userId]);
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -59,13 +83,13 @@ export function EditProfileModal({
     try {
       const updateData: Record<string, any> = {
         display_name: displayName.trim(),
+        phone_number: phoneNumber.trim() || null,
+        nickname: nickname.trim() || null,
+        school: school.trim() || null,
       };
 
-      // Include department if changed
       if (departmentId !== (currentDepartmentId || "")) {
         updateData.department_id = departmentId || null;
-        
-        // Update department cache
         const deptCacheData = {
           hasDepartment: !!departmentId,
           userId: userId,
@@ -94,51 +118,84 @@ export function EditProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your display name, profile picture, and department
+            Update your profile information
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <AvatarUpload
-            currentAvatarUrl={avatarUrl}
-            displayName={displayName}
-            userId={userId}
-            onUploadComplete={(url) => setAvatarUrl(url)}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Enter your display name"
+        <ScrollArea className="max-h-[60vh] pr-3">
+          <div className="space-y-5 py-4">
+            <AvatarUpload
+              currentAvatarUrl={avatarUrl}
+              displayName={displayName}
+              userId={userId}
+              onUploadComplete={(url) => setAvatarUrl(url)}
             />
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Enter your display name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nickname">Nickname / Study Name</Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Your nickname (optional)"
+                disabled={loadingFields}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="e.g. +234 xxx xxx xxxx"
+                disabled={loadingFields}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="school">School</Label>
+              <Input
+                id="school"
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                placeholder="e.g. AFIT"
+                disabled={loadingFields}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Select value={departmentId} onValueChange={setDepartmentId}>
+                <SelectTrigger id="department">
+                  <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  <SelectItem value="">No department</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.icon && <span className="mr-2">{dept.icon}</span>}
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Only select if you are a student of AFIT
+              </p>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
-              <SelectTrigger id="department">
-                <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="">No department</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.icon && <span className="mr-2">{dept.icon}</span>}
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Only select if you are a student of AFIT
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
+        </ScrollArea>
+        <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>

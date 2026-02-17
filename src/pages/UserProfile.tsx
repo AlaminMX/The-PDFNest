@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2, Check } from "lucide-react";
+import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2, Check, Phone, User, GraduationCap } from "lucide-react";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
@@ -16,7 +16,7 @@ import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 interface UserProfileData {
   id: string;
@@ -29,6 +29,9 @@ interface UserProfileData {
   department_id: string | null;
   department_name: string | null;
   pdf_count: number;
+  phone_number: string | null;
+  nickname: string | null;
+  school: string | null;
 }
 
 interface RecentFile {
@@ -44,20 +47,16 @@ interface Category {
   file_count?: number;
 }
 
-const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
-
-// Cache key for localStorage
+const STORAGE_LIMIT = 300 * 1024 * 1024;
 const PROFILE_CACHE_KEY = "pdfnest_profile_cache";
 
 export default function UserProfile() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [savingDept, setSavingDept] = useState(false);
   const { departments } = useDepartments();
 
-  // Get cached profile from localStorage for instant render
   const cachedProfile = useMemo(() => {
     try {
       const cached = localStorage.getItem(PROFILE_CACHE_KEY);
@@ -66,7 +65,6 @@ export default function UserProfile() {
     return null;
   }, []);
 
-  // Fetch profile with React Query for caching and background revalidation
   const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ["user-profile"],
     queryFn: async () => {
@@ -76,13 +74,17 @@ export default function UserProfile() {
         return null;
       }
 
-      const { data, error } = await supabase
-        .rpc("get_user_profile_summary", { p_user_id: user.id });
+      // Fetch profile summary + extra fields in parallel
+      const [summaryRes, extraRes] = await Promise.all([
+        supabase.rpc("get_user_profile_summary", { p_user_id: user.id }),
+        supabase.from("profiles").select("phone_number, nickname, school").eq("id", user.id).single(),
+      ]);
 
-      if (error) throw error;
+      if (summaryRes.error) throw summaryRes.error;
 
-      if (data && data.length > 0) {
-        const summary = data[0];
+      if (summaryRes.data && summaryRes.data.length > 0) {
+        const summary = summaryRes.data[0];
+        const extra = extraRes.data as any;
         const profile: UserProfileData = {
           id: summary.id,
           display_name: summary.display_name,
@@ -94,24 +96,23 @@ export default function UserProfile() {
           department_id: summary.department_id,
           department_name: summary.department_name,
           pdf_count: Number(summary.pdf_count),
+          phone_number: extra?.phone_number || null,
+          nickname: extra?.nickname || null,
+          school: extra?.school || null,
         };
-        
-        // Cache to localStorage
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
         return profile;
       }
       return null;
     },
-    staleTime: 60_000, // 1 minute
-    gcTime: 5 * 60_000, // 5 minutes
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
     placeholderData: cachedProfile,
   });
 
-  // Use fetched data or cached data
   const profile = profileData || cachedProfile;
   const userId = profile?.id || null;
 
-  // Fetch recent files from localStorage (instant)
   const recentFiles = useMemo(() => {
     if (!userId) return [];
     try {
@@ -121,21 +122,16 @@ export default function UserProfile() {
     return [];
   }, [userId]);
 
-  // Fetch categories with React Query
   const { data: categories = [] } = useQuery({
     queryKey: ["user-categories", userId],
     queryFn: async () => {
       if (!userId) return [];
-      
       const { data: categoriesData } = await supabase
         .from("categories")
         .select("id, name, color")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
-
       if (!categoriesData) return [];
-
-      // Get file counts in parallel
       const categoriesWithCounts = await Promise.all(
         categoriesData.map(async (cat) => {
           const { count } = await supabase
@@ -165,30 +161,20 @@ export default function UserProfile() {
 
   const getInitials = (name: string | null) => {
     if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   const handleSaveDepartment = async () => {
     if (!selectedDeptId || !userId) return;
-    
     setSavingDept(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ department_id: selectedDeptId })
         .eq("id", userId);
-
       if (error) throw error;
-
-      // Clear department cache to update navigation dot
       localStorage.removeItem("pdfnest_dept_status");
       localStorage.removeItem(PROFILE_CACHE_KEY);
-      
       toast.success("Department saved successfully!");
       refetch();
     } catch (error) {
@@ -199,10 +185,7 @@ export default function UserProfile() {
     }
   };
 
-  // Show skeleton immediately if no cached data
-  if (isLoading && !profile) {
-    return <ProfileSkeleton />;
-  }
+  if (isLoading && !profile) return <ProfileSkeleton />;
 
   if (!profile) {
     return (
@@ -215,8 +198,6 @@ export default function UserProfile() {
   const displayName = profile.display_name || profile.full_name || "User";
   const storageUsed = profile.total_storage_used || 0;
   const storagePercentage = getStoragePercentage(storageUsed);
-  const departmentName = profile.department_name;
-  const pdfCount = profile.pdf_count;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24 md:pb-8">
@@ -224,12 +205,7 @@ export default function UserProfile() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="shrink-0"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-xl font-bold">My Profile</h1>
@@ -239,10 +215,9 @@ export default function UserProfile() {
       </header>
 
       <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Admin Banners for Profile */}
         <AdminBannerDisplay showOnProfile />
 
-        {/* Department Banner - only show if no department */}
+        {/* Department Banner */}
         {!profile.department_id && (
           <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
             <CardContent className="p-5">
@@ -253,9 +228,7 @@ export default function UserProfile() {
                   </div>
                   <div>
                     <p className="font-semibold text-lg">Complete Your Profile</p>
-                    <p className="text-sm text-muted-foreground">
-                      Select your department to personalize your experience
-                    </p>
+                    <p className="text-sm text-muted-foreground">Select your department to personalize your experience</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -272,12 +245,7 @@ export default function UserProfile() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button 
-                    onClick={handleSaveDepartment} 
-                    disabled={!selectedDeptId || savingDept}
-                    size="icon"
-                    className="shrink-0"
-                  >
+                  <Button onClick={handleSaveDepartment} disabled={!selectedDeptId || savingDept} size="icon" className="shrink-0">
                     <Check className="h-4 w-4" />
                   </Button>
                 </div>
@@ -288,33 +256,39 @@ export default function UserProfile() {
 
         {/* Profile Card */}
         <Card className="overflow-hidden">
-          <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
+          <div className="h-24 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10">
-              <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-12">
+              <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
                 <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-center sm:text-left space-y-1 pb-1">
+              <div className="flex-1 text-center sm:text-left space-y-1.5 pb-1">
                 <h2 className="text-2xl font-bold">{displayName}</h2>
+                {profile.nickname && (
+                  <p className="text-sm text-muted-foreground italic">"{profile.nickname}"</p>
+                )}
                 {profile.email && (
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
                 )}
-                {departmentName && (
-                  <Badge variant="secondary" className="mt-1">
-                    <Building2 className="w-3 h-3 mr-1" />
-                    {departmentName}
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
+                  {profile.department_name && (
+                    <Badge variant="secondary">
+                      <Building2 className="w-3 h-3 mr-1" />
+                      {profile.department_name}
+                    </Badge>
+                  )}
+                  {profile.school && (
+                    <Badge variant="outline">
+                      <GraduationCap className="w-3 h-3 mr-1" />
+                      {profile.school}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowEditModal(true)}
-                className="gap-2"
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)} className="gap-2">
                 <Edit2 className="w-4 h-4" />
                 Edit Profile
               </Button>
@@ -322,47 +296,59 @@ export default function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pdfCount}</p>
-                <p className="text-xs text-muted-foreground">Total PDFs</p>
-              </div>
-            </div>
+        {/* Info Cards Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Personal Info */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Personal Info
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                { label: "Full Name", value: profile.full_name },
+                { label: "Display Name", value: profile.display_name },
+                { label: "Phone", value: profile.phone_number, icon: Phone },
+                { label: "School", value: profile.school },
+                { label: "Member since", value: profile.created_at ? format(new Date(profile.created_at), "MMM d, yyyy") : "N/A" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="font-medium text-right max-w-[60%] truncate">{item.value || "—"}</span>
+                </div>
+              ))}
+            </CardContent>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Folder className="w-5 h-5 text-primary" />
+          {/* Stats */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-2xl font-bold">{profile.pdf_count}</p>
+                  <p className="text-xs text-muted-foreground">Total PDFs</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-2xl font-bold">{categories.length}</p>
+                  <p className="text-xs text-muted-foreground">Categories</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{categories.length}</p>
-                <p className="text-xs text-muted-foreground">Categories</p>
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Joined</span>
+                <span className="font-medium ml-auto">
+                  {profile.created_at ? formatDistanceToNow(new Date(profile.created_at), { addSuffix: true }) : "N/A"}
+                </span>
               </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Calendar className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  {profile.created_at 
-                    ? format(new Date(profile.created_at), "MMM d, yyyy")
-                    : "N/A"
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground">Member since</p>
-              </div>
-            </div>
+            </CardContent>
           </Card>
         </div>
 
@@ -379,14 +365,9 @@ export default function UserProfile() {
               <span className="text-muted-foreground">
                 {formatStorageSize(storageUsed)} of 300 MB used
               </span>
-              <span className="font-medium">
-                {storagePercentage.toFixed(1)}%
-              </span>
+              <span className="font-medium">{storagePercentage.toFixed(1)}%</span>
             </div>
-            <Progress 
-              value={storagePercentage} 
-              className="h-2"
-            />
+            <Progress value={storagePercentage} className="h-2" />
             <p className="text-xs text-muted-foreground">
               {formatStorageSize(STORAGE_LIMIT - storageUsed)} remaining
             </p>
@@ -426,7 +407,6 @@ export default function UserProfile() {
               <div className="text-center py-8 text-muted-foreground">
                 <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No recently accessed files</p>
-                <p className="text-xs mt-1">Your recent PDFs will appear here</p>
               </div>
             )}
           </CardContent>
@@ -449,10 +429,7 @@ export default function UserProfile() {
                     className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => navigate("/")}
                   >
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: category.color }}
-                    />
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{category.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -466,14 +443,12 @@ export default function UserProfile() {
               <div className="text-center py-8 text-muted-foreground">
                 <Folder className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No categories yet</p>
-                <p className="text-xs mt-1">Create categories to organize your PDFs</p>
               </div>
             )}
           </CardContent>
         </Card>
       </main>
 
-      {/* Edit Profile Modal */}
       {userId && (
         <EditProfileModal
           open={showEditModal}
@@ -488,7 +463,6 @@ export default function UserProfile() {
           }}
         />
       )}
-
 
       <SmartBottomNav />
     </div>
