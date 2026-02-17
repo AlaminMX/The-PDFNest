@@ -5,39 +5,39 @@
 /* Typography System - Normalized font sizes and line heights */
 @layer base {
   :root {
-    /* Color System */
-    --background: 210 20% 98%;
-    --foreground: 217 19% 27%;
-    --card: 0 0% 100%;
-    --card-foreground: 217 19% 27%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 217 19% 27%;
-    --primary: 0 84% 51%;
+    /* Color System - Softened light theme */
+    --background: 220 16% 96%;
+    --foreground: 220 20% 20%;
+    --card: 220 14% 99%;
+    --card-foreground: 220 20% 20%;
+    --popover: 220 14% 99%;
+    --popover-foreground: 220 20% 20%;
+    --primary: 0 76% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 217 19% 27%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 217 15% 50%;
-    --accent: 0 93% 94%;
-    --accent-foreground: 0 77% 42%;
-    --destructive: 0 77% 42%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 20% 22%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 12% 44%;
+    --accent: 0 60% 94%;
+    --accent-foreground: 0 65% 38%;
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 94%;
-    --input: 214 20% 94%;
-    --ring: 0 84% 51%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 0 76% 48%;
     --radius: 0.625rem;
-    --gradient-start: 210 20% 98%;
-    --gradient-end: 0 86% 97%;
+    --gradient-start: 220 16% 96%;
+    --gradient-end: 0 40% 95%;
 
     /* Sidebar Colors */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 217 19% 27%;
-    --sidebar-primary: 0 84% 51%;
+    --sidebar-background: 220 14% 97%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 0 76% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 93% 94%;
-    --sidebar-accent-foreground: 0 77% 42%;
-    --sidebar-border: 214 31% 91%;
-    --sidebar-ring: 0 84% 51%;
+    --sidebar-accent: 0 50% 94%;
+    --sidebar-accent-foreground: 0 65% 38%;
+    --sidebar-border: 220 14% 88%;
+    --sidebar-ring: 0 76% 48%;
 
     /* Typography Scale */
     --font-size-xs: 0.75rem;      /* 12px */
