@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useCourses } from "@/hooks/useCourses";
 import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, BookOpen, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, FileText, BookOpen, ChevronRight, GraduationCap, Pencil, Check, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
@@ -12,6 +14,8 @@ import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { DepartmentTimetable } from "@/components/DepartmentTimetable";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useRepStatus } from "@/hooks/useRepStatus";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const SEMESTER_LABELS: Record<string, string> = {
   first: "First Semester",
@@ -22,9 +26,30 @@ function DepartmentCoursesContent() {
   const navigate = useNavigate();
   const { deptSlug, semester } = useParams<{ deptSlug: string; semester: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
-  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, 100, semester);
+  const { courses, loading: coursesLoading, refresh: refreshCourses } = useCourses(currentDept?.id, 100, semester);
   const { isAdmin } = useAdminStatus();
   const rep = useRepStatus();
+
+  const [editingCreditId, setEditingCreditId] = useState<string | null>(null);
+  const [editCreditValue, setEditCreditValue] = useState<string>("");
+
+  const canEdit = !!currentDept && (isAdmin || (rep.isRep && rep.departmentId === currentDept.id));
+
+  const handleSaveCredit = async (courseId: string) => {
+    const val = parseInt(editCreditValue, 10);
+    if (isNaN(val) || val < 0 || val > 20) {
+      toast.error("Credit units must be between 0 and 20");
+      return;
+    }
+    const { error } = await supabase.from("courses").update({ credit_units: val }).eq("id", courseId);
+    if (error) {
+      toast.error("Failed to update credit units");
+    } else {
+      toast.success("Credit units updated");
+      refreshCourses();
+    }
+    setEditingCreditId(null);
+  };
 
   // Validate semester param
   if (semester && !["first", "second"].includes(semester)) {
@@ -132,12 +157,56 @@ function DepartmentCoursesContent() {
                           <p className="font-semibold text-sm text-primary leading-tight">{course.code}</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">{course.name}</p>
                         </div>
-                        <Badge
-                          variant={course.note_count > 0 ? "secondary" : "outline"}
-                          className="text-[10px] px-1.5 py-0 mt-2 w-fit"
-                        >
-                          {course.note_count} {course.note_count === 1 ? "note" : "notes"}
-                        </Badge>
+                        <div className="flex items-center justify-between mt-2 gap-1.5">
+                          <Badge
+                            variant={course.note_count > 0 ? "secondary" : "outline"}
+                            className="text-[10px] px-1.5 py-0 w-fit"
+                          >
+                            {course.note_count} {course.note_count === 1 ? "note" : "notes"}
+                          </Badge>
+                          {editingCreditId === course.id ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={20}
+                                value={editCreditValue}
+                                onChange={(e) => setEditCreditValue(e.target.value)}
+                                className="h-6 w-12 text-[10px] px-1 py-0"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveCredit(course.id);
+                                  if (e.key === "Escape") setEditingCreditId(null);
+                                }}
+                              />
+                              <button onClick={() => handleSaveCredit(course.id)} className="text-green-500 hover:text-green-600">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setEditingCreditId(null)} className="text-muted-foreground hover:text-foreground">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
+                                <GraduationCap className="w-2.5 h-2.5" />
+                                {course.credit_units} CU
+                              </Badge>
+                              {canEdit && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingCreditId(course.id);
+                                    setEditCreditValue(String(course.credit_units || 0));
+                                  }}
+                                  className="text-muted-foreground/40 hover:text-primary transition-colors"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </button>
                     </motion.div>
                   ))}
