@@ -57,14 +57,14 @@ import { PDFViewer } from "@/components/PDFViewer";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
-  const { deptSlug, courseCode } = useParams<{ deptSlug: string; courseCode: string }>();
+  const { deptSlug, semester, courseCode } = useParams<{ deptSlug: string; semester: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
   const { session, user: sessionUser } = useSession();
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
-  const { courses, loading: coursesLoading } = useCourses(currentDept?.id);
+  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, 100, semester);
   const currentCourse = courses.find(c => c.code === courseCode);
   const { notes, loading: notesLoading, incrementViews, getSignedUrl, deleteNote, renameNote } = useLectureNotes(currentCourse?.id);
 
@@ -185,7 +185,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleShare = (noteId: string, title: string) => {
-    const url = `${window.location.origin}/afit-pdfs/${deptSlug}/${courseCode}?note=${noteId}`;
+    const url = `${window.location.origin}/afit-pdfs/${deptSlug}/semester/${semester}/${courseCode}?note=${noteId}`;
     
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
@@ -293,7 +293,7 @@ function CourseLectureNotesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${deptSlug}`)}
+              onClick={() => navigate(`/afit-pdfs/${deptSlug}/semester/${semester}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />

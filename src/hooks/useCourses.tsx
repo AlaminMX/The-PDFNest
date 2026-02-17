@@ -10,14 +10,14 @@ interface CourseWithNoteCount extends Course {
   credit_units: number;
 }
 
-export function useCourses(departmentId?: string, level: number = 100) {
+export function useCourses(departmentId?: string, level: number = 100, semester?: string) {
   const [courses, setCourses] = useState<CourseWithNoteCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (departmentId) fetchCourses();
-  }, [departmentId, level]);
+  }, [departmentId, level, semester]);
 
   const fetchCourses = async () => {
     if (!departmentId) return;
@@ -26,13 +26,18 @@ export function useCourses(departmentId?: string, level: number = 100) {
       setLoading(true);
       setError(null);
 
-      // Use view to avoid N+1 note-count queries.
-      const { data: coursesData, error: fetchError } = await supabase
+      let query = supabase
         .from("courses_with_note_counts")
         .select("*")
         .eq("department_id", departmentId)
         .eq("level", level)
         .order("code");
+
+      if (semester) {
+        query = query.eq("semester", semester);
+      }
+
+      const { data: coursesData, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
       setCourses((coursesData as CourseWithNoteCount[]) || []);

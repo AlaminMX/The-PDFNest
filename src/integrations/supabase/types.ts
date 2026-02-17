@@ -161,6 +161,7 @@ export type Database = {
           id: string
           level: number
           name: string
+          semester: string
         }
         Insert: {
           code: string
@@ -170,6 +171,7 @@ export type Database = {
           id?: string
           level?: number
           name: string
+          semester?: string
         }
         Update: {
           code?: string
@@ -179,6 +181,7 @@ export type Database = {
           id?: string
           level?: number
           name?: string
+          semester?: string
         }
         Relationships: [
           {
@@ -725,6 +728,7 @@ export type Database = {
           level: number | null
           name: string | null
           note_count: number | null
+          semester: string | null
         }
         Relationships: [
           {

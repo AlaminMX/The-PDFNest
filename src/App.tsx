@@ -19,6 +19,7 @@ import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminSessionLogs from "./pages/AdminSessionLogs";
 import AFITPDFs from "./pages/AFITPDFs";
 import SchoolStore from "./pages/SchoolStore";
+import SemesterSelection from "./pages/SemesterSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
@@ -53,8 +54,9 @@ const App = () => (
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/afit-pdfs" element={<AFITPDFs />} />
             <Route path="/school-store" element={<SchoolStore />} />
-            <Route path="/afit-pdfs/:deptSlug" element={<DepartmentCourses />} />
-            <Route path="/afit-pdfs/:deptSlug/:courseCode" element={<CourseLectureNotes />} />
+            <Route path="/afit-pdfs/:deptSlug" element={<SemesterSelection />} />
+            <Route path="/afit-pdfs/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
+            <Route path="/afit-pdfs/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
             <Route path="/rep/upload" element={<RepUpload />} />
             <Route path="/rep/:userId" element={<RepProfile />} />
             <Route path="/profile" element={<UserProfile />} />

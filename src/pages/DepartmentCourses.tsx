@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useCourses } from "@/hooks/useCourses";
 import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
@@ -13,16 +13,28 @@ import { DepartmentTimetable } from "@/components/DepartmentTimetable";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useRepStatus } from "@/hooks/useRepStatus";
 
+const SEMESTER_LABELS: Record<string, string> = {
+  first: "First Semester",
+  second: "Second Semester",
+};
+
 function DepartmentCoursesContent() {
   const navigate = useNavigate();
-  const { deptSlug } = useParams<{ deptSlug: string }>();
+  const { deptSlug, semester } = useParams<{ deptSlug: string; semester: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
-  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, 100);
+  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, 100, semester);
   const { isAdmin } = useAdminStatus();
   const rep = useRepStatus();
 
+  // Validate semester param
+  if (semester && !["first", "second"].includes(semester)) {
+    return <Navigate to={`/afit-pdfs/${deptSlug}`} replace />;
+  }
+
   const canEditTimetable =
     !!currentDept && (isAdmin || (rep.isRep && rep.departmentId === currentDept.id));
+
+  const semesterLabel = SEMESTER_LABELS[semester || "first"] || semester;
 
   if (!deptLoading && !currentDept) {
     return (
@@ -46,14 +58,13 @@ function DepartmentCoursesContent() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
-      {/* Header */}
       <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/afit-pdfs")}
+              onClick={() => navigate(`/afit-pdfs/${deptSlug}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -62,7 +73,7 @@ function DepartmentCoursesContent() {
               <h1 className="text-lg font-semibold truncate max-w-[180px] md:max-w-none">
                 {currentDept?.name || "Loading…"}
               </h1>
-              <p className="text-xs text-muted-foreground">100 Level Courses</p>
+              <p className="text-xs text-muted-foreground">{semesterLabel}</p>
             </div>
           </div>
           <ThemeToggle />
@@ -108,7 +119,7 @@ function DepartmentCoursesContent() {
                       transition={{ duration: 0.2, delay: i * 0.03 }}
                     >
                       <button
-                        onClick={() => navigate(`/afit-pdfs/${deptSlug}/${course.code}`)}
+                        onClick={() => navigate(`/afit-pdfs/${deptSlug}/semester/${semester}/${course.code}`)}
                         className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group flex flex-col justify-between min-h-[120px]"
                       >
                         <div>
@@ -137,7 +148,7 @@ function DepartmentCoursesContent() {
                 <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
                   <FileText className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground">No courses available</p>
+                <p className="text-sm text-muted-foreground">No courses available yet</p>
               </motion.div>
             )}
           </TabsContent>
