@@ -75,26 +75,47 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     setStep(prev => Math.max(prev - 1, 1));
   };
 
-    const handleAccountCreate = async () => {
-      // Just validate locally
-      if (!data.email || !data.password) {
-        toast.error("Please fill in all required fields.");
-        return;
-      }
+    // const handleAccountCreate = async () => {
+    //   // Just validate locally
+    //   if (!data.email || !data.password) {
+    //     toast.error("Please fill in all required fields.");
+    //     return;
+    //   }
     
-      if (data.password !== data.confirmPassword) {
-        toast.error("Passwords do not match.");
-        return;
-      }
+    //   if (data.password !== data.confirmPassword) {
+    //     toast.error("Passwords do not match.");
+    //     return;
+    //   }
     
-      if (!data.termsAccepted) {
-        toast.error("You must accept the terms.");
-        return;
-      }
+    //   if (!data.termsAccepted) {
+    //     toast.error("You must accept the terms.");
+    //     return;
+    //   }
     
-      setDirection(1);
-      setStep(2);
-    };
+    //   setDirection(1);
+    //   setStep(2);
+    // };
+
+  const handleAccountCreate = () => {
+  if (!data.email || !data.password) {
+    toast.error("Please fill in all required fields.");
+    return;
+  }
+
+  if (data.password !== data.confirmPassword) {
+    toast.error("Passwords do not match.");
+    return;
+  }
+
+  if (!data.termsAccepted) {
+    toast.error("You must accept the terms.");
+    return;
+  }
+
+  setDirection(1);
+  setStep(2);
+};
+
   
       // Update profile with terms
       // const { data: authData } = await supabase.auth.getUser();
