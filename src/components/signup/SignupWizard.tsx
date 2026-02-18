@@ -75,56 +75,32 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     setStep(prev => Math.max(prev - 1, 1));
   };
 
-    // const handleAccountCreate = async () => {
-    //   // Just validate locally
-    //   if (!data.email || !data.password) {
-    //     toast.error("Please fill in all required fields.");
-    //     return;
-    //   }
-    
-    //   if (data.password !== data.confirmPassword) {
-    //     toast.error("Passwords do not match.");
-    //     return;
-    //   }
-    
-    //   if (!data.termsAccepted) {
-    //     toast.error("You must accept the terms.");
-    //     return;
-    //   }
-    
-    //   setDirection(1);
-    //   setStep(2);
-    // };
+  const handleAccountCreate = async () => {
+    setLoading(true);
+    try {
+      // Tell Auth.tsx to stop redirecting
+      onStartOnboarding();
 
-  const handleAccountCreate = () => {
-  if (!data.email || !data.password) {
-    toast.error("Please fill in all required fields.");
-    return;
-  }
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signUp({
+        email: data.email.trim(),
+        password: data.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: { full_name: data.fullName.trim() },
+        },
+      });
 
-  if (data.password !== data.confirmPassword) {
-    toast.error("Passwords do not match.");
-    return;
-  }
+      if (error) throw error;
 
-  if (!data.termsAccepted) {
-    toast.error("You must accept the terms.");
-    return;
-  }
-
-  setDirection(1);
-  setStep(2);
-};
-
-  
       // Update profile with terms
-      // const { data: authData } = await supabase.auth.getUser();
-      // if (authData?.user) {
-      //   await supabase.from("profiles").update({
-      //     terms_accepted: true,
-      //     terms_accepted_at: new Date().toISOString(),
-      //   }).eq("id", authData.user.id);
-      // }
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user) {
+        await supabase.from("profiles").update({
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+        }).eq("id", authData.user.id);
+      }
 
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 4000);
@@ -133,11 +109,11 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       // Move to step 2
       setDirection(1);
       setStep(2);
-    // } catch (error: any) {
-    //   toast.error(error.message || "An error occurred");
-    // } finally {
-    //   setLoading(false);
-    // }
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveProfileData = async () => {
@@ -190,38 +166,10 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
   };
 
   const handleFinish = async () => {
-  setLoading(true);
-  try {
-    onStartOnboarding();
-
-    const redirectUrl = `${window.location.origin}/`;
-
-    const { error } = await supabase.auth.signUp({
-      email: data.email.trim(),
-      password: data.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { full_name: data.fullName.trim() },
-      },
-    });
-
-    if (error) throw error;
-
-    // Save extra profile data AFTER signup
     await saveProfileData();
-
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 4000);
-
     setSignupComplete(true);
     onFinishOnboarding();
-  } catch (error: any) {
-    toast.error(error.message || "Signup failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const variants = {
     enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
@@ -326,3 +274,4 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       </div>
     </div>
   );
+}
