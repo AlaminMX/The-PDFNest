@@ -49,13 +49,10 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
   };
 
   return (
-    <div className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl overflow-hidden mb-3">
-          <img src="/pdfnest-logo.png" alt="PDFNest" className="w-full h-full object-contain" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground">Create your account</h2>
-        <p className="text-sm text-muted-foreground mt-1">Step 1 of 5 — Account basics</p>
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">Create your account</h2>
+        <p className="text-muted-foreground">Get started with PDFNest in seconds</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,6 +66,7 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
             required
             disabled={loading}
             autoComplete="name"
+            className="h-11"
           />
         </div>
 
@@ -83,6 +81,7 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
             required
             disabled={loading}
             autoComplete="email"
+            className="h-11"
           />
         </div>
 
@@ -127,14 +126,14 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
           </label>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full h-11" disabled={loading}>
           {loading ? "Creating account..." : "Continue"}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground mt-4">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <button type="button" onClick={onSwitchToLogin} className="text-primary hover:underline">
+        <button type="button" onClick={onSwitchToLogin} className="text-primary hover:underline font-medium">
           Sign in
         </button>
       </p>

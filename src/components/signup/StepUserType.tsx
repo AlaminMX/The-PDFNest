@@ -17,35 +17,35 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
   const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
 
   return (
-    <div className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Are you a student?</h2>
-        <p className="text-sm text-muted-foreground mt-1">Step 3 of 5 — User type</p>
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">Are you a student?</h2>
+        <p className="text-muted-foreground">This helps us personalize your experience</p>
       </div>
 
-      <div className="flex gap-3 mb-5">
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={() => updateData({ isStudent: true })}
-          className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border text-sm font-medium transition-all ${
+          className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl border text-sm font-medium transition-all ${
             data.isStudent === true
               ? "border-primary bg-primary/10 text-foreground"
-              : "border-border bg-background hover:border-primary/40 text-foreground"
+              : "border-border bg-card/50 hover:border-primary/40 text-foreground"
           }`}
         >
-          <GraduationCap className="w-6 h-6" />
-          Yes
+          <GraduationCap className="w-7 h-7" />
+          Yes, I'm a student
         </button>
         <button
           type="button"
           onClick={() => updateData({ isStudent: false, school: "", schoolOther: "", departmentId: "" })}
-          className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border text-sm font-medium transition-all ${
+          className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl border text-sm font-medium transition-all ${
             data.isStudent === false
               ? "border-primary bg-primary/10 text-foreground"
-              : "border-border bg-background hover:border-primary/40 text-foreground"
+              : "border-border bg-card/50 hover:border-primary/40 text-foreground"
           }`}
         >
-          <User className="w-6 h-6" />
+          <User className="w-7 h-7" />
           No
         </button>
       </div>
@@ -58,10 +58,10 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
               <button
                 type="button"
                 onClick={() => updateData({ school: "AFIT", schoolOther: "" })}
-                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                   data.school === "AFIT"
                     ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-background hover:border-primary/40 text-foreground"
+                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
                 }`}
               >
                 AFIT
@@ -69,10 +69,10 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
               <button
                 type="button"
                 onClick={() => updateData({ school: "others" })}
-                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                   data.school === "others"
                     ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-background hover:border-primary/40 text-foreground"
+                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
                 }`}
               >
                 Others
@@ -88,6 +88,7 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
                 value={data.schoolOther}
                 onChange={e => updateData({ schoolOther: e.target.value })}
                 autoFocus
+                className="h-11"
               />
             </div>
           )}
@@ -95,7 +96,7 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
           <div className="space-y-2">
             <Label>Department <span className="text-xs text-muted-foreground">(optional)</span></Label>
             <Select value={data.departmentId} onValueChange={v => updateData({ departmentId: v })}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11">
                 <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department"} />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
@@ -111,16 +112,16 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
         </div>
       )}
 
-      <div className="flex gap-3 mt-6">
-        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0">
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0 h-11 w-11">
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <Button className="flex-1" onClick={onNext} disabled={data.isStudent === null}>
+        <Button className="flex-1 h-11" onClick={onNext} disabled={data.isStudent === null}>
           Continue
         </Button>
       </div>
 
-      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground mt-3 hover:text-foreground transition-colors">
+      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
         Skip this step
       </button>
     </div>
