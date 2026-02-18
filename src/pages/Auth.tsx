@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,15 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const isOnboarding = useRef(false);
 
   useEffect(() => {
     localStorage.setItem('hasVisitedBefore', 'true');
     
     const handleRedirect = () => {
+      // Don't redirect if user is in the signup onboarding flow
+      if (isOnboarding.current) return;
+      
       const redirectPath = sessionStorage.getItem('redirectAfterLogin');
       if (redirectPath) {
         sessionStorage.removeItem('redirectAfterLogin');
@@ -42,11 +46,11 @@ export default function Auth() {
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) handleRedirect();
+      if (session && !isOnboarding.current) handleRedirect();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) handleRedirect();
+      if (session && !isOnboarding.current) handleRedirect();
     });
 
     const handleBeforeUnload = () => {
@@ -61,6 +65,15 @@ export default function Auth() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [navigate]);
+
+  const handleStartOnboarding = () => {
+    isOnboarding.current = true;
+  };
+
+  const handleFinishOnboarding = () => {
+    isOnboarding.current = false;
+    navigate("/");
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +131,17 @@ export default function Auth() {
     }
   };
 
+  // Signup wizard is full-page
+  if (!isLogin && !isForgotPassword) {
+    return (
+      <SignupWizard
+        onSwitchToLogin={() => setIsLogin(true)}
+        onStartOnboarding={handleStartOnboarding}
+        onFinishOnboarding={handleFinishOnboarding}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       {/* Layered gradient background */}
@@ -142,152 +166,147 @@ export default function Auth() {
         <ThemeToggle />
       </div>
 
-      {/* Show signup wizard when not login mode */}
-      {!isLogin && !isForgotPassword ? (
-        <SignupWizard onSwitchToLogin={() => setIsLogin(true)} />
-      ) : (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-center mb-8 space-y-4"
+        >
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden"
+          >
+            <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="w-full h-full object-contain" />
+          </motion.div>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
+              {isForgotPassword ? "Reset your password" : "Welcome back"}
+            </p>
+          </div>
+        </motion.div>
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md relative z-10"
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6"
         >
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="text-center mb-8 space-y-4"
-          >
-            <motion.div 
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden"
-            >
-              <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="w-full h-full object-contain" />
-            </motion.div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-2">
-                {isForgotPassword ? "Reset your password" : "Welcome back"}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6"
-          >
-            {isForgotPassword ? (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Sending..." : "Send Reset Link"}
-                </Button>
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => { setIsForgotPassword(false); setIsLogin(true); }}
-                    className="text-sm text-primary hover:underline"
-                    disabled={loading}
-                  >
-                    Back to sign in
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleAuth} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                    autoComplete="email"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <PasswordInput
-                    id="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    autoComplete="current-password"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="rememberMe"
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    />
-                    <label htmlFor="rememberMe" className="text-sm text-muted-foreground leading-none cursor-pointer">
-                      Remember me
-                    </label>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsForgotPassword(true)}
-                    className="text-sm text-primary hover:underline"
-                    disabled={loading}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Loading..." : "Sign In"}
-                </Button>
-              </form>
-            )}
-
-            {!isForgotPassword && (
-              <p className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <button type="button" onClick={() => setIsLogin(false)} className="text-primary hover:underline">
-                  Sign up
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Sending..." : "Send Reset Link"}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => { setIsForgotPassword(false); setIsLogin(true); }}
+                  className="text-sm text-primary hover:underline"
+                  disabled={loading}
+                >
+                  Back to sign in
                 </button>
-              </p>
-            )}
-          </motion.div>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="email"
+                />
+              </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-            className="mt-6 text-center text-sm text-muted-foreground"
-          >
-            <Link to="/terms" className="hover:text-foreground hover:underline transition-colors">
-              Terms & Conditions
-            </Link>
-            <span className="mx-2">•</span>
-            <Link to="/privacy" className="hover:text-foreground hover:underline transition-colors">
-              Privacy Policy
-            </Link>
-          </motion.div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <PasswordInput
+                  id="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
+                  <label htmlFor="rememberMe" className="text-sm text-muted-foreground leading-none cursor-pointer">
+                    Remember me
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm text-primary hover:underline"
+                  disabled={loading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Loading..." : "Sign In"}
+              </Button>
+            </form>
+          )}
+
+          {!isForgotPassword && (
+            <p className="text-center text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <button type="button" onClick={() => setIsLogin(false)} className="text-primary hover:underline">
+                Sign up
+              </button>
+            </p>
+          )}
         </motion.div>
-      )}
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
+          <Link to="/terms" className="hover:text-foreground hover:underline transition-colors">
+            Terms & Conditions
+          </Link>
+          <span className="mx-2">•</span>
+          <Link to="/privacy" className="hover:text-foreground hover:underline transition-colors">
+            Privacy Policy
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

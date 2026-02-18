@@ -27,10 +27,10 @@ interface Props {
 
 export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
   return (
-    <div className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Your preferences</h2>
-        <p className="text-sm text-muted-foreground mt-1">Step 4 of 5 — Personalize your experience</p>
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">Your preferences</h2>
+        <p className="text-muted-foreground">Personalize your PDFNest experience</p>
       </div>
 
       <div className="space-y-5">
@@ -45,13 +45,13 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
                   key={opt.value}
                   type="button"
                   onClick={() => updateData({ preferredTheme: opt.value })}
-                  className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs font-medium transition-all ${
+                  className={`flex-1 flex flex-col items-center gap-1.5 p-3.5 rounded-xl border text-xs font-medium transition-all ${
                     data.preferredTheme === opt.value
                       ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border bg-background hover:border-primary/40 text-foreground"
+                      : "border-border bg-card/50 hover:border-primary/40 text-foreground"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-5 h-5" />
                   {opt.label}
                 </button>
               );
@@ -68,10 +68,10 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
                 key={String(val)}
                 type="button"
                 onClick={() => updateData({ financialLiteracyInterest: val })}
-                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                   data.financialLiteracyInterest === val
                     ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-background hover:border-primary/40 text-foreground"
+                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
                 }`}
               >
                 {val ? "Yes" : "No"}
@@ -89,10 +89,10 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
                 key={opt.value}
                 type="button"
                 onClick={() => updateData({ usageReason: opt.value })}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
                   data.usageReason === opt.value
                     ? "border-primary bg-primary/10 text-foreground font-medium"
-                    : "border-border bg-background hover:border-primary/40 text-foreground"
+                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
                 }`}
               >
                 {opt.label}
@@ -106,6 +106,7 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
               value={data.usageReasonOther}
               onChange={e => updateData({ usageReasonOther: e.target.value })}
               autoFocus
+              className="h-11"
             />
           )}
         </div>
@@ -121,6 +122,7 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
               max={100}
               value={data.age}
               onChange={e => updateData({ age: e.target.value })}
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
@@ -130,21 +132,22 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
               value={data.nickname}
               onChange={e => updateData({ nickname: e.target.value })}
               maxLength={30}
+              className="h-11"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3 mt-6">
-        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0">
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0 h-11 w-11">
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <Button className="flex-1" onClick={onNext}>
+        <Button className="flex-1 h-11" onClick={onNext}>
           Continue
         </Button>
       </div>
 
-      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground mt-3 hover:text-foreground transition-colors">
+      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
         Skip this step
       </button>
     </div>
