@@ -133,11 +133,11 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       // Move to step 2
       setDirection(1);
       setStep(2);
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred");
-    } finally {
-      setLoading(false);
-    }
+    // } catch (error: any) {
+    //   toast.error(error.message || "An error occurred");
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const saveProfileData = async () => {
