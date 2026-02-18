@@ -11,10 +11,10 @@ const themeOptions = [
 ];
 
 const usageOptions = [
-  { value: "escape-stress", label: "Escape stress from too many PDFs" },
-  { value: "safe-storage", label: "Safe storage" },
-  { value: "afit-pdfs", label: "AFIT PDFs" },
-  { value: "research", label: "Research" },
+  { value: "escape-stress", label: "My PDFs are everywhere and it's stressing me out." },
+  { value: "safe-storage", label: "I just want one safe place for all my school materials" },
+  { value: "afit-pdfs", label: "Access to AFIT resources" },
+  { value: "research", label: "For research and long-term storage" },
   { value: "other", label: "Other" },
 ];
 
