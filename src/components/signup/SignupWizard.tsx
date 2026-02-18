@@ -326,4 +326,3 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       </div>
     </div>
   );
-}
