@@ -97,13 +97,13 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     };
   
       // Update profile with terms
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData?.user) {
-        await supabase.from("profiles").update({
-          terms_accepted: true,
-          terms_accepted_at: new Date().toISOString(),
-        }).eq("id", authData.user.id);
-      }
+      // const { data: authData } = await supabase.auth.getUser();
+      // if (authData?.user) {
+      //   await supabase.from("profiles").update({
+      //     terms_accepted: true,
+      //     terms_accepted_at: new Date().toISOString(),
+      //   }).eq("id", authData.user.id);
+      // }
 
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 4000);
