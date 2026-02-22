@@ -220,8 +220,24 @@ export default function AdminUserDetail() {
         p_user_id: userId,
       });
 
-      if (rpcError) {
+      const shouldFallbackToEdgeFunction =
+        !!rpcError &&
+        /could not find the function public\.admin_delete_user_account|schema cache|function\s+public\.admin_delete_user_account/i.test(
+          rpcError.message || ""
+        );
+
+      if (rpcError && !shouldFallbackToEdgeFunction) {
         throw rpcError;
+      }
+
+      if (shouldFallbackToEdgeFunction) {
+        const { error: fnError } = await supabase.functions.invoke("delete-user-account", {
+          body: { userId },
+        });
+
+        if (fnError) {
+          throw new Error(fnError.message || "Failed to delete user account via fallback function");
+        }
       }
 
       toast.success("User account deleted successfully");
