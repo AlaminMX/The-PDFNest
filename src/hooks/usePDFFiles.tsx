@@ -171,7 +171,7 @@ export function usePDFFiles(userId: string | undefined) {
   };
 
   // Cache a PDF for offline access
-  const cacheForOffline = useCallback(async (fileId: string, url: string, fileName: string) => {
+  const cacheForOffline = useCallback(async (fileId: string, url: string, fileName: string): Promise<boolean> => {
     try {
       // Check if already cached
       const existing = await getCachedPDF(fileId);
@@ -183,23 +183,31 @@ export function usePDFFiles(userId: string | undefined) {
             f.id === fileId ? { ...f, isOfflineAvailable: true } : f
           )
         );
-        return;
+        return true;
       }
 
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       await cachePDF(fileId, blob, fileName);
-      
+
+      const verifyCached = await getCachedPDF(fileId);
+      if (!verifyCached) {
+        throw new Error("Verification failed: file not found in offline cache");
+      }
+
       setCachedIds((prev) => new Set(prev).add(fileId));
       setFiles((prev) =>
         prev.map((f) =>
           f.id === fileId ? { ...f, isOfflineAvailable: true } : f
         )
       );
+
+      return true;
     } catch (err) {
       console.warn("Failed to cache PDF for offline:", err);
       toast.error("Failed to save PDF offline");
+      return false;
     }
   }, []);
 

@@ -1189,10 +1189,12 @@ export default function Index() {
                                     </button>
                                   )}
                                   <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (!file.isOfflineAvailable && file.url) {
-                                        cacheForOffline(file.id, file.url, file.name);
-                                        toast.success("Saved for offline access");
+                                        const saved = await cacheForOffline(file.id, file.url, file.name);
+                                        if (saved) {
+                                          toast.success("Saved for offline access");
+                                        }
                                       }
                                     }}
                                     className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
@@ -1307,10 +1309,12 @@ export default function Index() {
                                   )}
                                  </>
                                 )}
-                               <DropdownMenuItem onClick={() => {
+                               <DropdownMenuItem onClick={async () => {
                                  if (!file.isOfflineAvailable && file.url) {
-                                   cacheForOffline(file.id, file.url, file.name);
-                                   toast.success("Saved for offline access");
+                                   const saved = await cacheForOffline(file.id, file.url, file.name);
+                                   if (saved) {
+                                     toast.success("Saved for offline access");
+                                   }
                                  }
                                }}>
                                  {file.isOfflineAvailable ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <CloudDownload className="w-4 h-4 mr-2" />}
@@ -1475,10 +1479,12 @@ export default function Index() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!file.isOfflineAvailable && file.url) {
-                              cacheForOffline(file.id, file.url, file.name);
-                              toast.success("Saved for offline access");
+                              const saved = await cacheForOffline(file.id, file.url, file.name);
+                              if (saved) {
+                                toast.success("Saved for offline access");
+                              }
                             }
                           }}
                           className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
