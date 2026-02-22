@@ -31,6 +31,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const isOnboarding = useRef(false);
   const oauthProcessedRef = useRef(false);
+  const redirectingRef = useRef(false);
 
   const ensureGoogleProfile = async () => {
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -39,7 +40,14 @@ export default function Auth() {
     if (!user) return;
 
     const googleDefaultsRaw = localStorage.getItem("pendingGoogleSignupDefaults");
-    const googleDefaults = googleDefaultsRaw ? JSON.parse(googleDefaultsRaw) : null;
+    let googleDefaults: { nickname?: string; preferredTheme?: string } | null = null;
+    if (googleDefaultsRaw) {
+      try {
+        googleDefaults = JSON.parse(googleDefaultsRaw);
+      } catch {
+        localStorage.removeItem("pendingGoogleSignupDefaults");
+      }
+    }
 
     const derivedNickname = googleDefaults?.nickname?.trim()
       || user.user_metadata?.nickname
@@ -50,13 +58,8 @@ export default function Auth() {
 
     const preferredTheme = googleDefaults?.preferredTheme || "system";
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
     const payload = {
+      id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       display_name: derivedNickname,
@@ -66,13 +69,11 @@ export default function Auth() {
       terms_accepted_at: new Date().toISOString(),
     };
 
-    if (!profile) {
-      const { error } = await supabase.from("profiles").insert({ id: user.id, ...payload });
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
-      if (error) throw error;
-    }
+    const { error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(payload, { onConflict: "id" });
+
+    if (upsertError) throw upsertError;
 
     setTheme(preferredTheme);
     localStorage.setItem("pdfnest-theme", preferredTheme);
@@ -83,27 +84,32 @@ export default function Auth() {
     localStorage.setItem("hasVisitedBefore", "true");
 
     const handleRedirect = async () => {
-      if (isOnboarding.current) return;
+      if (isOnboarding.current || redirectingRef.current) return;
 
-      const { data: userData } = await supabase.auth.getUser();
-      const provider = userData.user?.app_metadata?.provider;
+      redirectingRef.current = true;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const provider = userData.user?.app_metadata?.provider;
 
-      if (provider === "google" && !oauthProcessedRef.current) {
-        oauthProcessedRef.current = true;
-        try {
-          await ensureGoogleProfile();
-          toast.success("Signed in with Google successfully.");
-        } catch (error: any) {
-          toast.error(error.message || "Failed to initialize your Google profile.");
+        if (provider === "google" && !oauthProcessedRef.current) {
+          oauthProcessedRef.current = true;
+          try {
+            await ensureGoogleProfile();
+            toast.success("Signed in with Google successfully.");
+          } catch (error: any) {
+            toast.error(error.message || "Failed to initialize your Google profile.");
+          }
         }
-      }
 
-      const redirectPath = sessionStorage.getItem("redirectAfterLogin");
-      if (redirectPath) {
-        sessionStorage.removeItem("redirectAfterLogin");
-        navigate(redirectPath);
-      } else {
-        navigate("/");
+        const redirectPath = sessionStorage.getItem("redirectAfterLogin");
+        if (redirectPath) {
+          sessionStorage.removeItem("redirectAfterLogin");
+          navigate(redirectPath);
+        } else {
+          navigate("/");
+        }
+      } finally {
+        redirectingRef.current = false;
       }
     };
 
@@ -141,6 +147,10 @@ export default function Auth() {
   const handleFinishOnboarding = () => {
     isOnboarding.current = false;
     navigate("/");
+  };
+
+  const handleAbortOnboarding = () => {
+    isOnboarding.current = false;
   };
 
   const handleGoogleLogin = async () => {
@@ -222,6 +232,7 @@ export default function Auth() {
         onSwitchToLogin={() => setIsLogin(true)}
         onStartOnboarding={handleStartOnboarding}
         onFinishOnboarding={handleFinishOnboarding}
+        onAbortOnboarding={handleAbortOnboarding}
       />
     );
   }

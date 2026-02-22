@@ -76,6 +76,7 @@ export default function AdminUserDetail() {
   const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const filteredPdfs = useMemo(() => {
     let filtered = pdfs.filter(pdf => 
@@ -210,21 +211,39 @@ export default function AdminUserDetail() {
 
 
   const handleDeleteUserAccount = async () => {
+    if (isDeletingAccount) return;
     if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
 
-    setLoading(true);
+    setIsDeletingAccount(true);
     try {
-      const { error } = await supabase.functions.invoke("delete-user-account", {
-        body: { userId },
+      const { error: rpcError } = await (supabase as any).rpc("admin_delete_user_account", {
+        p_user_id: userId,
       });
 
-      if (error) throw error;
+      const shouldFallbackToEdgeFunction =
+        !!rpcError &&
+        /function\s+public\.admin_delete_user_account|could not find the function/i.test(rpcError.message || "");
+
+      if (rpcError && !shouldFallbackToEdgeFunction) {
+        throw rpcError;
+      }
+
+      if (shouldFallbackToEdgeFunction) {
+        const { error: fnError } = await supabase.functions.invoke("delete-user-account", {
+          body: { userId },
+        });
+
+        if (fnError) {
+          throw new Error(fnError.message || "Failed to delete user with fallback function");
+        }
+      }
 
       toast.success("User account deleted successfully");
       navigate("/admin");
     } catch (error: any) {
       toast.error(error.message || "Failed to delete user account");
-      setLoading(false);
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
   const handleDelete = async (pdf: PDFFile) => {
@@ -244,7 +263,7 @@ export default function AdminUserDetail() {
 
       if (dbError) throw dbError;
 
-      setPdfs(pdfs.filter(p => p.id !== pdf.id));
+      setPdfs((prev) => prev.filter((p) => p.id !== pdf.id));
       toast.success("File deleted successfully");
     } catch (error) {
       console.error("Error deleting file:", error);
@@ -329,8 +348,8 @@ export default function AdminUserDetail() {
               </div>
             </div>
             <div className="pt-4">
-              <Button variant="destructive" onClick={handleDeleteUserAccount}>
-                Delete User Account
+              <Button variant="destructive" onClick={handleDeleteUserAccount} disabled={isDeletingAccount}>
+                {isDeletingAccount ? "Deleting Account..." : "Delete User Account"}
               </Button>
             </div>
           </CardContent>

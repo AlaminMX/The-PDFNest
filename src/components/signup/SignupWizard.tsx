@@ -55,9 +55,10 @@ interface SignupWizardProps {
   onSwitchToLogin: () => void;
   onStartOnboarding: () => void;
   onFinishOnboarding: () => void;
+  onAbortOnboarding: () => void;
 }
 
-export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboarding }: SignupWizardProps) {
+export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboarding, onAbortOnboarding }: SignupWizardProps) {
   const { setTheme } = useTheme();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<SignupData>(initialData);
@@ -220,6 +221,7 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       toast.success("Signup complete. Welcome to PDFNest!");
       onFinishOnboarding();
     } catch (error: any) {
+      onAbortOnboarding();
       toast.error(error.message || "An error occurred while finishing signup");
     } finally {
       setLoading(false);
