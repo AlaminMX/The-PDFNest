@@ -42,7 +42,7 @@ export default function Auth() {
   const oauthProcessedRef = useRef(false);
   const redirectingRef = useRef(false);
 
-  const isGoogleProviderDisabled = (message?: string) => /unsupported provider|provider is not enabled/i.test(message || "");
+  const isGoogleProviderDisabled = (message?: string) => /unsupported provider|provider is not enabled|missing oauth secret/i.test(message || "");
 
   const ensureGoogleProfile = async () => {
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -177,7 +177,7 @@ export default function Auth() {
       toast.success("Redirecting to Google...");
     } catch (error: any) {
       if (isGoogleProviderDisabled(error?.message)) {
-        toast.error("Google sign-in is not enabled. Enable Google provider in Supabase Auth settings.");
+        toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
       } else {
         toast.error(error.message || "Unable to continue with Google");
       }
