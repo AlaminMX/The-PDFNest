@@ -28,6 +28,9 @@ interface UserData {
   createdAt: string;
   departmentId: string | null;
   departmentName: string | null;
+  nickname: string | null;
+  preferredTheme: string | null;
+  usageReason: string | null;
 }
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
@@ -107,6 +110,9 @@ export default function AdminDashboard() {
           id, 
           email, 
           full_name, 
+          nickname,
+          preferred_theme,
+          usage_reason,
           created_at,
           department_id,
           departments (
@@ -157,6 +163,9 @@ export default function AdminDashboard() {
           createdAt: profile.created_at,
           departmentId: profile.department_id,
           departmentName: profile.departments?.name || null,
+          nickname: profile.nickname || null,
+          preferredTheme: profile.preferred_theme || null,
+          usageReason: profile.usage_reason || null,
         };
       });
 
@@ -512,6 +521,8 @@ export default function AdminDashboard() {
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="hidden xl:table-cell">Nickname</TableHead>
+                  <TableHead className="hidden xl:table-cell">Theme</TableHead>
                   <TableHead className="hidden xl:table-cell">Joined</TableHead>
                   <TableHead className="text-center">PDFs</TableHead>
                   <TableHead className="text-right">Total Size</TableHead>
@@ -521,7 +532,7 @@ export default function AdminDashboard() {
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -550,6 +561,8 @@ export default function AdminDashboard() {
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.nickname || "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.preferredTheme || "system"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
