@@ -11,6 +11,7 @@ import { SignupWizard } from "@/components/signup/SignupWizard";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
@@ -19,8 +20,9 @@ const authSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  
-  const isFirstTimeVisitor = !localStorage.getItem('hasVisitedBefore');
+  const { setTheme } = useTheme();
+
+  const isFirstTimeVisitor = !localStorage.getItem("hasVisitedBefore");
   const [isLogin, setIsLogin] = useState(!isFirstTimeVisitor);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -28,17 +30,77 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const isOnboarding = useRef(false);
+  const oauthProcessedRef = useRef(false);
+
+  const ensureGoogleProfile = async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    const user = userData.user;
+    if (!user) return;
+
+    const googleDefaultsRaw = localStorage.getItem("pendingGoogleSignupDefaults");
+    const googleDefaults = googleDefaultsRaw ? JSON.parse(googleDefaultsRaw) : null;
+
+    const derivedNickname = googleDefaults?.nickname?.trim()
+      || user.user_metadata?.nickname
+      || user.user_metadata?.full_name
+      || user.user_metadata?.name
+      || user.email?.split("@")[0]
+      || "User";
+
+    const preferredTheme = googleDefaults?.preferredTheme || "system";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const payload = {
+      email: user.email,
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      display_name: derivedNickname,
+      nickname: derivedNickname,
+      preferred_theme: preferredTheme,
+      terms_accepted: true,
+      terms_accepted_at: new Date().toISOString(),
+    };
+
+    if (!profile) {
+      const { error } = await supabase.from("profiles").insert({ id: user.id, ...payload });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      if (error) throw error;
+    }
+
+    setTheme(preferredTheme);
+    localStorage.setItem("pdfnest-theme", preferredTheme);
+    localStorage.removeItem("pendingGoogleSignupDefaults");
+  };
 
   useEffect(() => {
-    localStorage.setItem('hasVisitedBefore', 'true');
-    
-    const handleRedirect = () => {
-      // Don't redirect if user is in the signup onboarding flow
+    localStorage.setItem("hasVisitedBefore", "true");
+
+    const handleRedirect = async () => {
       if (isOnboarding.current) return;
-      
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+
+      const { data: userData } = await supabase.auth.getUser();
+      const provider = userData.user?.app_metadata?.provider;
+
+      if (provider === "google" && !oauthProcessedRef.current) {
+        oauthProcessedRef.current = true;
+        try {
+          await ensureGoogleProfile();
+          toast.success("Signed in with Google successfully.");
+        } catch (error: any) {
+          toast.error(error.message || "Failed to initialize your Google profile.");
+        }
+      }
+
+      const redirectPath = sessionStorage.getItem("redirectAfterLogin");
       if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
+        sessionStorage.removeItem("redirectAfterLogin");
         navigate(redirectPath);
       } else {
         navigate("/");
@@ -46,25 +108,31 @@ export default function Auth() {
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !isOnboarding.current) handleRedirect();
+      if (session && !isOnboarding.current) {
+        void handleRedirect();
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && !isOnboarding.current) handleRedirect();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && !isOnboarding.current) {
+        void handleRedirect();
+      }
     });
 
     const handleBeforeUnload = () => {
-      if (sessionStorage.getItem('tempSession') === 'true') {
+      if (sessionStorage.getItem("tempSession") === "true") {
         supabase.auth.signOut();
       }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [navigate]);
+  }, [navigate, setTheme]);
 
   const handleStartOnboarding = () => {
     isOnboarding.current = true;
@@ -73,6 +141,23 @@ export default function Auth() {
   const handleFinishOnboarding = () => {
     isOnboarding.current = false;
     navigate("/");
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) throw error;
+      toast.success("Redirecting to Google...");
+    } catch (error: any) {
+      toast.error(error.message || "Unable to continue with Google");
+      setLoading(false);
+    }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -93,11 +178,11 @@ export default function Auth() {
         password,
       });
       if (error) throw error;
-      
+
       if (!rememberMe) {
-        sessionStorage.setItem('tempSession', 'true');
+        sessionStorage.setItem("tempSession", "true");
       } else {
-        sessionStorage.removeItem('tempSession');
+        sessionStorage.removeItem("tempSession");
       }
       toast.success("Welcome back!");
     } catch (error: any) {
@@ -131,7 +216,6 @@ export default function Auth() {
     }
   };
 
-  // Signup wizard is full-page
   if (!isLogin && !isForgotPassword) {
     return (
       <SignupWizard
@@ -144,11 +228,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Layered gradient background */}
       <div className="absolute inset-0 bg-gradient-to-tl from-primary/10 via-transparent to-accent/10 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-secondary/5 to-transparent pointer-events-none" />
-      
-      {/* Animated background orbs */}
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ x: [0, 120, 0], y: [0, -60, 0], scale: [1, 1.3, 1] }}
@@ -166,22 +248,19 @@ export default function Auth() {
         <ThemeToggle />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8 space-y-4"
         >
-          <motion.div 
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden"
-          >
+          <motion.div whileHover={{ scale: 1.05, rotate: 5 }} className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden">
             <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="w-full h-full object-contain" />
           </motion.div>
           <div>
@@ -192,7 +271,7 @@ export default function Auth() {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -202,15 +281,7 @@ export default function Auth() {
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                />
+                <Input id="email" type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Sending..." : "Send Reset Link"}
@@ -218,7 +289,10 @@ export default function Auth() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => { setIsForgotPassword(false); setIsLogin(true); }}
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setIsLogin(true);
+                  }}
                   className="text-sm text-primary hover:underline"
                   disabled={loading}
                 >
@@ -228,6 +302,19 @@ export default function Auth() {
             </form>
           ) : (
             <form onSubmit={handleAuth} className="space-y-4">
+              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+                Continue with Google
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or use email</span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -257,21 +344,12 @@ export default function Auth() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="rememberMe"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                  />
+                  <Checkbox id="rememberMe" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
                   <label htmlFor="rememberMe" className="text-sm text-muted-foreground leading-none cursor-pointer">
                     Remember me
                   </label>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={loading}
-                >
+                <button type="button" onClick={() => setIsForgotPassword(true)} className="text-sm text-primary hover:underline" disabled={loading}>
                   Forgot password?
                 </button>
               </div>
@@ -292,12 +370,7 @@ export default function Auth() {
           )}
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.4 }}
-          className="mt-6 text-center text-sm text-muted-foreground"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.4 }} className="mt-6 text-center text-sm text-muted-foreground">
           <Link to="/terms" className="hover:text-foreground hover:underline transition-colors">
             Terms & Conditions
           </Link>
