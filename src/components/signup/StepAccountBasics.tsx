@@ -9,6 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { SignupData } from "./SignupWizard";
 import { toast } from "sonner";
 
+const GoogleIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4">
+    <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.2-1.4 3.5-5.4 3.5-3.2 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.8 0 3 .8 3.7 1.5l2.5-2.4C16.6 2.9 14.5 2 12 2 6.9 2 2.8 6.1 2.8 11.2S6.9 20.4 12 20.4c6.9 0 9.2-4.8 9.2-7.3 0-.5-.1-.9-.1-1.3H12z"/>
+    <path fill="#34A853" d="M2.8 11.2c0 1.7.6 3.2 1.7 4.5l2.8-2.2c-.4-.7-.6-1.4-.6-2.3s.2-1.6.6-2.3L4.5 6.7a8.8 8.8 0 0 0-1.7 4.5z"/>
+    <path fill="#FBBC05" d="M12 20.4c2.5 0 4.6-.8 6.2-2.3l-3-2.4c-.8.6-1.8.9-3.2.9-2.5 0-4.7-1.7-5.5-4L3.6 15c1.6 3.2 4.9 5.4 8.4 5.4z"/>
+    <path fill="#4285F4" d="M21.2 12.8c0-.6-.1-1.1-.2-1.6H12v3.9h5.4c-.3 1.3-1 2.3-2.1 3l3 2.4c1.8-1.6 2.9-4.1 2.9-7.7z"/>
+  </svg>
+);
+
 const schema = z.object({
   fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Invalid email address").max(255),
@@ -58,6 +67,7 @@ export function StepAccountBasics({ data, updateData, onNext, onGoogleSignup, on
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Button type="button" variant="outline" className="w-full h-11" onClick={onGoogleSignup} disabled={loading}>
+          <GoogleIcon />
           Continue with Google
         </Button>
 

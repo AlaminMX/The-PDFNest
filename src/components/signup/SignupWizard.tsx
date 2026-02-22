@@ -127,6 +127,8 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     localStorage.setItem("pdfnest-theme", preferredTheme);
   };
 
+  const isGoogleProviderDisabled = (message?: string) => /unsupported provider|provider is not enabled/i.test(message || "");
+
   const upsertProfile = async (userId: string) => {
     const profilePayload = getResolvedProfileData();
     const { error } = await supabase
@@ -156,7 +158,11 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       if (error) throw error;
       toast.success("Redirecting to Google...");
     } catch (error: any) {
-      toast.error(error.message || "Unable to continue with Google");
+      if (isGoogleProviderDisabled(error?.message)) {
+        toast.error("Google sign-in is not enabled. Enable Google provider in Supabase Auth settings.");
+      } else {
+        toast.error(error.message || "Unable to continue with Google");
+      }
       setLoading(false);
     }
   };
