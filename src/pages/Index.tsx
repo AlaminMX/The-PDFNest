@@ -6,7 +6,7 @@ import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { uploadManager } from "@/lib/uploadManager";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
 
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,41 @@ import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
+
+
+function DesktopHeaderNav() {
+  const baseLinkClass =
+    "px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+
+  return (
+    <nav aria-label="Desktop navigation" className="hidden lg:flex items-center gap-1 ml-6">
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          `${baseLinkClass} ${
+            isActive
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`
+        }
+      >
+        Profile
+      </NavLink>
+      <NavLink
+        to="/ai-features"
+        className={({ isActive }) =>
+          `${baseLinkClass} ${
+            isActive
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`
+        }
+      >
+        AI Features
+      </NavLink>
+    </nav>
+  );
+}
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -844,6 +879,7 @@ export default function Index() {
             <div className="flex items-center gap-2 p-4">
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">PDFNest</h1>
+              <DesktopHeaderNav />
               <div className="ml-auto flex items-center gap-2">
                 <div id="view-toggle" className="flex items-center border rounded-md">
                   <Button
