@@ -30,11 +30,12 @@ interface Props {
   data: SignupData;
   updateData: (d: Partial<SignupData>) => void;
   onNext: () => void;
+  onGoogleSignup: () => void;
   onSwitchToLogin: () => void;
   loading: boolean;
 }
 
-export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, loading }: Props) {
+export function StepAccountBasics({ data, updateData, onNext, onGoogleSignup, onSwitchToLogin, loading }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -56,6 +57,19 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <Button type="button" variant="outline" className="w-full h-11" onClick={onGoogleSignup} disabled={loading}>
+          Continue with Google
+        </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or use email</span>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
           <Input

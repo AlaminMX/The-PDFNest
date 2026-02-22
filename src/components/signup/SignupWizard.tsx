@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Confetti } from "@/components/Confetti";
@@ -54,121 +55,178 @@ interface SignupWizardProps {
   onSwitchToLogin: () => void;
   onStartOnboarding: () => void;
   onFinishOnboarding: () => void;
+  onAbortOnboarding: () => void;
 }
 
-export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboarding }: SignupWizardProps) {
+export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboarding, onAbortOnboarding }: SignupWizardProps) {
+  const { setTheme } = useTheme();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<SignupData>(initialData);
   const [loading, setLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
   const [direction, setDirection] = useState(1);
+  const submittingRef = useRef(false);
 
   const totalSteps = 5;
 
   const updateData = (partial: Partial<SignupData>) => {
-    setData(prev => ({ ...prev, ...partial }));
+    setData((prev) => ({ ...prev, ...partial }));
   };
 
   const goBack = () => {
+    if (loading) return;
     setDirection(-1);
-    setStep(prev => Math.max(prev - 1, 1));
+    setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleAccountCreate = async () => {
+  const getResolvedProfileData = () => {
+    const discoverySource = data.discoverySource === "other"
+      ? data.discoverySourceOther
+      : data.discoverySource;
+
+    const usageReason = data.usageReason === "other"
+      ? data.usageReasonOther
+      : data.usageReason;
+
+    const school = data.school === "others"
+      ? data.schoolOther
+      : data.school;
+
+    const nickname = data.nickname?.trim() || data.fullName.trim() || data.email.split("@")[0];
+
+    const profilePayload: Record<string, unknown> = {
+      email: data.email.trim(),
+      full_name: data.fullName.trim() || null,
+      display_name: nickname,
+      nickname,
+      discovery_source: discoverySource || null,
+      is_student: data.isStudent ?? false,
+      school: school || null,
+      preferred_theme: data.preferredTheme || "system",
+      financial_literacy_interest: data.financialLiteracyInterest,
+      usage_reason: usageReason || null,
+      terms_accepted: data.termsAccepted,
+      terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null,
+    };
+
+    if (data.age && !Number.isNaN(Number.parseInt(data.age, 10))) {
+      profilePayload.age = Number.parseInt(data.age, 10);
+    }
+
+    if (data.departmentId) {
+      profilePayload.department_id = data.departmentId;
+    }
+
+    return profilePayload;
+  };
+
+  const applyThemePreference = () => {
+    const preferredTheme = data.preferredTheme || "system";
+    setTheme(preferredTheme);
+    localStorage.setItem("pdfnest-theme", preferredTheme);
+  };
+
+  const upsertProfile = async (userId: string) => {
+    const profilePayload = getResolvedProfileData();
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ id: userId, ...profilePayload }, { onConflict: "id" });
+
+    if (error) throw error;
+  };
+
+  const handleGoogleSignup = async () => {
+    if (loading) return;
+
     setLoading(true);
     try {
-      // Tell Auth.tsx to stop redirecting
-      onStartOnboarding();
+      localStorage.setItem("pendingGoogleSignupDefaults", JSON.stringify({
+        nickname: data.nickname?.trim() || data.fullName.trim() || "",
+        preferredTheme: data.preferredTheme || "system",
+      }));
 
-      const redirectUrl = `${window.location.origin}/`;
-      const { error } = await supabase.auth.signUp({
-        email: data.email.trim(),
-        password: data.password,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
         options: {
-          emailRedirectTo: redirectUrl,
-          data: { full_name: data.fullName.trim() },
+          redirectTo: `${window.location.origin}/auth`,
         },
       });
 
       if (error) throw error;
-
-      // Update profile with terms
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData?.user) {
-        await supabase.from("profiles").update({
-          terms_accepted: true,
-          terms_accepted_at: new Date().toISOString(),
-        }).eq("id", authData.user.id);
-      }
-
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 4000);
-      toast.success("Account created! Let's personalize your experience.");
-      
-      // Move to step 2
-      setDirection(1);
-      setStep(2);
+      toast.success("Redirecting to Google...");
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
-    } finally {
+      toast.error(error.message || "Unable to continue with Google");
       setLoading(false);
     }
   };
 
-  const saveProfileData = async () => {
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user) return;
-
-      const discoverySource = data.discoverySource === "other" 
-        ? data.discoverySourceOther 
-        : data.discoverySource;
-
-      const usageReason = data.usageReason === "other"
-        ? data.usageReasonOther
-        : data.usageReason;
-
-      const school = data.school === "others"
-        ? data.schoolOther
-        : data.school;
-
-      const profileUpdate: Record<string, any> = {
-        discovery_source: discoverySource || null,
-        is_student: data.isStudent ?? false,
-        school: school || null,
-        preferred_theme: data.preferredTheme || "system",
-        financial_literacy_interest: data.financialLiteracyInterest,
-        usage_reason: usageReason || null,
-        nickname: data.nickname?.trim() || null,
-      };
-
-      if (data.age && !isNaN(parseInt(data.age))) {
-        profileUpdate.age = parseInt(data.age);
-      }
-
-      if (data.departmentId) {
-        profileUpdate.department_id = data.departmentId;
-      }
-
-      await supabase.from("profiles").update(profileUpdate).eq("id", authData.user.id);
-    } catch (err) {
-      console.error("Failed to save profile data:", err);
-    }
-  };
-
-  const handleStepComplete = async (nextStep: number) => {
-    if (step >= 2) {
-      await saveProfileData();
-    }
+  const handleStepComplete = (nextStep: number) => {
+    if (loading) return;
     setDirection(1);
     setStep(nextStep);
   };
 
   const handleFinish = async () => {
-    await saveProfileData();
-    setSignupComplete(true);
-    onFinishOnboarding();
+    if (submittingRef.current || loading) return;
+
+    submittingRef.current = true;
+    setLoading(true);
+    try {
+      onStartOnboarding();
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: data.email.trim(),
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
+          data: {
+            full_name: data.fullName.trim(),
+            nickname: data.nickname?.trim() || null,
+          },
+        },
+      });
+
+      let user = signUpData.user;
+      const alreadyRegistered = signUpError?.message?.toLowerCase().includes("already") || false;
+
+      if (signUpError && !alreadyRegistered) {
+        throw signUpError;
+      }
+
+      if (!user && alreadyRegistered) {
+        const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: data.email.trim(),
+          password: data.password,
+        });
+
+        if (signInError) {
+          throw new Error("This email already exists. Sign in to continue your existing account.");
+        }
+
+        user = signedInData.user;
+        toast.info("Existing account detected. We completed the remaining signup details.");
+      }
+
+      if (!user) {
+        throw new Error("Could not create account session. Please try again.");
+      }
+
+      await upsertProfile(user.id);
+      applyThemePreference();
+
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4000);
+      setSignupComplete(true);
+      toast.success("Signup complete. Welcome to PDFNest!");
+      onFinishOnboarding();
+    } catch (error: any) {
+      onAbortOnboarding();
+      toast.error(error.message || "An error occurred while finishing signup");
+    } finally {
+      setLoading(false);
+      submittingRef.current = false;
+    }
   };
 
   const variants = {
@@ -180,14 +238,12 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
       {showConfetti && <Confetti />}
-      
-      {/* Background orbs */}
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -left-32 w-[28rem] h-[28rem] bg-gradient-to-tr from-accent/30 to-primary/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <img src="/pdfnest-logo.png" alt="PDFNest" className="w-8 h-8 rounded-lg" />
@@ -196,7 +252,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
         <ThemeToggle />
       </div>
 
-      {/* Progress bar */}
       {step <= totalSteps && !signupComplete && (
         <div className="relative z-10 px-6 md:px-0 md:max-w-lg md:mx-auto w-full">
           <div className="flex gap-1.5">
@@ -215,7 +270,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
         </div>
       )}
 
-      {/* Main content area - centered */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg">
           <AnimatePresence mode="wait" custom={direction}>
@@ -232,7 +286,8 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
                 <StepAccountBasics
                   data={data}
                   updateData={updateData}
-                  onNext={handleAccountCreate}
+                  onNext={() => handleStepComplete(2)}
+                  onGoogleSignup={handleGoogleSignup}
                   onSwitchToLogin={onSwitchToLogin}
                   loading={loading}
                 />
@@ -266,6 +321,7 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
                   onFinish={handleFinish}
                   onBack={goBack}
                   signupComplete={signupComplete}
+                  loading={loading}
                 />
               )}
             </motion.div>
