@@ -68,6 +68,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -220,6 +238,7 @@ export type Database = {
           color: string | null
           created_at: string | null
           display_order: number | null
+          faculty_id: string | null
           icon: string | null
           id: string
           is_visible: boolean
@@ -231,6 +250,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -242,6 +262,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -256,7 +277,47 @@ export type Database = {
             referencedRelation: "department_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "departments_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      faculties: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_visible: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       lecture_notes: {
         Row: {
