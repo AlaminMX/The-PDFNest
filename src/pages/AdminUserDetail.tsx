@@ -7,6 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Trash2, FileText, Calendar, HardDrive, Mail, User, Search, Loader2, Activity, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -209,10 +219,10 @@ export default function AdminUserDetail() {
     }
   };
 
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
   const handleDeleteUserAccount = async () => {
-    if (isDeletingAccount) return;
-    if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
+    if (isDeletingAccount || !userId) return;
 
     setIsDeletingAccount(true);
     try {
@@ -246,6 +256,7 @@ export default function AdminUserDetail() {
       toast.error(error.message || "Failed to delete user account");
     } finally {
       setIsDeletingAccount(false);
+      setShowDeleteAccountDialog(false);
     }
   };
   const handleDelete = async (pdf: PDFFile) => {
@@ -350,10 +361,31 @@ export default function AdminUserDetail() {
               </div>
             </div>
             <div className="pt-4">
-              <Button variant="destructive" onClick={handleDeleteUserAccount} disabled={isDeletingAccount}>
+              <Button variant="destructive" onClick={() => setShowDeleteAccountDialog(true)} disabled={isDeletingAccount}>
                 {isDeletingAccount ? "Deleting Account..." : "Delete User Account"}
               </Button>
             </div>
+
+            <AlertDialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete User Account</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this user account and all associated data including uploaded files. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteUserAccount}
+                    disabled={isDeletingAccount}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeletingAccount ? "Deleting..." : "Delete Account"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
 

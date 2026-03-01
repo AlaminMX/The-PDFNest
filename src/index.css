@@ -5,25 +5,25 @@
 /* Typography System - Normalized font sizes and line heights */
 @layer base {
   :root {
-    /* Color System */
+    /* Color System - Light Theme (improved contrast) */
     --background: 210 20% 98%;
-    --foreground: 217 19% 27%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 217 19% 27%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 217 19% 27%;
+    --popover-foreground: 222 47% 11%;
     --primary: 0 84% 51%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 217 19% 27%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 217 15% 50%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 40%;
     --accent: 0 93% 94%;
-    --accent-foreground: 0 77% 42%;
+    --accent-foreground: 0 77% 36%;
     --destructive: 0 77% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 94%;
-    --input: 214 20% 94%;
+    --border: 214 25% 84%;
+    --input: 214 25% 84%;
     --ring: 0 84% 51%;
     --radius: 0.625rem;
     --gradient-start: 210 20% 98%;
