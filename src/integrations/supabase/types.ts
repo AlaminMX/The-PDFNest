@@ -865,6 +865,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user_account: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       get_rep_public_info: {
         Args: { rep_user_id: string }
         Returns: {

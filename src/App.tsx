@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -17,6 +18,7 @@ import AdminBanners from "./pages/AdminBanners";
 import AdminCategories from "./pages/AdminCategories";
 import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminSessionLogs from "./pages/AdminSessionLogs";
+import AdminActivityLogs from "./pages/AdminActivityLogs";
 import AFITPDFs from "./pages/AFITPDFs";
 import FacultySelection from "./pages/FacultySelection";
 import AdminFaculties from "./pages/AdminFaculties";
@@ -39,6 +41,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <RamadanDecoration />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -52,7 +55,8 @@ const App = () => (
             <Route path="/admin/departments" element={<AdminDepartments />} />
             <Route path="/admin/banners" element={<AdminBanners />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
-            <Route path="/admin/logs" element={<AdminSessionLogs />} />
+            <Route path="/admin/logs" element={<AdminActivityLogs />} />
+            <Route path="/admin/sessions" element={<AdminSessionLogs />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/admin/faculties" element={<AdminFaculties />} />
             <Route path="/afit-pdfs" element={<FacultySelection />} />
