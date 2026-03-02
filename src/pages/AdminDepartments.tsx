@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useDepartmentCategories } from "@/hooks/useDepartmentCategories";
+import { useFaculties } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ interface EditingDepartment {
   icon: string | null;
   is_visible: boolean;
   category_id: string | null;
+  faculty_id: string | null;
 }
 
 interface NewDepartment {
@@ -35,6 +37,7 @@ interface NewDepartment {
   color: string;
   icon: string;
   category_id: string;
+  faculty_id: string;
 }
 
 interface DepartmentItemProps {
@@ -169,11 +172,12 @@ export default function AdminDepartments() {
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { departments, loading: deptLoading, refresh: refreshDepartments } = useDepartments();
   const { categories } = useDepartmentCategories();
+  const { faculties, refresh: refreshFaculties } = useFaculties();
   
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "" });
+  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
   const [creating, setCreating] = useState(false);
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -199,6 +203,7 @@ export default function AdminDepartments() {
       icon: dept.icon || "",
       is_visible: dept.is_visible !== false,
       category_id: dept.category_id || null,
+      faculty_id: dept.faculty_id || null,
     });
   };
 
@@ -236,6 +241,7 @@ export default function AdminDepartments() {
           icon: editingDept.icon?.trim() || null,
           is_visible: editingDept.is_visible,
           category_id: editingDept.category_id || null,
+          faculty_id: editingDept.faculty_id || null,
         })
         .eq("id", editingDept.id);
 
@@ -284,13 +290,14 @@ export default function AdminDepartments() {
           display_order: maxOrder + 1,
           is_visible: true,
           category_id: newDept.category_id?.trim() || null,
+          faculty_id: newDept.faculty_id?.trim() || null,
         });
 
       if (error) throw error;
 
       toast.success("Department created successfully");
       setShowCreateDialog(false);
-      setNewDept({ name: "", color: "", icon: "", category_id: "" });
+      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
       refreshDepartments();
     } catch (error: any) {
       console.error("Error creating department:", error);
@@ -551,6 +558,32 @@ export default function AdminDepartments() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Faculty Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="newDeptFaculty">
+                  Faculty
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (which faculty this department belongs to)
+                  </span>
+                </Label>
+                <Select
+                  value={newDept.faculty_id}
+                  onValueChange={(value) => setNewDept({ ...newDept, faculty_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger id="newDeptFaculty">
+                    <SelectValue placeholder="No faculty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No faculty</SelectItem>
+                    {faculties.map((fac) => (
+                      <SelectItem key={fac.id} value={fac.id}>
+                        {fac.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -688,6 +721,32 @@ export default function AdminDepartments() {
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Faculty Selector */}
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="editDeptFaculty">
+                    Faculty
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (which faculty this department belongs to)
+                    </span>
+                  </Label>
+                  <Select
+                    value={editingDept.faculty_id || "none"}
+                    onValueChange={(value) => setEditingDept({ ...editingDept, faculty_id: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger id="editDeptFaculty">
+                      <SelectValue placeholder="No faculty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No faculty</SelectItem>
+                      {faculties.map((fac) => (
+                        <SelectItem key={fac.id} value={fac.id}>
+                          {fac.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
