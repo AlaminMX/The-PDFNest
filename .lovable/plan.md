@@ -1,87 +1,66 @@
 
 
-## Assumptions
+## Issues Identified
 
-- **Frontend**: React 18 + Vite + Tailwind CSS + TypeScript + framer-motion
-- **Backend**: Lovable Cloud (Supabase) with existing profiles, departments, courses, pdf_files, admin_banners tables
-- **Auth**: Supabase auth with existing Google OAuth via `supabase.auth.signInWithOAuth`
-- **PWA**: vite-plugin-pwa configured; OAuth route `/~oauth` must be excluded from service worker
-- **Existing department grouping**: `department_categories` table exists but user wants a dedicated `faculties` table
-- **Theme**: next-themes with `storageKey="pdfnest-theme"`, dark default
+1. **Session Logs 404**: Admin sidebar links to `/admin/sessions` but `App.tsx` route is `/admin/logs` pointing to `AdminSessionLogs`. There's also a separate `AdminActivityLogs` page but no route for it — the `/admin/logs` route loads `AdminSessionLogs`.
+2. **Sidebar light theme**: Sidebar is hardcoded with `bg-[#1c1c1c] text-white` and `bg-white/20` borders, ignoring light/dark theme entirely.
+3. **Faculty grid display**: Currently uses a single-column list layout, not a grid. No faculty color applied to buttons.
+4. **Admin Departments missing faculty assignment**: No `faculty_id` field in create/edit department forms.
+5. **Ramadan theme too minimal**: Only a small crescent in top-right corner with red primary color. User wants site-wide gold aesthetic.
+6. **Activity logging incomplete**: Two separate logging systems (`activityLogger.ts` and `sessionLogger.ts`) exist but many actions aren't logged. Need a unified, comprehensive log view.
 
----
+## Plan
 
-## Plan (Single Execution Cycle)
+### 1. Fix Session Logs 404
+- Add route `/admin/sessions` → `AdminSessionLogs` in `App.tsx`
+- Keep `/admin/logs` → `AdminActivityLogs` (currently points to SessionLogs, fix this)
+- Merge Activity Logs and Session Logs into one unified "Site Activity" page at `/admin/logs` that shows both `user_activity_logs` and `user_sessions` data with tabs
 
-### 1. Database Migrations
+### 2. Fix Sidebar Light Theme
+- Remove hardcoded `bg-[#1c1c1c] text-white` from `AppSidebar` in `Index.tsx`
+- Replace with theme-aware classes: `bg-sidebar-background text-sidebar-foreground`
+- Replace all `bg-white/20` dividers with `bg-sidebar-border`
+- Replace `text-white` references with `text-sidebar-foreground`
+- Update light theme CSS variables for sidebar in `index.css` to ensure proper contrast
 
-**a) Create `app_settings` table** for Ramadan toggle and future admin-controlled feature flags:
-- Columns: `key` (text, PK), `value` (text), `updated_at` (timestamptz)
-- Seed with `ramadan_theme_enabled = 'false'`
-- RLS: anyone can SELECT, only admins can UPDATE
+### 3. Faculty Grid Display with Colors
+- Change `FacultySelection.tsx` layout from single-column to 2-column responsive grid (`grid-cols-2`)
+- Apply faculty `color` to each card's icon container and left border/accent, similar to `DepartmentTile`
+- Use `getDepartmentStyles` utility (or similar) to derive colors from the faculty's color field
 
-**b) Create `faculties` table**:
-- Columns: `id` (uuid PK), `name` (text), `slug` (text unique), `icon` (text), `color` (text), `display_order` (integer), `is_visible` (boolean default true), `created_at` (timestamptz)
-- RLS: anyone can SELECT, admins can ALL
+### 4. Admin Department → Faculty Assignment
+- In `AdminDepartments.tsx`, add a `faculty_id` Select dropdown in both the create and edit dialogs
+- Fetch faculties list using `useFaculties` hook
+- Save `faculty_id` on insert/update to the `departments` table
 
-**c) Add `faculty_id` (uuid, nullable) to `departments` table** referencing `faculties.id`
+### 5. Ramadan Theme — Site-Wide Gold Aesthetic
+- When `ramadan_theme_enabled` is true, inject a `.ramadan` class on the root element
+- Add CSS variables for Ramadan theme in `index.css` that override primary color to gold (`42 87% 55%`), accent to warm gold tones
+- Update `RamadanDecoration.tsx` to use gold color instead of primary red, position it so it doesn't block content (top-right with offset)
+- Add subtle gold border/accent to cards site-wide when Ramadan is active
+- Apply the ramadan class in `App.tsx` or a layout wrapper based on `useAppSettings`
 
-### 2. Ramadan Theme (Section 1)
+### 6. Comprehensive Activity Logging
+- Consolidate admin log views: create a unified `/admin/logs` page with two tabs — "Activity Feed" (from `user_activity_logs`) and "Sessions" (from `user_sessions`)
+- Fix route mismatch in `App.tsx`: `/admin/logs` → unified logs page, `/admin/sessions` → same page (redirect or alias)
+- Ensure `logActivity` calls exist for all major user actions (verify coverage in upload, delete, rename, download, AI features, profile updates, login/logout, page views)
 
-- Create `src/hooks/useAppSettings.tsx` hook that queries `app_settings` for `ramadan_theme_enabled` (cached, fetched on load)
-- Create `src/components/RamadanDecoration.tsx` — a subtle hanging crescent moon SVG at top-right of homepage with gentle CSS sway animation
-- Modify `ThemeToggle.tsx` — when Ramadan mode is active, replace Sun/Moon icons with a crescent moon icon
-- Add Ramadan toggle to `AdminDashboard.tsx` sidebar or settings area as a Switch component
-- Condition rendering of decorations based on the setting value
+### Files to Modify
+- `src/App.tsx` — fix routes
+- `src/pages/Index.tsx` — fix sidebar theme classes
+- `src/index.css` — add Ramadan gold theme variables, fix sidebar light theme variables
+- `src/pages/FacultySelection.tsx` — grid layout + color display
+- `src/pages/AdminDepartments.tsx` — add faculty_id select
+- `src/components/RamadanDecoration.tsx` — gold color, better positioning
+- `src/pages/AdminSessionLogs.tsx` — merge into unified log page with tabs
+- `src/pages/AdminActivityLogs.tsx` — merge into unified log page
+- `src/pages/AdminDashboard.tsx` — fix sidebar item paths
 
-### 3. Google Sign-Up (Section 2)
+### Database
+- No schema changes needed (all tables already exist)
 
-- Run the `configure-social-auth` tool to generate Lovable Cloud managed OAuth module
-- Update `Auth.tsx` and `SignupWizard.tsx` to use `lovable.auth.signInWithOAuth("google", ...)` instead of `supabase.auth.signInWithOAuth`
-- Add `/~oauth` to `navigateFallbackDenylist` in `vite.config.ts`
-- Keep existing Google profile creation logic (`ensureGoogleProfile`)
-- Preserve error handling for cancelled login, duplicate emails, network errors
-
-### 4. Signup Flow Cleanup (Section 3)
-
-- Remove "Financial literacy" and "Novels" question blocks from `StepPreferences.tsx`
-- Remove `financialLiteracyInterest` from `SignupData` interface and `initialData`
-- Remove from profile save payload in `SignupWizard.tsx`
-- Ensure Age and Usage Reason display correctly in `AdminUserDetail.tsx` (already present) and `AdminDashboard.tsx` user table (add Age column)
-
-### 5. Admin Enhancements (Section 4)
-
-- **User Deletion**: Already implemented in `AdminUserDetail.tsx`. Add a proper `AlertDialog` confirmation modal instead of `window.confirm`. Ensure the `delete-user-account` edge function deletes storage files (verify existing logic handles this)
-- **Ramadan Toggle**: Add to admin sidebar or dashboard as a card with Switch component that updates `app_settings`
-
-### 6. Light Theme Fix (Section 5)
-
-- Adjust CSS variables in `src/index.css` for light mode:
-  - Increase foreground contrast (darken `--foreground`)
-  - Strengthen `--border` color for visibility
-  - Improve `--muted-foreground` contrast
-  - Ensure button text meets WCAG AA contrast ratio
-- Test card borders, input borders, and text readability
-
-### 7. Faculties Layer (Section 6)
-
-- Create `src/pages/FacultySelection.tsx` — lists faculties with department counts
-- Create `src/hooks/useFaculties.tsx` — fetches faculties with department counts
-- Update routing in `App.tsx`:
-  - `/afit-pdfs` → `FacultySelection` (was departments list)
-  - `/afit-pdfs/:facultySlug` → new page showing departments filtered by faculty
-  - `/afit-pdfs/:facultySlug/:deptSlug` → `SemesterSelection`
-  - `/afit-pdfs/:facultySlug/:deptSlug/semester/:semester` → `DepartmentCourses`
-  - `/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode` → `CourseLectureNotes`
-- Create `src/pages/AdminFaculties.tsx` for admin CRUD (add/edit/delete faculties)
-- Add "Faculties" to admin sidebar navigation
-- Update `AdminDepartments.tsx` to include faculty assignment when editing departments
-
-### Files Modified/Created
-
-**New files**: `RamadanDecoration.tsx`, `useAppSettings.tsx`, `FacultySelection.tsx`, `useFaculties.tsx`, `AdminFaculties.tsx`
-
-**Modified files**: `ThemeToggle.tsx`, `StepPreferences.tsx`, `SignupWizard.tsx`, `Auth.tsx`, `AdminDashboard.tsx`, `AdminUserDetail.tsx`, `AdminDepartments.tsx`, `AFITPDFs.tsx`, `App.tsx`, `vite.config.ts`, `index.css`, `Index.tsx`
-
-**Database**: 2 migrations (app_settings + faculties table, departments.faculty_id column)
+### Risk Analysis
+- Sidebar color changes affect the main homepage layout — must test both themes
+- Ramadan gold override must not break non-Ramadan mode
+- Route changes must not break existing admin navigation
 
