@@ -6,7 +6,7 @@
 @layer base {
   :root {
     /* Color System */
-    --background: 210 20% 98%;
+    --background: 0 0% 13%;
     --foreground: 217 19% 27%;
     --card: 0 0% 100%;
     --card-foreground: 217 19% 27%;
@@ -26,8 +26,8 @@
     --input: 214 20% 94%;
     --ring: 0 84% 51%;
     --radius: 0.625rem;
-    --gradient-start: 210 20% 98%;
-    --gradient-end: 0 86% 97%;
+    --gradient-start: 0 0% 13%;
+    --gradient-end: 0 0% 13%;
 
     /* Sidebar Colors */
     --sidebar-background: 0 0% 98%;
@@ -82,7 +82,7 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 0 0% 13%;
     --foreground: 210 40% 98%;
     --card: 222.2 50% 8%;
     --card-foreground: 210 40% 98%;
@@ -101,8 +101,8 @@
     --border: 217.2 20% 22%;
     --input: 217.2 20% 22%;
     --ring: 0 84% 60%;
-    --gradient-start: 222.2 84% 4.9%;
-    --gradient-end: 220 30% 8%;
+    --gradient-start: 0 0% 13%;
+    --gradient-end: 0 0% 13%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 0 84% 60%;
@@ -118,7 +118,7 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen antialiased;
+    @apply bg-[#212121] text-foreground min-h-screen antialiased;
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
   }
