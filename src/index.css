@@ -110,10 +110,10 @@
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 0 84% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 0 84% 60%;
+    --sidebar-accent: 0 24% 24%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 18% 31%;
+    --sidebar-ring: 0 74% 56%;
   }
 
   /* Ramadan Gold Theme Override */
