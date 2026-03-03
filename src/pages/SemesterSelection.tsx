@@ -15,7 +15,7 @@ const SEMESTERS = [
 
 function SemesterSelectionContent() {
   const navigate = useNavigate();
-  const { deptSlug } = useParams<{ deptSlug: string }>();
+  const { facultySlug, deptSlug } = useParams<{ facultySlug: string; deptSlug: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
   const { counts, loading: countsLoading } = useSemesterCounts(currentDept?.id);
 
@@ -47,7 +47,7 @@ function SemesterSelectionContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/afit-pdfs")}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -94,7 +94,7 @@ function SemesterSelectionContent() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <button
-                  onClick={() => navigate(`/afit-pdfs/${deptSlug}/semester/${sem.key}`)}
+                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${sem.key}`)}
                   className="w-full text-left p-6 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-4">
