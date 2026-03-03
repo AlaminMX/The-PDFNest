@@ -475,6 +475,7 @@ function AppSidebar({
     </Sidebar>
   );
 }
+
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
