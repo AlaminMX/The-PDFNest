@@ -8,22 +8,25 @@
     /* Color System */
     --background: 0 0% 13%;
     --foreground: 217 19% 27%;
+    /* Color System - Light Theme (improved contrast) */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 217 19% 27%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 217 19% 27%;
+    --popover-foreground: 222 47% 11%;
     --primary: 0 84% 51%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 217 19% 27%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 217 15% 50%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 40%;
     --accent: 0 93% 94%;
-    --accent-foreground: 0 77% 42%;
+    --accent-foreground: 0 77% 36%;
     --destructive: 0 77% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 94%;
-    --input: 214 20% 94%;
+    --border: 214 25% 84%;
+    --input: 214 25% 84%;
     --ring: 0 84% 51%;
     --radius: 0.625rem;
     --gradient-start: 0 0% 13%;
@@ -111,6 +114,25 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 0 84% 60%;
+  }
+
+  /* Ramadan Gold Theme Override */
+  .ramadan {
+    --primary: 42 87% 45%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 42 87% 45%;
+    --accent: 42 50% 90%;
+    --accent-foreground: 42 60% 25%;
+  }
+
+  .ramadan.dark, .dark .ramadan, .ramadan .dark {
+    --primary: 42 87% 55%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 42 87% 55%;
+    --accent: 42 30% 20%;
+    --accent-foreground: 42 80% 80%;
+    --sidebar-primary: 42 87% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
   }
 
   * {

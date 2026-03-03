@@ -24,7 +24,7 @@ const SEMESTER_LABELS: Record<string, string> = {
 
 function DepartmentCoursesContent() {
   const navigate = useNavigate();
-  const { deptSlug, semester } = useParams<{ deptSlug: string; semester: string }>();
+  const { facultySlug, deptSlug, semester } = useParams<{ facultySlug: string; deptSlug: string; semester: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
   const { courses, loading: coursesLoading, refresh: refreshCourses } = useCourses(currentDept?.id, 100, semester);
   const { isAdmin } = useAdminStatus();
@@ -53,7 +53,7 @@ function DepartmentCoursesContent() {
 
   // Validate semester param
   if (semester && !["first", "second"].includes(semester)) {
-    return <Navigate to={`/afit-pdfs/${deptSlug}`} replace />;
+    return <Navigate to={`/afit-pdfs/${facultySlug}/${deptSlug}`} replace />;
   }
 
   const canEditTimetable =
@@ -89,7 +89,7 @@ function DepartmentCoursesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${deptSlug}`)}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -144,7 +144,7 @@ function DepartmentCoursesContent() {
                       transition={{ duration: 0.2, delay: i * 0.03 }}
                     >
                       <button
-                        onClick={() => navigate(`/afit-pdfs/${deptSlug}/semester/${semester}/${course.code}`)}
+                        onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}/${course.code}`)}
                         className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group flex flex-col justify-between min-h-[120px]"
                       >
                         <div>
