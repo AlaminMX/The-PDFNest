@@ -219,20 +219,35 @@ export default function AdminUserDetail() {
     }
   };
 
-  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
   const handleDeleteUserAccount = async () => {
-    if (isDeletingAccount || !userId) return;
+    if (isDeletingAccount) return;
+    if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
 
     setIsDeletingAccount(true);
     try {
-      // Call the admin_delete_user_account RPC function
-      const { error } = await supabase.rpc("admin_delete_user_account" as any, {
+      const { error: rpcError } = await (supabase as any).rpc("admin_delete_user_account", {
         p_user_id: userId,
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to delete user account");
+      const shouldFallbackToEdgeFunction =
+        !!rpcError &&
+        /could not find the function public\.admin_delete_user_account|schema cache|function\s+public\.admin_delete_user_account/i.test(
+          rpcError.message || ""
+        );
+
+      if (rpcError && !shouldFallbackToEdgeFunction) {
+        throw rpcError;
+      }
+
+      if (shouldFallbackToEdgeFunction) {
+        const { error: fnError } = await supabase.functions.invoke("delete-user-account", {
+          body: { userId },
+        });
+
+        if (fnError) {
+          throw new Error(fnError.message || "Failed to delete user account via fallback function");
+        }
       }
 
       toast.success("User account deleted successfully");

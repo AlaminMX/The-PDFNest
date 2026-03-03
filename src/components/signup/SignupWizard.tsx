@@ -102,6 +102,7 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       is_student: data.isStudent ?? false,
       school: school || null,
       preferred_theme: data.preferredTheme || "system",
+      financial_literacy_interest: data.financialLiteracyInterest,
       usage_reason: usageReason || null,
       terms_accepted: data.termsAccepted,
       terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null,
@@ -145,16 +146,18 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
         preferredTheme: data.preferredTheme || "system",
       }));
 
-      const { lovable } = await import("@/integrations/lovable/index");
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
       });
 
-      if (result?.error) throw result.error;
+      if (error) throw error;
       toast.success("Redirecting to Google...");
     } catch (error: any) {
       if (isGoogleProviderDisabled(error?.message)) {
-        toast.error("Google sign-in is not available at the moment. Please try again later.");
+        toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
       } else {
         toast.error(error.message || "Unable to continue with Google");
       }
