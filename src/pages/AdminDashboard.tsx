@@ -2,12 +2,16 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
-  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Menu, X, FolderTree, ListOrdered
+  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
+  Menu, X, FolderTree, Moon
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -61,6 +65,7 @@ function formatDate(dateString: string): string {
 
 const sidebarItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+  { id: "faculties", label: "Faculties", icon: Building2, path: "/admin/faculties" },
   { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
   { id: "categories", label: "Categories", icon: FolderTree, path: "/admin/categories" },
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
@@ -68,6 +73,36 @@ const sidebarItems = [
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
   { id: "commits", label: "Implemented Commits", icon: ListOrdered, path: "/admin/commits" },
 ];
+
+function RamadanToggleControl() {
+  const { settings, updateSetting } = useAppSettings();
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggle = async (checked: boolean) => {
+    setToggling(true);
+    const success = await updateSetting("ramadan_theme_enabled", checked ? "true" : "false");
+    if (success) {
+      toast.success(checked ? "Ramadan theme enabled" : "Ramadan theme disabled");
+    } else {
+      toast.error("Failed to update setting");
+    }
+    setToggling(false);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-1 py-2">
+      <div className="flex items-center gap-2">
+        <Moon className="h-4 w-4 text-muted-foreground" />
+        <Label className="text-xs">Ramadan Theme</Label>
+      </div>
+      <Switch
+        checked={settings.ramadan_theme_enabled}
+        onCheckedChange={handleToggle}
+        disabled={toggling}
+      />
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -297,6 +332,7 @@ export default function AdminDashboard() {
 
       {/* Footer */}
       <div className="p-4 border-t space-y-2">
+        <RamadanToggleControl />
         <ThemeToggle />
         <Button 
           variant="outline" 

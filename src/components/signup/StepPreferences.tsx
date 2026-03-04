@@ -59,48 +59,6 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
           </div>
         </div>
 
-        {/* Financial literacy */}
-        <div className="space-y-2">
-          <Label>Do you read books on Finantial literacy?</Label>
-          <div className="flex gap-2">
-            {[true, false].map(val => (
-              <button
-                key={String(val)}
-                type="button"
-                onClick={() => updateData({ financialLiteracyInterest: val })}
-                className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
-                  data.financialLiteracyInterest === val
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
-                }`}
-              >
-                {val ? "Yes" : "No"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-         {/* Novels */}
-        <div className="space-y-2">
-          <Label>Do you read Novels?</Label>
-          <div className="flex gap-2">
-            {[true, false].map(val => (
-              <button
-                key={String(val)}
-                type="button"
-                onClick={() => updateData({ financialLiteracyInterest: val })}
-                className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
-                  data.financialLiteracyInterest === val
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
-                }`}
-              >
-                {val ? "Yes" : "No"}
-              </button>
-            ))}
-          </div>
-        </div>
-        
         {/* Usage reason */}
         <div className="space-y-2">
           <Label>Why are you using PDFNest?</Label>

@@ -178,7 +178,7 @@ function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground">
       {/* Header with subtle gradient accent */}
       <SidebarHeader className="pb-0">
         <div className="flex items-center gap-3 px-3 py-4">
@@ -189,7 +189,7 @@ function AppSidebar({
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
               <span className="font-bold text-base tracking-tight">PDFNest</span>
-              <span className="text-[11px] text-sidebar-foreground/70">Smart PDF Manager</span>
+              <span className="text-[11px] text-white/70">Smart PDF Manager</span>
             </div>
           )}
         </div>
@@ -369,7 +369,7 @@ function AppSidebar({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground border border-dashed border-sidebar-border hover:border-sidebar-ring/50 transition-colors"
+                    className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground border border-dashed border-sidebar-border hover:border-sidebar-foreground/50 transition-colors"
                     onClick={() => setShowNewCategoryForm(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
