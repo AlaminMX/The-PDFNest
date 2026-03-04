@@ -487,6 +487,15 @@ export default function Index() {
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { data: profileStorageUsed } = useQuery({
+    queryKey: ["user-storage", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { data } = await supabase.from("profiles").select("total_storage_used").eq("id", user.id).maybeSingle();
+      return data?.total_storage_used || 0;
+    },
+    enabled: !!user?.id,
+  });
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -586,8 +595,14 @@ export default function Index() {
   }, [authLoading, repLoading, isRep, user?.id, navigate]);
 
   if (authLoading) {
-    // Avoid rendering an intermediate full-screen loader which can feel like a page flash.
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground text-sm">Loading your workspace...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -814,15 +829,6 @@ export default function Index() {
     uploadManager.addFiles(droppedFiles, selectedCategory === "all" ? null : selectedCategory);
   };
 
-  const { data: profileStorageUsed } = useQuery({
-    queryKey: ["user-storage", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0;
-      const { data } = await supabase.from("profiles").select("total_storage_used").eq("id", user.id).maybeSingle();
-      return data?.total_storage_used || 0;
-    },
-    enabled: !!user?.id,
-  });
   const storageUsed = profileStorageUsed ?? 0;
 
   const filteredFiles = selectedCategory === "all" 
