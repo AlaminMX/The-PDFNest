@@ -87,6 +87,7 @@ export default function AdminUserDetail() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
   const filteredPdfs = useMemo(() => {
     let filtered = pdfs.filter(pdf => 
@@ -221,8 +222,7 @@ export default function AdminUserDetail() {
 
 
   const handleDeleteUserAccount = async () => {
-    if (isDeletingAccount) return;
-    if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
+    if (isDeletingAccount || !userId) return;
 
     setIsDeletingAccount(true);
     try {
