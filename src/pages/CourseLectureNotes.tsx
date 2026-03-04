@@ -57,7 +57,7 @@ import { PDFViewer } from "@/components/PDFViewer";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
-  const { deptSlug, semester, courseCode } = useParams<{ deptSlug: string; semester: string; courseCode: string }>();
+  const { facultySlug, deptSlug, semester, courseCode } = useParams<{ facultySlug: string; deptSlug: string; semester: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
   const { session, user: sessionUser } = useSession();
@@ -185,7 +185,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleShare = (noteId: string, title: string) => {
-    const url = `${window.location.origin}/afit-pdfs/${deptSlug}/semester/${semester}/${courseCode}?note=${noteId}`;
+    const url = `${window.location.origin}/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}/${courseCode}?note=${noteId}`;
     
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
@@ -293,7 +293,7 @@ function CourseLectureNotesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${deptSlug}/semester/${semester}`)}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
