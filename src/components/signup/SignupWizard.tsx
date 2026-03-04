@@ -24,7 +24,6 @@ export interface SignupData {
   schoolOther: string;
   departmentId: string;
   preferredTheme: string;
-  financialLiteracyInterest: boolean;
   usageReason: string;
   usageReasonOther: string;
   age: string;
@@ -44,7 +43,6 @@ const initialData: SignupData = {
   schoolOther: "",
   departmentId: "",
   preferredTheme: "system",
-  financialLiteracyInterest: false,
   usageReason: "",
   usageReasonOther: "",
   age: "",
