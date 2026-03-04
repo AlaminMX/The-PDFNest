@@ -32,6 +32,7 @@ import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
+import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
         <Sonner />
         <RamadanDecoration />
         <BrowserRouter>
+          <ActivityRouteTracker />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />

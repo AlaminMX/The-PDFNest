@@ -209,6 +209,11 @@ export default function Auth() {
       }
       toast.success("Welcome back!");
     } catch (error: any) {
+      await logActivity("login_failed", {
+        provider: "email_password",
+        identifier: email.trim().toLowerCase(),
+        reason: error?.message || "unknown_error",
+      });
       toast.error(error.message || "An error occurred");
     } finally {
       setLoading(false);
