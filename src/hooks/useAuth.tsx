@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const initialSessionChecked = useRef(false);
 
   useEffect(() => {
     let cleanupIdleDetection: (() => void) | null = null;
@@ -16,30 +17,32 @@ export function useAuth() {
     // Set up auth state listener FIRST
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
       
       // Start session on login
-      if (event === 'SIGNED_IN' && session) {
+      if (event === 'SIGNED_IN' && newSession) {
         setTimeout(() => {
           startSession();
           cleanupIdleDetection = setupIdleDetection();
         }, 0);
       }
       
-      if (!session) {
+      // Only redirect to /auth on explicit SIGNED_OUT event, not on initial load
+      if (event === 'SIGNED_OUT') {
         navigate("/auth");
       }
     });
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      initialSessionChecked.current = true;
       setLoading(false);
       
-      if (!session) {
+      if (!existingSession) {
         navigate("/auth");
       } else {
         // Set up idle detection for existing sessions
