@@ -9,9 +9,10 @@ interface Props {
   onFinish: () => void;
   onBack: () => void;
   signupComplete: boolean;
+  loading?: boolean;
 }
 
-export function StepGuidedUpload({ onFinish, onBack, signupComplete }: Props) {
+export function StepGuidedUpload({ onFinish, onBack, signupComplete, loading = false }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -92,7 +93,7 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete }: Props) {
             Your first PDF has been uploaded. Start exploring PDFNest!
           </p>
         </div>
-        <Button className="w-full h-11" onClick={onFinish}>
+        <Button className="w-full h-11" onClick={onFinish} disabled={loading}>
           Go to Dashboard
         </Button>
       </div>
@@ -126,7 +127,7 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete }: Props) {
       >
         <Upload className={`w-10 h-10 mx-auto mb-3 ${dragOver ? "text-primary" : "text-muted-foreground"}`} />
         <p className="text-sm font-medium text-foreground">
-          {uploading ? "Uploading..." : "Drop a PDF here or tap to browse"}
+          {uploading ? "Uploading..." : loading ? "Finalizing account..." : "Drop a PDF here or tap to browse"}
         </p>
         <p className="text-xs text-muted-foreground mt-1">Max 50MB</p>
         <input
@@ -135,15 +136,15 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete }: Props) {
           accept=".pdf"
           className="hidden"
           onChange={handleInputChange}
-          disabled={uploading}
+          disabled={uploading || loading || signupComplete}
         />
       </div>
 
       <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0 h-11 w-11">
+        <Button variant="outline" onClick={onBack} size="icon" className="shrink-0 h-11 w-11" disabled={loading}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <Button variant="outline" className="flex-1 h-11" onClick={onFinish}>
+        <Button variant="outline" className="flex-1 h-11" onClick={onFinish} disabled={loading}>
           Skip & go to dashboard
         </Button>
       </div>
