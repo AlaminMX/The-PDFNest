@@ -209,6 +209,7 @@ export default function Auth() {
       }
       toast.success("Welcome back!");
     } catch (error: any) {
+      const { logActivity } = await import("@/lib/sessionLogger");
       await logActivity("login_failed", {
         provider: "email_password",
         identifier: email.trim().toLowerCase(),

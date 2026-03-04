@@ -8,6 +8,8 @@ import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { uploadManager } from "@/lib/uploadManager";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,7 +191,7 @@ function AppSidebar({
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
               <span className="font-bold text-base tracking-tight">PDFNest</span>
-              <span className="text-[11px] text-white/70">Smart PDF Manager</span>
+              <span className="text-[11px] text-sidebar-foreground/70">Smart PDF Manager</span>
             </div>
           )}
         </div>
@@ -812,7 +814,16 @@ export default function Index() {
     uploadManager.addFiles(droppedFiles, selectedCategory === "all" ? null : selectedCategory);
   };
 
-  const storageUsed = files.reduce((total, file) => total + (file.file_size || 0), 0);
+  const { data: profileStorageUsed } = useQuery({
+    queryKey: ["user-storage", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { data } = await supabase.from("profiles").select("total_storage_used").eq("id", user.id).maybeSingle();
+      return data?.total_storage_used || 0;
+    },
+    enabled: !!user?.id,
+  });
+  const storageUsed = profileStorageUsed ?? 0;
 
   const filteredFiles = selectedCategory === "all" 
     ? files 
