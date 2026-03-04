@@ -1,84 +1,66 @@
 
 
-# PDFNest: Offline Indicator, Save Offline Button, FAB Simplification, and PDF Preview Speed
+## Issues Identified
 
-## Overview
+1. **Session Logs 404**: Admin sidebar links to `/admin/sessions` but `App.tsx` route is `/admin/logs` pointing to `AdminSessionLogs`. There's also a separate `AdminActivityLogs` page but no route for it — the `/admin/logs` route loads `AdminSessionLogs`.
+2. **Sidebar light theme**: Sidebar is hardcoded with `bg-[#1c1c1c] text-white` and `bg-white/20` borders, ignoring light/dark theme entirely.
+3. **Faculty grid display**: Currently uses a single-column list layout, not a grid. No faculty color applied to buttons.
+4. **Admin Departments missing faculty assignment**: No `faculty_id` field in create/edit department forms.
+5. **Ramadan theme too minimal**: Only a small crescent in top-right corner with red primary color. User wants site-wide gold aesthetic.
+6. **Activity logging incomplete**: Two separate logging systems (`activityLogger.ts` and `sessionLogger.ts`) exist but many actions aren't logged. Need a unified, comprehensive log view.
 
-Four changes: (1) add an offline mode banner, (2) add a "Save Offline" button on each PDF card, (3) simplify the FAB to upload-only (remove AI features menu), and (4) speed up PDF preview loading.
+## Plan
 
----
+### 1. Fix Session Logs 404
+- Add route `/admin/sessions` → `AdminSessionLogs` in `App.tsx`
+- Keep `/admin/logs` → `AdminActivityLogs` (currently points to SessionLogs, fix this)
+- Merge Activity Logs and Session Logs into one unified "Site Activity" page at `/admin/logs` that shows both `user_activity_logs` and `user_sessions` data with tabs
 
-## 1. Offline Mode Indicator Banner
+### 2. Fix Sidebar Light Theme
+- Remove hardcoded `bg-[#1c1c1c] text-white` from `AppSidebar` in `Index.tsx`
+- Replace with theme-aware classes: `bg-sidebar-background text-sidebar-foreground`
+- Replace all `bg-white/20` dividers with `bg-sidebar-border`
+- Replace `text-white` references with `text-sidebar-foreground`
+- Update light theme CSS variables for sidebar in `index.css` to ensure proper contrast
 
-**What**: A persistent banner at the top of the main content area that appears when the user loses internet connectivity, and disappears when they reconnect.
+### 3. Faculty Grid Display with Colors
+- Change `FacultySelection.tsx` layout from single-column to 2-column responsive grid (`grid-cols-2`)
+- Apply faculty `color` to each card's icon container and left border/accent, similar to `DepartmentTile`
+- Use `getDepartmentStyles` utility (or similar) to derive colors from the faculty's color field
 
-**Where**: `src/pages/Index.tsx` -- add a banner right after `<AdminBannerDisplay />` inside the `<header>` or just below it.
+### 4. Admin Department → Faculty Assignment
+- In `AdminDepartments.tsx`, add a `faculty_id` Select dropdown in both the create and edit dialogs
+- Fetch faculties list using `useFaculties` hook
+- Save `faculty_id` on insert/update to the `departments` table
 
-**How**:
-- Add `useState` + `useEffect` with `online`/`offline` event listeners on `window`
-- Render a yellow/amber banner: "You're offline -- only cached PDFs are available"
-- Use `WifiOff` icon from lucide-react
-- Banner disappears automatically when back online
+### 5. Ramadan Theme — Site-Wide Gold Aesthetic
+- When `ramadan_theme_enabled` is true, inject a `.ramadan` class on the root element
+- Add CSS variables for Ramadan theme in `index.css` that override primary color to gold (`42 87% 55%`), accent to warm gold tones
+- Update `RamadanDecoration.tsx` to use gold color instead of primary red, position it so it doesn't block content (top-right with offset)
+- Add subtle gold border/accent to cards site-wide when Ramadan is active
+- Apply the ramadan class in `App.tsx` or a layout wrapper based on `useAppSettings`
 
----
+### 6. Comprehensive Activity Logging
+- Consolidate admin log views: create a unified `/admin/logs` page with two tabs — "Activity Feed" (from `user_activity_logs`) and "Sessions" (from `user_sessions`)
+- Fix route mismatch in `App.tsx`: `/admin/logs` → unified logs page, `/admin/sessions` → same page (redirect or alias)
+- Ensure `logActivity` calls exist for all major user actions (verify coverage in upload, delete, rename, download, AI features, profile updates, login/logout, page views)
 
-## 2. "Save Offline" Button on Each PDF Card
+### Files to Modify
+- `src/App.tsx` — fix routes
+- `src/pages/Index.tsx` — fix sidebar theme classes
+- `src/index.css` — add Ramadan gold theme variables, fix sidebar light theme variables
+- `src/pages/FacultySelection.tsx` — grid layout + color display
+- `src/pages/AdminDepartments.tsx` — add faculty_id select
+- `src/components/RamadanDecoration.tsx` — gold color, better positioning
+- `src/pages/AdminSessionLogs.tsx` — merge into unified log page with tabs
+- `src/pages/AdminActivityLogs.tsx` — merge into unified log page
+- `src/pages/AdminDashboard.tsx` — fix sidebar item paths
 
-**What**: A small button/icon on each PDF file row (list view) and card (grid view) that lets users explicitly cache a PDF to IndexedDB for offline access. Shows a checkmark if already cached.
+### Database
+- No schema changes needed (all tables already exist)
 
-**Where**: `src/pages/Index.tsx` -- in both list view and grid view file rendering sections.
-
-**How**:
-- Use the existing `cacheForOffline` function from `usePDFFiles` hook and `isOfflineAvailable` flag on each file
-- In list view: add a cloud-download / check-circle icon button in the action row (next to favorite, download, etc.)
-- In grid view: add it in the button row at the bottom of each card
-- When clicked: call `cacheForOffline(file.id, file.url, file.name)`, show a toast on success
-- If already cached (`file.isOfflineAvailable === true`): show a green check icon instead
-- In the mobile dropdown menu: add a "Save Offline" / "Saved Offline" menu item
-
----
-
-## 3. Simplify FAB -- Upload Only
-
-**What**: Remove the expandable menu from the FAB. Clicking the FAB directly triggers file upload instead of opening a radial menu with "Upload" and "AI Features".
-
-**Where**: 
-- `src/components/FloatingActionButton.tsx` -- simplify to a single upload button
-- `src/pages/Index.tsx` -- update the FAB usage (remove `onAIFeatures` prop)
-
-**How**:
-- Replace the FAB component internals: remove `isOpen` state, remove the `actions` array, remove `AnimatePresence`
-- Single button with `Upload` icon that directly calls `onUpload` on click
-- Remove the `onAIFeatures` prop entirely
-- Update Index.tsx line ~1688 to remove `onAIFeatures` prop
-
----
-
-## 4. Faster PDF Preview Loading
-
-**What**: Optimize `PDFViewer.tsx` to render the first page faster for large files by using progressive loading and lower initial render resolution.
-
-**Where**: `src/components/PDFViewer.tsx`
-
-**How**:
-- Enable `disableAutoFetch: true` and `disableStream: false` so pdfjs loads only what's needed for the first page via range requests, rather than downloading the entire file before rendering
-- Reduce `rangeChunkSize` from 65536 to 32768 for faster initial chunks
-- Render the first page at 1x device pixel ratio initially (skip HiDPI scaling on first render), then re-render at full quality after initial display -- this makes the first page appear much faster
-- Show a skeleton placeholder matching the expected page dimensions instead of a centered spinner while loading
-- Check offline cache first: if the PDF is cached in IndexedDB, load from the local blob instead of fetching from the network
-
----
-
-## Technical Details
-
-### Files to modify:
-1. **`src/pages/Index.tsx`** -- offline banner, save-offline buttons in list/grid views, remove `onAIFeatures` from FAB
-2. **`src/components/FloatingActionButton.tsx`** -- simplify to single upload button
-3. **`src/components/PDFViewer.tsx`** -- progressive loading optimizations, offline cache fallback
-
-### Files NOT modified:
-- `src/lib/offlineStorage.ts` -- already has all needed functions (`cachePDF`, `getCachedPDF`, `getAllCachedIds`)
-- `src/hooks/usePDFFiles.tsx` -- already exposes `cacheForOffline` and `isOfflineAvailable`
-
-### No database changes required.
+### Risk Analysis
+- Sidebar color changes affect the main homepage layout — must test both themes
+- Ramadan gold override must not break non-Ramadan mode
+- Route changes must not break existing admin navigation
 
