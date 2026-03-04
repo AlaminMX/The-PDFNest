@@ -71,7 +71,7 @@ const sidebarItems = [
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
-  { id: "commits", label: "Implemented Commits", icon: ListOrdered, path: "/admin/commits" },
+  { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
 ];
 
 function RamadanToggleControl() {
