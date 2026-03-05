@@ -901,7 +901,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_activity_event: {
+        Args: {
+          p_action: string
+          p_context?: Json
+          p_resource: string
+          p_session_id: string
+          p_status: string
+          p_timestamp: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       purge_old_session_data: { Args: never; Returns: undefined }
+      record_failed_login_attempt: {
+        Args: {
+          p_context?: Json
+          p_identifier: string
+          p_ip_address?: string
+          p_session_id?: string
+          p_user_agent?: string
+        }
+        Returns: number
+      }
       update_user_storage: {
         Args: { p_size_delta: number; p_user_id: string }
         Returns: undefined
