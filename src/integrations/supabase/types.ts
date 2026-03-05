@@ -901,6 +901,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_old_session_data: { Args: never; Returns: undefined }
       update_user_storage: {
         Args: { p_size_delta: number; p_user_id: string }
         Returns: undefined
