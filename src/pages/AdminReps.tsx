@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -33,6 +34,7 @@ interface Course {
   id?: string;
   code: string;
   name: string;
+  semester?: string;
   isNew?: boolean;
   isDeleted?: boolean;
 }
@@ -55,6 +57,7 @@ export default function AdminReps() {
   const [newDepartmentColor, setNewDepartmentColor] = useState("");
   const [newDepartmentIcon, setNewDepartmentIcon] = useState("");
   const [courses, setCourses] = useState<{ code: string; name: string }[]>([{ code: "", name: "" }]);
+  const [selectedCreateSemester, setSelectedCreateSemester] = useState<string>("first");
 
   // Edit rep state - FULL editing capability
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -66,6 +69,7 @@ export default function AdminReps() {
   const [editCourses, setEditCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [editSemester, setEditSemester] = useState<string>("first");
 
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
@@ -154,7 +158,7 @@ export default function AdminReps() {
     }
   };
 
-  const fetchCoursesForDepartment = async (departmentId: string) => {
+  const fetchCoursesForDepartment = async (departmentId: string, semester: string) => {
     if (!departmentId) {
       setEditCourses([]);
       return;
@@ -164,12 +168,13 @@ export default function AdminReps() {
     try {
       const { data, error } = await supabase
         .from("courses")
-        .select("id, code, name")
+        .select("id, code, name, semester")
         .eq("department_id", departmentId)
+        .eq("semester", semester)
         .order("name");
 
       if (error) throw error;
-      setEditCourses(data?.map(c => ({ id: c.id, code: c.code, name: c.name })) || []);
+      setEditCourses(data?.map(c => ({ id: c.id, code: c.code, name: c.name, semester: c.semester })) || []);
     } catch (error) {
       console.error("Error fetching courses:", error);
       toast.error("Failed to load courses");
@@ -196,18 +201,16 @@ export default function AdminReps() {
 
   // Edit dialog course management
   const addEditCourse = () => {
-    setEditCourses([...editCourses, { code: "", name: "", isNew: true }]);
+    setEditCourses([...editCourses, { code: "", name: "", semester: editSemester, isNew: true }]);
   };
 
   const removeEditCourse = (index: number) => {
     const course = editCourses[index];
     if (course.id) {
-      // Mark existing course for deletion
       const updated = [...editCourses];
       updated[index] = { ...course, isDeleted: true };
       setEditCourses(updated);
     } else {
-      // Remove new course entirely
       setEditCourses(editCourses.filter((_, i) => i !== index));
     }
   };
@@ -277,6 +280,7 @@ export default function AdminReps() {
         code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
         name: c.name.trim(),
         level: 100,
+        semester: selectedCreateSemester,
       }));
 
       await supabase.from("courses").insert(coursesToInsert);
@@ -314,6 +318,7 @@ export default function AdminReps() {
     setNewDepartmentColor("");
     setNewDepartmentIcon("");
     setCourses([{ code: "", name: "" }]);
+    setSelectedCreateSemester("first");
   };
 
   const handleDeleteRep = async (repId: string, displayName: string) => {
@@ -358,10 +363,11 @@ export default function AdminReps() {
     setEditPassword("");
     setEditDisplayName(rep.display_name || "");
     setEditDepartmentId(rep.department_id || "");
+    setEditSemester("first");
     setShowEditDialog(true);
     
     if (rep.department_id) {
-      await fetchCoursesForDepartment(rep.department_id);
+      await fetchCoursesForDepartment(rep.department_id, "first");
     } else {
       setEditCourses([]);
     }
@@ -369,7 +375,15 @@ export default function AdminReps() {
 
   const handleDepartmentChange = async (newDeptId: string) => {
     setEditDepartmentId(newDeptId);
-    await fetchCoursesForDepartment(newDeptId);
+    await fetchCoursesForDepartment(newDeptId, editSemester);
+  };
+
+  const handleEditSemesterChange = async (semester: string) => {
+    // Save any pending changes for current semester before switching
+    setEditSemester(semester);
+    if (editDepartmentId) {
+      await fetchCoursesForDepartment(editDepartmentId, semester);
+    }
   };
 
   const handleUpdateRep = async () => {
@@ -418,7 +432,7 @@ export default function AdminReps() {
             .eq("id", course.id!);
         }
 
-        // Insert new courses
+        // Insert new courses with semester
         const toInsert = editCourses.filter(c => c.isNew && !c.isDeleted && c.name.trim());
         if (toInsert.length > 0) {
           await supabase.from("courses").insert(
@@ -427,6 +441,7 @@ export default function AdminReps() {
               code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
               name: c.name.trim(),
               level: 100,
+              semester: c.semester || editSemester,
             }))
           );
         }
@@ -581,6 +596,20 @@ export default function AdminReps() {
                         Add Course
                       </Button>
                     </div>
+
+                    {/* Semester selector for create */}
+                    <div className="space-y-2">
+                      <Label>Semester</Label>
+                      <Tabs value={selectedCreateSemester} onValueChange={setSelectedCreateSemester}>
+                        <TabsList className="w-full">
+                          <TabsTrigger value="first" className="flex-1">First Semester</TabsTrigger>
+                          <TabsTrigger value="second" className="flex-1">Second Semester</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                      <p className="text-xs text-muted-foreground">
+                        All courses below will be added to the {selectedCreateSemester} semester.
+                      </p>
+                    </div>
                     
                     <div className="space-y-3">
                       {courses.map((course, index) => (
@@ -614,7 +643,7 @@ export default function AdminReps() {
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Add all courses this department offers.
+                      Add all courses this department offers for the selected semester.
                     </p>
                   </div>
                 </div>
@@ -796,12 +825,20 @@ export default function AdminReps() {
                       Add Course
                     </Button>
                   </div>
+
+                  {/* Semester tabs for edit */}
+                  <Tabs value={editSemester} onValueChange={handleEditSemesterChange}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="first" className="flex-1">First Semester</TabsTrigger>
+                      <TabsTrigger value="second" className="flex-1">Second Semester</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                   
                   {loadingCourses ? (
                     <div className="py-4 text-center text-muted-foreground">Loading courses...</div>
                   ) : visibleEditCourses.length === 0 ? (
                     <div className="py-4 text-center text-muted-foreground">
-                      No courses yet. Add courses for this department.
+                      No courses for the {editSemester} semester yet. Add courses for this department.
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -837,7 +874,7 @@ export default function AdminReps() {
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Manage courses for this department. Changes will be saved when you click Save.
+                    Manage {editSemester} semester courses for this department. Changes will be saved when you click Save.
                   </p>
                 </div>
               )}
