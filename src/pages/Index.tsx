@@ -526,6 +526,7 @@ export default function Index() {
     return !localStorage.getItem(`checklist-dismissed-${user?.id}`);
   });
   const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
+  const [showViewHint, setShowViewHint] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -672,10 +673,26 @@ export default function Index() {
     }
   };
 
-  const handleOpenPreview = (file: any) => {
+  const handleOpenPreview = async (file: any) => {
     if (!file.url && !file.isOfflineAvailable) return;
+    
+    let previewUrl = file.url || '';
+    
+    // For offline files or when offline, try to get cached blob
+    if (file.isOfflineAvailable && (!file.url || !navigator.onLine)) {
+      try {
+        const { getCachedPDF } = await import("@/lib/offlineStorage");
+        const blob = await getCachedPDF(file.id);
+        if (blob) {
+          previewUrl = URL.createObjectURL(blob);
+        }
+      } catch (err) {
+        console.error("Error loading cached PDF:", err);
+      }
+    }
+    
     setPreviewPdf({ 
-      url: file.url || '', 
+      url: previewUrl, 
       name: file.name,
       fileSize: file.file_size,
       fileId: file.id,
