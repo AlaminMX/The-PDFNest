@@ -167,7 +167,7 @@ function AppSidebar({
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
-  const [filesSectionOpen, setFilesSectionOpen] = useState(true);
+  const [filesSectionOpen, setFilesSectionOpen] = useState(false);
   const [recentSectionOpen, setRecentSectionOpen] = useState(false);
   
   const handleAddCategoryLocal = async () => {
@@ -514,7 +514,7 @@ export default function Index() {
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
   const [viewMode, setViewMode] = useState<"list" | "grid">(
-    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "list"
+    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "grid"
   );
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);

@@ -8,7 +8,6 @@ import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { getDepartmentStyles } from "@/lib/departmentColors";
 import { motion } from "framer-motion";
-import { useMemo } from "react";
 
 function FacultySelectionContent() {
   const navigate = useNavigate();
@@ -58,45 +57,50 @@ function FacultySelectionContent() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="p-5 rounded-xl bg-muted/30 border border-border/30 aspect-[4/3]">
-                  <div className="h-10 w-10 bg-muted/50 rounded-lg mb-3" />
-                  <div className="h-4 w-2/3 bg-muted/50 rounded mb-2" />
-                  <div className="h-3 w-1/2 bg-muted/50 rounded" />
-                </div>
-              ))
-            : visibleFaculties.map((faculty, index) => {
-                const styles = getDepartmentStyles(faculty.color, index);
-                return (
-                  <FacultyCard
-                    key={faculty.id}
-                    faculty={faculty}
-                    styles={styles}
-                    index={index}
-                    onClick={() => navigate(`/afit-pdfs/${faculty.slug}`)}
-                  />
-                );
-              })}
+        <div className="max-w-2xl mx-auto">
+          {/* Faculty Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-5 rounded-xl bg-muted/30 border border-border/30 aspect-[4/3]">
+                    <div className="h-10 w-10 bg-muted/50 rounded-lg mb-3" />
+                    <div className="h-4 w-2/3 bg-muted/50 rounded mb-2" />
+                    <div className="h-3 w-1/2 bg-muted/50 rounded" />
+                  </div>
+                ))
+              : visibleFaculties.map((faculty, index) => {
+                  const styles = getDepartmentStyles(faculty.color, index);
+                  return (
+                    <FacultyCard
+                      key={faculty.id}
+                      faculty={faculty}
+                      styles={styles}
+                      index={index}
+                      onClick={() => navigate(`/afit-pdfs/${faculty.slug}`)}
+                    />
+                  );
+                })}
+          </div>
 
-          {/* School Store Tile */}
+          {/* School Store Tile - spans full width below grid */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: visibleFaculties.length * 0.06 }}
+            className="mt-3"
           >
             <button
               onClick={() => navigate("/school-store")}
-              className="w-full text-left p-5 rounded-xl bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-red-500/10 hover:from-amber-500/15 hover:via-orange-500/15 hover:to-red-500/15 border border-amber-500/20 transition-all duration-200 group aspect-[4/3] flex flex-col justify-between"
+              className="w-full text-left px-5 py-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 hover:from-amber-500/15 hover:via-orange-500/15 hover:to-red-500/15 border border-amber-500/20 transition-all duration-200 group flex items-center gap-4"
             >
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
                 <ShoppingBag className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <h3 className="font-medium mb-0.5">School Store</h3>
-                <p className="text-xs text-muted-foreground">Coming Soon</p>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium">School Store</h3>
+                <p className="text-xs text-muted-foreground">Coming Soon • Join the waitlist</p>
               </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
             </button>
           </motion.div>
         </div>
@@ -132,7 +136,6 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
         className="w-full text-left p-5 rounded-xl border border-border/20 hover:border-border/40 transition-all duration-200 group aspect-[4/3] flex flex-col justify-between relative overflow-hidden"
         style={{ background: styles.bgLight }}
       >
-        {/* Color accent bar at top */}
         <div
           className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
           style={{ background: styles.accentBg }}
