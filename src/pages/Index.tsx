@@ -555,6 +555,18 @@ export default function Index() {
     }
   }, [user?.id, files]);
 
+  // One-time view mode hint
+  useEffect(() => {
+    if (!user?.id) return;
+    const hintKey = `pdfnest-view-hint-${user.id}`;
+    if (localStorage.getItem(hintKey)) return;
+    const timer = setTimeout(() => {
+      setShowViewHint(true);
+      localStorage.setItem(hintKey, "true");
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
+
   // Online/offline listener
   useEffect(() => {
     const goOnline = () => setIsOnline(true);
