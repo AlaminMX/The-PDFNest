@@ -167,7 +167,7 @@ function AppSidebar({
   const { open } = useSidebar();
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
-  const [filesSectionOpen, setFilesSectionOpen] = useState(true);
+  const [filesSectionOpen, setFilesSectionOpen] = useState(false);
   const [recentSectionOpen, setRecentSectionOpen] = useState(false);
   
   const handleAddCategoryLocal = async () => {
@@ -514,7 +514,7 @@ export default function Index() {
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
   const [viewMode, setViewMode] = useState<"list" | "grid">(
-    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "list"
+    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "grid"
   );
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
@@ -526,6 +526,7 @@ export default function Index() {
     return !localStorage.getItem(`checklist-dismissed-${user?.id}`);
   });
   const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
+  const [showViewHint, setShowViewHint] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -553,6 +554,18 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // One-time view mode hint
+  useEffect(() => {
+    if (!user?.id) return;
+    const hintKey = `pdfnest-view-hint-${user.id}`;
+    if (localStorage.getItem(hintKey)) return;
+    const timer = setTimeout(() => {
+      setShowViewHint(true);
+      localStorage.setItem(hintKey, "true");
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
 
   // Online/offline listener
   useEffect(() => {
@@ -672,10 +685,26 @@ export default function Index() {
     }
   };
 
-  const handleOpenPreview = (file: any) => {
+  const handleOpenPreview = async (file: any) => {
     if (!file.url && !file.isOfflineAvailable) return;
+    
+    let previewUrl = file.url || '';
+    
+    // For offline files or when offline, try to get cached blob
+    if (file.isOfflineAvailable && (!file.url || !navigator.onLine)) {
+      try {
+        const { getCachedPDF } = await import("@/lib/offlineStorage");
+        const blob = await getCachedPDF(file.id);
+        if (blob) {
+          previewUrl = URL.createObjectURL(blob);
+        }
+      } catch (err) {
+        console.error("Error loading cached PDF:", err);
+      }
+    }
+    
     setPreviewPdf({ 
-      url: file.url || '', 
+      url: previewUrl, 
       name: file.name,
       fileSize: file.file_size,
       fileId: file.id,
@@ -899,11 +928,11 @@ export default function Index() {
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <DesktopHeaderNav />
               <div className="ml-auto flex items-center gap-2">
-                <div id="view-toggle" className="flex items-center border rounded-md">
+                <div id="view-toggle" className="relative flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => { setViewMode("list"); localStorage.setItem("pdfnest-view-mode", "list"); }}
                     className="rounded-r-none"
                   >
                     <LayoutList className="w-4 h-4" />
@@ -911,11 +940,18 @@ export default function Index() {
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("grid")}
+                    onClick={() => { setViewMode("grid"); localStorage.setItem("pdfnest-view-mode", "grid"); }}
                     className="rounded-l-none"
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
+                  {showViewHint && (
+                    <div className="absolute top-full right-0 mt-2 w-56 p-3 rounded-lg bg-popover border shadow-lg z-50 animate-in fade-in slide-in-from-top-2">
+                      <p className="text-xs text-foreground font-medium mb-1">💡 View Mode</p>
+                      <p className="text-xs text-muted-foreground mb-2">Switch between Grid and List view using this toggle.</p>
+                      <Button size="sm" variant="secondary" className="w-full h-7 text-xs" onClick={() => setShowViewHint(false)}>Got it</Button>
+                    </div>
+                  )}
                 </div>
                 <InstallPWA />
                 <div id="theme-toggle">

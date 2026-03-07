@@ -29,6 +29,8 @@ interface UserProfileData {
   department_id: string | null;
   department_name: string | null;
   pdf_count: number;
+  nickname: string | null;
+  phone_number: string | null;
 }
 
 interface RecentFile {
@@ -83,6 +85,14 @@ export default function UserProfile() {
 
       if (data && data.length > 0) {
         const summary = data[0];
+        
+        // Also fetch extra fields not in the RPC
+        const { data: extraData } = await supabase
+          .from("profiles")
+          .select("nickname, phone_number")
+          .eq("id", user.id)
+          .maybeSingle();
+
         const profile: UserProfileData = {
           id: summary.id,
           display_name: summary.display_name,
@@ -94,9 +104,10 @@ export default function UserProfile() {
           department_id: summary.department_id,
           department_name: summary.department_name,
           pdf_count: Number(summary.pdf_count),
+          nickname: extraData?.nickname || null,
+          phone_number: extraData?.phone_number || null,
         };
         
-        // Cache to localStorage
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
         return profile;
       }
@@ -482,6 +493,9 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
+          currentNickname={profile.nickname}
+          currentPhoneNumber={profile.phone_number}
+          currentFullName={profile.full_name}
           onUpdateComplete={() => {
             localStorage.removeItem(PROFILE_CACHE_KEY);
             refetch();
