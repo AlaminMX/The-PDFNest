@@ -928,11 +928,11 @@ export default function Index() {
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <DesktopHeaderNav />
               <div className="ml-auto flex items-center gap-2">
-                <div id="view-toggle" className="flex items-center border rounded-md">
+                <div id="view-toggle" className="relative flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => { setViewMode("list"); localStorage.setItem("pdfnest-view-mode", "list"); }}
                     className="rounded-r-none"
                   >
                     <LayoutList className="w-4 h-4" />
@@ -940,11 +940,18 @@ export default function Index() {
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("grid")}
+                    onClick={() => { setViewMode("grid"); localStorage.setItem("pdfnest-view-mode", "grid"); }}
                     className="rounded-l-none"
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
+                  {showViewHint && (
+                    <div className="absolute top-full right-0 mt-2 w-56 p-3 rounded-lg bg-popover border shadow-lg z-50 animate-in fade-in slide-in-from-top-2">
+                      <p className="text-xs text-foreground font-medium mb-1">💡 View Mode</p>
+                      <p className="text-xs text-muted-foreground mb-2">Switch between Grid and List view using this toggle.</p>
+                      <Button size="sm" variant="secondary" className="w-full h-7 text-xs" onClick={() => setShowViewHint(false)}>Got it</Button>
+                    </div>
+                  )}
                 </div>
                 <InstallPWA />
                 <div id="theme-toggle">
