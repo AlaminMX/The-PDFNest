@@ -630,6 +630,30 @@ export type Database = {
           },
         ]
       }
+      store_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
       study_guides: {
         Row: {
           content: Json
