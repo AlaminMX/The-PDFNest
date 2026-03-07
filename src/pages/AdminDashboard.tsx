@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
-  Menu, X, FolderTree, Moon
+  Menu, X, FolderTree, Moon, ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -34,6 +34,7 @@ interface UserData {
   nickname: string | null;
   preferredTheme: string | null;
   usageReason: string | null;
+  age: number | null;
 }
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
@@ -72,6 +73,7 @@ const sidebarItems = [
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
   { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
+  { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
 ];
 
 function RamadanToggleControl() {
@@ -147,6 +149,7 @@ export default function AdminDashboard() {
           nickname,
           preferred_theme,
           usage_reason,
+          age,
           created_at,
           department_id,
           departments (
@@ -200,6 +203,7 @@ export default function AdminDashboard() {
           nickname: profile.nickname || null,
           preferredTheme: profile.preferred_theme || null,
           usageReason: profile.usage_reason || null,
+          age: profile.age ?? null,
         };
       });
 
@@ -555,9 +559,10 @@ export default function AdminDashboard() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Department</TableHead>
+                  <TableHead className="hidden md:table-cell">Department</TableHead>
+                  <TableHead className="hidden xl:table-cell">Age</TableHead>
+                  <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
                   <TableHead className="hidden xl:table-cell">Nickname</TableHead>
-                  <TableHead className="hidden xl:table-cell">Theme</TableHead>
                   <TableHead className="hidden xl:table-cell">Joined</TableHead>
                   <TableHead className="text-center">PDFs</TableHead>
                   <TableHead className="text-right">Total Size</TableHead>
@@ -567,7 +572,7 @@ export default function AdminDashboard() {
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -587,7 +592,7 @@ export default function AdminDashboard() {
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {user.email}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell className="hidden md:table-cell">
                         {user.departmentName ? (
                           <Badge variant="outline" className="font-normal">
                             {user.departmentName}
@@ -596,8 +601,9 @@ export default function AdminDashboard() {
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.age ?? "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">{user.nickname || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.preferredTheme || "system"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
