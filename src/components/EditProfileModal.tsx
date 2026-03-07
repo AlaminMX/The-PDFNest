@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AvatarUpload } from "./AvatarUpload";
 import { toast } from "sonner";
 import { useDepartments } from "@/hooks/useDepartments";
+import { Trash2 } from "lucide-react";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -22,6 +23,9 @@ interface EditProfileModalProps {
   currentDisplayName: string;
   currentAvatarUrl?: string | null;
   currentDepartmentId?: string | null;
+  currentNickname?: string | null;
+  currentPhoneNumber?: string | null;
+  currentFullName?: string | null;
   onUpdateComplete: () => void;
 }
 
@@ -32,22 +36,49 @@ export function EditProfileModal({
   currentDisplayName,
   currentAvatarUrl,
   currentDepartmentId,
+  currentNickname,
+  currentPhoneNumber,
+  currentFullName,
   onUpdateComplete,
 }: EditProfileModalProps) {
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
   const [departmentId, setDepartmentId] = useState(currentDepartmentId || "");
+  const [nickname, setNickname] = useState(currentNickname || "");
+  const [phoneNumber, setPhoneNumber] = useState(currentPhoneNumber || "");
+  const [fullName, setFullName] = useState(currentFullName || "");
   const [saving, setSaving] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
   const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
 
-  // Reset state when modal opens with new values
   useEffect(() => {
     if (open) {
       setDisplayName(currentDisplayName);
       setAvatarUrl(currentAvatarUrl);
       setDepartmentId(currentDepartmentId || "");
+      setNickname(currentNickname || "");
+      setPhoneNumber(currentPhoneNumber || "");
+      setFullName(currentFullName || "");
     }
-  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId]);
+  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId, currentNickname, currentPhoneNumber, currentFullName]);
+
+  const handleRemoveAvatar = async () => {
+    setRemovingAvatar(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", userId);
+      if (error) throw error;
+      setAvatarUrl(null);
+      toast.success("Profile picture removed");
+    } catch (error) {
+      console.error("Error removing avatar:", error);
+      toast.error("Failed to remove profile picture");
+    } finally {
+      setRemovingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -59,13 +90,13 @@ export function EditProfileModal({
     try {
       const updateData: Record<string, any> = {
         display_name: displayName.trim(),
+        nickname: nickname.trim() || null,
+        phone_number: phoneNumber.trim() || null,
+        full_name: fullName.trim() || null,
       };
 
-      // Include department if changed
       if (departmentId !== (currentDepartmentId || "")) {
         updateData.department_id = departmentId || null;
-        
-        // Update department cache
         const deptCacheData = {
           hasDepartment: !!departmentId,
           userId: userId,
@@ -94,20 +125,35 @@ export function EditProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your display name, profile picture, and department
+            Update your profile information
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <AvatarUpload
-            currentAvatarUrl={avatarUrl}
-            displayName={displayName}
-            userId={userId}
-            onUploadComplete={(url) => setAvatarUrl(url)}
-          />
+        <div className="space-y-5 py-4">
+          <div className="flex flex-col items-center gap-2">
+            <AvatarUpload
+              currentAvatarUrl={avatarUrl}
+              displayName={displayName}
+              userId={userId}
+              onUploadComplete={(url) => setAvatarUrl(url)}
+            />
+            {avatarUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive gap-1 text-xs"
+                onClick={handleRemoveAvatar}
+                disabled={removingAvatar}
+              >
+                <Trash2 className="w-3 h-3" />
+                {removingAvatar ? "Removing..." : "Remove Picture"}
+              </Button>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
             <Input
@@ -117,6 +163,38 @@ export function EditProfileModal({
               placeholder="Enter your display name"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="nickname">Nickname</Label>
+            <Input
+              id="nickname"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="Enter a nickname (optional)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+2348012345678"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
             <Select value={departmentId} onValueChange={setDepartmentId}>
