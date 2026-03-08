@@ -164,7 +164,14 @@ function AppSidebar({
   recentFiles: RecentFile[];
   onOpenRecentFile: (fileId: string) => void;
 }) {
-  const { open } = useSidebar();
+  const { open, isMobile, setOpenMobile } = useSidebar();
+  
+  const handleCategoryClick = (id: string) => {
+    onSelectCategory(id);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
   const [filesSectionOpen, setFilesSectionOpen] = useState(false);
