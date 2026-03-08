@@ -303,7 +303,33 @@ function AppSidebar({
         {/* Separator */}
         <div className="mx-4 h-px bg-sidebar-border" />
 
-        {/* Files / Categories Section */}
+        {/* Favorites */}
+        <SidebarGroup className="py-1">
+          <SidebarGroupContent className="pl-1">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={selectedCategory === "favorites"}
+                  onClick={() => handleCategoryClick("favorites")}
+                  className="py-2.5 px-3 rounded-lg transition-all duration-150"
+                >
+                  <Star className="w-[18px] h-[18px] text-[hsl(var(--chart-4))] shrink-0" />
+                  <span className="text-[13px] ml-0.5 font-medium">Favorites</span>
+                  {open && (
+                    <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                      {files.filter((f) => f.is_favorite).length}
+                    </span>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Separator */}
+        <div className="mx-4 h-px bg-sidebar-border" />
+
+        {/* Files Section */}
         <Collapsible open={filesSectionOpen} onOpenChange={setFilesSectionOpen}>
           <SidebarGroup className="py-2">
             <CollapsibleTrigger asChild>
@@ -312,7 +338,7 @@ function AppSidebar({
                   <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
                     <Folder className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
-                  <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
+                  <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground">Files</span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
@@ -335,10 +361,34 @@ function AppSidebar({
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  
-                  {categories.map((category) => {
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        {/* Separator */}
+        <div className="mx-4 h-px bg-sidebar-border" />
+
+        {/* Categories Section */}
+        <Collapsible open={categoriesSectionOpen} onOpenChange={setCategoriesSectionOpen}>
+          <SidebarGroup className="py-2">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+                    <Tag className="w-4 h-4 text-sidebar-foreground/80" />
+                  </div>
+                  <span className="font-medium text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Categories</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${categoriesSectionOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1.5 pl-1">
+                <SidebarMenu>
+                  {categories.filter(c => c.id !== "favorites").map((category) => {
                     const count = files.filter((f) => 
-                      category.id === "favorites" ? f.is_favorite :
                       category.id === "uncategorized" ? !f.category_id :
                       f.category_id === category.id
                     ).length;
@@ -348,13 +398,9 @@ function AppSidebar({
                         <SidebarMenuButton 
                           isActive={selectedCategory === category.id}
                           onClick={() => handleCategoryClick(category.id)}
-                          className="py-2.5 px-3 rounded-lg transition-all duration-150"
+                          className="py-2 px-3 rounded-lg transition-all duration-150"
                         >
-                          {category.id === "favorites" ? (
-                            <Star className="w-[18px] h-[18px] text-[#f1b824] shrink-0" />
-                          ) : (
-                            <Folder className="w-[18px] h-[18px] shrink-0" />
-                          )}
+                          <Folder className="w-[16px] h-[16px] shrink-0" />
                           <span className="truncate text-[13px] ml-0.5">{category.name}</span>
                           {open && count > 0 && (
                             <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
@@ -362,7 +408,7 @@ function AppSidebar({
                             </span>
                           )}
                         </SidebarMenuButton>
-                        {category.id !== "uncategorized" && category.id !== "favorites" && (
+                        {category.id !== "uncategorized" && (
                           <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
                             <Trash2 className="w-3.5 h-3.5" />
                           </SidebarMenuAction>
