@@ -164,7 +164,14 @@ function AppSidebar({
   recentFiles: RecentFile[];
   onOpenRecentFile: (fileId: string) => void;
 }) {
-  const { open } = useSidebar();
+  const { open, isMobile, setOpenMobile } = useSidebar();
+  
+  const handleCategoryClick = (id: string) => {
+    onSelectCategory(id);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
   const [filesSectionOpen, setFilesSectionOpen] = useState(false);
@@ -316,7 +323,7 @@ function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       isActive={selectedCategory === "all"}
-                      onClick={() => onSelectCategory("all")}
+                      onClick={() => handleCategoryClick("all")}
                       className="py-2.5 px-3 rounded-lg transition-all duration-150"
                     >
                       <Folder className="w-[18px] h-[18px] shrink-0" />
@@ -340,7 +347,7 @@ function AppSidebar({
                       <SidebarMenuItem key={category.id}>
                         <SidebarMenuButton 
                           isActive={selectedCategory === category.id}
-                          onClick={() => onSelectCategory(category.id)}
+                          onClick={() => handleCategoryClick(category.id)}
                           className="py-2.5 px-3 rounded-lg transition-all duration-150"
                         >
                           {category.id === "favorites" ? (

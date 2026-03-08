@@ -304,7 +304,7 @@ export default function UserProfile() {
           <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
             <div className="flex flex-col items-center gap-4 -mt-10 sm:flex-row sm:items-end">
-              <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0">
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0 [&>img]:object-cover [&>img]:object-center">
                 <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                   {getInitials(displayName)}
