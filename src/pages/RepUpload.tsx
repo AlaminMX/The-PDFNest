@@ -63,7 +63,7 @@ export default function RepUpload() {
   useEffect(() => {
     if (!repLoading && !isRep) {
       toast.error("Access denied. Rep role required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isRep, repLoading, navigate]);
 
