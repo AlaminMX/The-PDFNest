@@ -346,6 +346,14 @@ export default function AdminUserDetail() {
                 <p className="font-medium">{user.nickname || "—"}</p>
               </div>
               <div>
+                <p className="text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium">{user.phone_number || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Date of Birth</p>
+                <p className="font-medium">{(user as any).date_of_birth ? formatDate((user as any).date_of_birth) : "—"}</p>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground">Theme</p>
                 <p className="font-medium">{user.preferred_theme || "system"}</p>
               </div>
