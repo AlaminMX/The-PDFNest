@@ -150,7 +150,8 @@ export default function AdminDashboard() {
           nickname,
           preferred_theme,
           usage_reason,
-          age,
+          date_of_birth,
+          phone_number,
           created_at,
           department_id,
           departments (
