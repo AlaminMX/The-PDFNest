@@ -240,7 +240,7 @@ export default function UserProfile() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -452,7 +452,7 @@ export default function UserProfile() {
                   <div
                     key={file.id}
                     className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div className="p-2 rounded bg-primary/10">
                       <FileText className="w-4 h-4 text-primary" />
@@ -491,7 +491,7 @@ export default function UserProfile() {
                   <div
                     key={category.id}
                     className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"

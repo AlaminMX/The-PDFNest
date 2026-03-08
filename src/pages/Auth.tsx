@@ -117,7 +117,7 @@ export default function Auth() {
           sessionStorage.removeItem("redirectAfterLogin");
           navigate(redirectPath);
         } else {
-          navigate("/");
+          navigate("/dashboard");
         }
       } finally {
         redirectingRef.current = false;
@@ -157,7 +157,7 @@ export default function Auth() {
 
   const handleFinishOnboarding = () => {
     isOnboarding.current = false;
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleAbortOnboarding = () => {

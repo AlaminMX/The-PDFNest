@@ -24,7 +24,7 @@ function FacultySelectionContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />

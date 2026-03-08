@@ -112,7 +112,7 @@ export default function AdminUserDetail() {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, adminLoading, navigate]);
 

@@ -56,7 +56,7 @@ export default function AdminWaitlist() {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, adminLoading, navigate]);
 

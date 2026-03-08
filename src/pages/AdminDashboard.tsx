@@ -128,7 +128,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, adminLoading, navigate]);
 
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-2" 
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to App

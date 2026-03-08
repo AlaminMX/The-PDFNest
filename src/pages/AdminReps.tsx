@@ -74,7 +74,7 @@ export default function AdminReps() {
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, authLoading, adminLoading, navigate]);
 
