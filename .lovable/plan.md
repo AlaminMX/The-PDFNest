@@ -1,37 +1,27 @@
 
 
-## Plan: Semester-Aware Course Management in Admin Dashboard
+## Plan: Cursor Animation on Landing Page + Rename Sidebar Label
 
-### Current State
-- The `courses` table already has a `semester` column (default: `'first'`), so **no database migration is needed**.
-- The **RepUpload** page already has semester selection working correctly -- it passes `selectedSemester` to `useCourses` and filters properly.
-- The **Admin Reps** page (create and edit dialogs) is the problem: it has no semester awareness. All courses are fetched/created without a semester filter, and new courses are inserted without specifying a semester (defaulting to `'first'`).
+### 1. Cursor-Responsive Animation on Landing Page
 
-### Changes Required
+Create a `CursorFollower` component that renders small, semi-transparent PDF-themed icons (file icons / document shapes) that gently drift toward the cursor position with a lag/spring effect. This will be rendered as a full-page overlay on the landing page (pointer-events-none).
 
-#### 1. `src/pages/AdminReps.tsx` — Edit Dialog: Add Semester Tabs
-- Add `editSemester` state (default: `"first"`).
-- Update `fetchCoursesForDepartment` to accept and filter by semester.
-- Add a semester tab/select above the course list in the edit dialog so admin can switch between first and second semester courses.
-- When switching semesters, re-fetch courses for that semester.
-- When inserting new courses in the edit flow, include `semester: editSemester`.
+**Approach:**
+- Track mouse position via `mousemove` on the landing page container
+- Render 6-8 small floating SVG document/file icons at random initial positions
+- Each icon follows the cursor with a different spring delay (creating a trailing effect)
+- Use CSS transforms (no framer-motion for this — keep it lightweight with `requestAnimationFrame`)
+- Icons are semi-transparent (`opacity-[0.06]` to `opacity-[0.12]`), subtle, not distracting
+- Hide on mobile (touch devices) since there's no cursor
+- Entire overlay is `pointer-events-none` and `fixed inset-0`
 
-#### 2. `src/pages/AdminReps.tsx` — Create Dialog: Add Semester per Course
-- Add a `selectedCreateSemester` state to the create dialog.
-- Add semester tabs/select in the "Courses Offered" section of the create dialog.
-- Track courses separately per semester, or add a semester field to each course entry.
-- When inserting courses during rep creation, include the correct `semester` value.
+**Files:**
+- Create `src/components/landing/CursorFollowEffect.tsx`
+- Update `src/pages/LandingPage.tsx` to include it
 
-#### 3. `src/pages/AdminReps.tsx` — Course Interface Update
-- Extend the `Course` interface to include `semester?: string`.
-- Pass semester through all course CRUD operations (add, update, delete).
+### 2. Rename "AFIT Resources" → "Resources" in Sidebar
 
-### Files Modified
-- `src/pages/AdminReps.tsx` (sole file)
+Simple text change in `src/pages/Index.tsx` line 219.
 
-### What Stays Unchanged
-- Database schema (semester column already exists)
-- RepUpload page (already working)
-- `useCourses` hook (already supports semester filtering)
-- All other pages and components
+Also update `src/components/NavigationTutorial.tsx` line 81 for consistency.
 
