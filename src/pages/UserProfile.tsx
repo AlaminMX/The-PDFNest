@@ -304,14 +304,12 @@ export default function UserProfile() {
           <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
             <div className="flex flex-col items-center gap-4 -mt-10 sm:flex-row sm:items-end">
-              <div className="flex justify-center w-full sm:w-auto">
-                <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
-                  <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                    {getInitials(displayName)}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0">
+                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
+                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                  {getInitials(displayName)}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 text-center sm:text-left space-y-1 pb-1">
                 <h2 className="text-2xl font-bold">{displayName}</h2>
                 {profile.email && (
