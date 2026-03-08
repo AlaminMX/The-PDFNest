@@ -1,4 +1,5 @@
 import { LandingNav } from "@/components/landing/LandingNav";
+import { CursorFollowEffect } from "@/components/landing/CursorFollowEffect";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
@@ -12,7 +13,8 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative">
+      <CursorFollowEffect />
       <LandingNav />
       <main>
         <HeroSection />
