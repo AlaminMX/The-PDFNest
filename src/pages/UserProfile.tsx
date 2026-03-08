@@ -31,6 +31,7 @@ interface UserProfileData {
   pdf_count: number;
   nickname: string | null;
   phone_number: string | null;
+  date_of_birth: string | null;
 }
 
 interface RecentFile {
