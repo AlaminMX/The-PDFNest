@@ -542,6 +542,7 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           created_at: string | null
+          date_of_birth: string | null
           default_category_id: string | null
           default_sort_order: string | null
           department_id: string | null
@@ -567,6 +568,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null
@@ -592,6 +594,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null

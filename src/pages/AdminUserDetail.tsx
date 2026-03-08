@@ -46,7 +46,8 @@ interface UserProfile {
   school: string | null;
   is_student: boolean | null;
   financial_literacy_interest: boolean | null;
-  age: number | null;
+  date_of_birth: string | null;
+  phone_number: string | null;
   created_at: string;
   total_storage_used: number;
 }
@@ -128,7 +129,7 @@ export default function AdminUserDetail() {
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, nickname, preferred_theme, discovery_source, usage_reason, school, is_student, financial_literacy_interest, age, created_at, total_storage_used")
+        .select("id, email, full_name, nickname, preferred_theme, discovery_source, usage_reason, school, is_student, financial_literacy_interest, date_of_birth, phone_number, created_at, total_storage_used")
         .eq("id", userId)
         .maybeSingle();
 
@@ -343,6 +344,14 @@ export default function AdminUserDetail() {
               <div>
                 <p className="text-sm text-muted-foreground">Nickname</p>
                 <p className="font-medium">{user.nickname || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium">{user.phone_number || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Date of Birth</p>
+                <p className="font-medium">{(user as any).date_of_birth ? formatDate((user as any).date_of_birth) : "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Theme</p>

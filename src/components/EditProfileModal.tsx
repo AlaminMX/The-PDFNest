@@ -11,10 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AvatarUpload } from "./AvatarUpload";
 import { toast } from "sonner";
 import { useDepartments } from "@/hooks/useDepartments";
-import { Trash2 } from "lucide-react";
+import { Trash2, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -23,9 +27,9 @@ interface EditProfileModalProps {
   currentDisplayName: string;
   currentAvatarUrl?: string | null;
   currentDepartmentId?: string | null;
-  currentNickname?: string | null;
   currentPhoneNumber?: string | null;
   currentFullName?: string | null;
+  currentDateOfBirth?: string | null;
   onUpdateComplete: () => void;
 }
 
@@ -36,17 +40,20 @@ export function EditProfileModal({
   currentDisplayName,
   currentAvatarUrl,
   currentDepartmentId,
-  currentNickname,
   currentPhoneNumber,
   currentFullName,
+  currentDateOfBirth,
   onUpdateComplete,
 }: EditProfileModalProps) {
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
   const [departmentId, setDepartmentId] = useState(currentDepartmentId || "");
-  const [nickname, setNickname] = useState(currentNickname || "");
   const [phoneNumber, setPhoneNumber] = useState(currentPhoneNumber || "");
   const [fullName, setFullName] = useState(currentFullName || "");
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(
+    currentDateOfBirth ? new Date(currentDateOfBirth) : undefined
+  );
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removingAvatar, setRemovingAvatar] = useState(false);
   const { departments, loading: loadingDepts } = useDepartments({ visibleOnly: true });
@@ -56,11 +63,11 @@ export function EditProfileModal({
       setDisplayName(currentDisplayName);
       setAvatarUrl(currentAvatarUrl);
       setDepartmentId(currentDepartmentId || "");
-      setNickname(currentNickname || "");
       setPhoneNumber(currentPhoneNumber || "");
       setFullName(currentFullName || "");
+      setDateOfBirth(currentDateOfBirth ? new Date(currentDateOfBirth) : undefined);
     }
-  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId, currentNickname, currentPhoneNumber, currentFullName]);
+  }, [open, currentDisplayName, currentAvatarUrl, currentDepartmentId, currentPhoneNumber, currentFullName, currentDateOfBirth]);
 
   const handleRemoveAvatar = async () => {
     setRemovingAvatar(true);
@@ -90,9 +97,10 @@ export function EditProfileModal({
     try {
       const updateData: Record<string, any> = {
         display_name: displayName.trim(),
-        nickname: nickname.trim() || null,
+        nickname: displayName.trim(),
         phone_number: phoneNumber.trim() || null,
         full_name: fullName.trim() || null,
+        date_of_birth: dateOfBirth ? format(dateOfBirth, "yyyy-MM-dd") : null,
       };
 
       if (departmentId !== (currentDepartmentId || "")) {
@@ -155,7 +163,7 @@ export function EditProfileModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
+            <Label htmlFor="displayName">Display Name / Nickname</Label>
             <Input
               id="displayName"
               value={displayName}
@@ -175,16 +183,6 @@ export function EditProfileModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="nickname">Nickname</Label>
-            <Input
-              id="nickname"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="Enter a nickname (optional)"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="phoneNumber">Phone Number</Label>
             <Input
               id="phoneNumber"
@@ -193,6 +191,42 @@ export function EditProfileModal({
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="+2348012345678"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date of Birth</Label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full h-11 justify-start text-left font-normal",
+                    !dateOfBirth && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateOfBirth ? format(dateOfBirth, "PPP") : "Pick your date of birth"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateOfBirth}
+                  onSelect={(date) => {
+                    setDateOfBirth(date);
+                    setCalendarOpen(false);
+                  }}
+                  disabled={(date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                  captionLayout="dropdown-buttons"
+                  fromYear={1950}
+                  toYear={new Date().getFullYear()}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">

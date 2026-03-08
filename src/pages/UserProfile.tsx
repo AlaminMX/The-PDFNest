@@ -31,6 +31,7 @@ interface UserProfileData {
   pdf_count: number;
   nickname: string | null;
   phone_number: string | null;
+  date_of_birth: string | null;
 }
 
 interface RecentFile {
@@ -89,7 +90,7 @@ export default function UserProfile() {
         // Also fetch extra fields not in the RPC
         const { data: extraData } = await supabase
           .from("profiles")
-          .select("nickname, phone_number")
+          .select("nickname, phone_number, date_of_birth")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -106,6 +107,7 @@ export default function UserProfile() {
           pdf_count: Number(summary.pdf_count),
           nickname: extraData?.nickname || null,
           phone_number: extraData?.phone_number || null,
+          date_of_birth: (extraData as any)?.date_of_birth || null,
         };
         
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
@@ -493,9 +495,9 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
-          currentNickname={profile.nickname}
           currentPhoneNumber={profile.phone_number}
           currentFullName={profile.full_name}
+          currentDateOfBirth={profile.date_of_birth}
           onUpdateComplete={() => {
             localStorage.removeItem(PROFILE_CACHE_KEY);
             refetch();

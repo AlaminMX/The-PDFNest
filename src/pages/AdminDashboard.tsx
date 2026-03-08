@@ -34,7 +34,8 @@ interface UserData {
   nickname: string | null;
   preferredTheme: string | null;
   usageReason: string | null;
-  age: number | null;
+  dateOfBirth: string | null;
+  phoneNumber: string | null;
 }
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
@@ -149,7 +150,8 @@ export default function AdminDashboard() {
           nickname,
           preferred_theme,
           usage_reason,
-          age,
+          date_of_birth,
+          phone_number,
           created_at,
           department_id,
           departments (
@@ -199,11 +201,12 @@ export default function AdminDashboard() {
           totalStorage: pdfStats.storage,
           createdAt: profile.created_at,
           departmentId: profile.department_id,
-          departmentName: profile.departments?.name || null,
+          departmentName: (profile as any).departments?.name || null,
           nickname: profile.nickname || null,
           preferredTheme: profile.preferred_theme || null,
           usageReason: profile.usage_reason || null,
-          age: profile.age ?? null,
+          dateOfBirth: (profile as any).date_of_birth || null,
+          phoneNumber: profile.phone_number || null,
         };
       });
 
@@ -560,9 +563,9 @@ export default function AdminDashboard() {
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
-                  <TableHead className="hidden xl:table-cell">Age</TableHead>
+                  <TableHead className="hidden xl:table-cell">DOB</TableHead>
+                  <TableHead className="hidden xl:table-cell">Phone</TableHead>
                   <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
-                  <TableHead className="hidden xl:table-cell">Nickname</TableHead>
                   <TableHead className="hidden xl:table-cell">Joined</TableHead>
                   <TableHead className="text-center">PDFs</TableHead>
                   <TableHead className="text-right">Total Size</TableHead>
@@ -601,9 +604,9 @@ export default function AdminDashboard() {
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.age ?? "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.phoneNumber || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.nickname || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
