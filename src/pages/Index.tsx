@@ -176,6 +176,7 @@ function AppSidebar({
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
   const [filesSectionOpen, setFilesSectionOpen] = useState(false);
   const [recentSectionOpen, setRecentSectionOpen] = useState(false);
+  const [categoriesSectionOpen, setCategoriesSectionOpen] = useState(true);
   
   const handleAddCategoryLocal = async () => {
     if (!newCategoryName.trim()) {
