@@ -201,11 +201,12 @@ export default function AdminDashboard() {
           totalStorage: pdfStats.storage,
           createdAt: profile.created_at,
           departmentId: profile.department_id,
-          departmentName: profile.departments?.name || null,
+          departmentName: (profile as any).departments?.name || null,
           nickname: profile.nickname || null,
           preferredTheme: profile.preferred_theme || null,
           usageReason: profile.usage_reason || null,
-          age: profile.age ?? null,
+          dateOfBirth: (profile as any).date_of_birth || null,
+          phoneNumber: profile.phone_number || null,
         };
       });
 
