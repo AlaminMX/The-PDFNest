@@ -495,9 +495,9 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
-          currentNickname={profile.nickname}
           currentPhoneNumber={profile.phone_number}
           currentFullName={profile.full_name}
+          currentDateOfBirth={profile.date_of_birth}
           onUpdateComplete={() => {
             localStorage.removeItem(PROFILE_CACHE_KEY);
             refetch();
