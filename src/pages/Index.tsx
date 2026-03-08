@@ -1093,6 +1093,16 @@ export default function Index() {
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoOrganize}
+                      disabled={isOrganizing}
+                      title="Auto-organize uncategorized files with AI"
+                    >
+                      <Sparkles className={`w-4 h-4 mr-1 ${isOrganizing ? "animate-spin" : ""}`} />
+                      <span className="hidden sm:inline">{isOrganizing ? "Organizing..." : "Auto-Organize"}</span>
+                    </Button>
                   </div>
                 </div>
               </div>
