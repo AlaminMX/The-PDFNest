@@ -1140,16 +1140,27 @@ export default function Index() {
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAutoOrganize}
-                      disabled={isOrganizing}
-                      title="Auto-organize uncategorized files with AI"
-                    >
-                      <Sparkles className={`w-4 h-4 mr-1 ${isOrganizing ? "animate-spin" : ""}`} />
-                      <span className="hidden sm:inline">{isOrganizing ? "Organizing..." : "Auto-Organize"}</span>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isOrganizing}
+                          title="Auto-organize files with AI"
+                        >
+                          <Sparkles className={`w-4 h-4 mr-1 ${isOrganizing ? "animate-spin" : ""}`} />
+                          <span className="hidden sm:inline">{isOrganizing ? "Organizing..." : "Auto-Organize"}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAutoOrganize(false)}>
+                          Organize uncategorized only
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAutoOrganize(true)}>
+                          Re-organize all files
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
