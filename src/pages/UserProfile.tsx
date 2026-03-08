@@ -90,7 +90,7 @@ export default function UserProfile() {
         // Also fetch extra fields not in the RPC
         const { data: extraData } = await supabase
           .from("profiles")
-          .select("nickname, phone_number")
+          .select("nickname, phone_number, date_of_birth")
           .eq("id", user.id)
           .maybeSingle();
 
