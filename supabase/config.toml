@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.send-waitlist-email]
 verify_jwt = true
+
+[functions.organize-pdfs]
+verify_jwt = true

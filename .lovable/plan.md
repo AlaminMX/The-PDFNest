@@ -1,43 +1,37 @@
 
 
-## Plan: AI-Powered PDF Auto-Organizer
+## Plan: Semester-Aware Course Management in Admin Dashboard
 
-### Overview
-Add a button that uses AI to automatically categorize all uncategorized PDFs (or all PDFs) into the user's existing categories based on file names. The AI analyzes file names and assigns each to the best-matching category. Works for existing files and can be re-run after new uploads.
+### Current State
+- The `courses` table already has a `semester` column (default: `'first'`), so **no database migration is needed**.
+- The **RepUpload** page already has semester selection working correctly -- it passes `selectedSemester` to `useCourses` and filters properly.
+- The **Admin Reps** page (create and edit dialogs) is the problem: it has no semester awareness. All courses are fetched/created without a semester filter, and new courses are inserted without specifying a semester (defaulting to `'first'`).
 
----
+### Changes Required
 
-### New Edge Function: `supabase/functions/organize-pdfs/index.ts`
+#### 1. `src/pages/AdminReps.tsx` — Edit Dialog: Add Semester Tabs
+- Add `editSemester` state (default: `"first"`).
+- Update `fetchCoursesForDepartment` to accept and filter by semester.
+- Add a semester tab/select above the course list in the edit dialog so admin can switch between first and second semester courses.
+- When switching semesters, re-fetch courses for that semester.
+- When inserting new courses in the edit flow, include `semester: editSemester`.
 
-- Accepts `{ files: [{id, name}], categories: [{id, name}] }` from the client
-- Sends file names + category names to Lovable AI (`google/gemini-2.5-flash-lite` — lightweight classification task)
-- Uses tool calling to extract structured output: `{ assignments: [{fileId, categoryId}] }`
-- Returns the assignments array
-- Handles 429/402 rate limit errors
+#### 2. `src/pages/AdminReps.tsx` — Create Dialog: Add Semester per Course
+- Add a `selectedCreateSemester` state to the create dialog.
+- Add semester tabs/select in the "Courses Offered" section of the create dialog.
+- Track courses separately per semester, or add a semester field to each course entry.
+- When inserting courses during rep creation, include the correct `semester` value.
 
-### Config Update: `supabase/config.toml`
-- Add `[functions.organize-pdfs]` with `verify_jwt = true`
-
-### UI Changes: `src/pages/Index.tsx`
-- Add an "Auto-Organize" button (with a Sparkles icon) in the header/toolbar area near the sort controls
-- On click: sends all uncategorized files + user's categories to the edge function
-- Shows a loading state with progress toast
-- On success: batch-updates `pdf_files.category_id` for each assignment via Supabase client
-- Updates local file state to reflect new categories
-- Shows summary toast: "Organized X files into categories"
-- If no uncategorized files exist, shows info toast
-
-### Flow
-1. User clicks "Auto-Organize"
-2. Client collects uncategorized files (files with `category_id === null`) and user's custom categories
-3. Calls edge function which asks AI to classify each file name into the best category
-4. Client receives assignments and batch-updates each file's `category_id`
-5. UI refreshes to show files in their new categories
+#### 3. `src/pages/AdminReps.tsx` — Course Interface Update
+- Extend the `Course` interface to include `semester?: string`.
+- Pass semester through all course CRUD operations (add, update, delete).
 
 ### Files Modified
-| File | Change |
-|------|--------|
-| `supabase/functions/organize-pdfs/index.ts` | New edge function |
-| `supabase/config.toml` | Add function entry |
-| `src/pages/Index.tsx` | Add Auto-Organize button + handler |
+- `src/pages/AdminReps.tsx` (sole file)
+
+### What Stays Unchanged
+- Database schema (semester column already exists)
+- RepUpload page (already working)
+- `useCourses` hook (already supports semester filtering)
+- All other pages and components
 

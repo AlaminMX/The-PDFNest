@@ -527,6 +527,7 @@ export default function Index() {
   });
   const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
   const [showViewHint, setShowViewHint] = useState(false);
+  const [isOrganizing, setIsOrganizing] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -890,6 +891,51 @@ export default function Index() {
 
   const fileCount = sortedFiles.length;
 
+  const handleAutoOrganize = async () => {
+    const uncategorized = files.filter((f) => f.category_id === null);
+    if (uncategorized.length === 0) {
+      toast.info("All files are already categorized!");
+      return;
+    }
+    const customCategories = categories.filter(
+      (c) => c.id !== "favorites" && c.id !== "uncategorized"
+    );
+    if (customCategories.length === 0) {
+      toast.error("Create some categories first so AI can organize your files.");
+      return;
+    }
+    setIsOrganizing(true);
+    toast.loading("AI is organizing your files...", { id: "organize" });
+    try {
+      const { data, error } = await supabase.functions.invoke("organize-pdfs", {
+        body: {
+          files: uncategorized.map((f) => ({ id: f.id, name: f.name })),
+          categories: customCategories.map((c) => ({ id: c.id, name: c.name })),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const assignments: { fileId: string; categoryId: string }[] = data.assignments || [];
+      if (assignments.length === 0) {
+        toast.info("AI couldn't find matching categories for your files.", { id: "organize" });
+        return;
+      }
+      let successCount = 0;
+      for (const { fileId, categoryId } of assignments) {
+        try {
+          await updateFileCategory(fileId, categoryId);
+          successCount++;
+        } catch { /* skip */ }
+      }
+      toast.success(`Organized ${successCount} file${successCount !== 1 ? "s" : ""} into categories!`, { id: "organize" });
+    } catch (err: any) {
+      console.error("Auto-organize error:", err);
+      toast.error(err.message || "Failed to organize files", { id: "organize" });
+    } finally {
+      setIsOrganizing(false);
+    }
+  };
+
   return (
     <SidebarProvider>
       <SparkleBackground />
@@ -1091,6 +1137,16 @@ export default function Index() {
                       onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoOrganize}
+                      disabled={isOrganizing}
+                      title="Auto-organize uncategorized files with AI"
+                    >
+                      <Sparkles className={`w-4 h-4 mr-1 ${isOrganizing ? "animate-spin" : ""}`} />
+                      <span className="hidden sm:inline">{isOrganizing ? "Organizing..." : "Auto-Organize"}</span>
                     </Button>
                   </div>
                 </div>
