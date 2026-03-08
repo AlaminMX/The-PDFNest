@@ -107,6 +107,7 @@ export default function UserProfile() {
           pdf_count: Number(summary.pdf_count),
           nickname: extraData?.nickname || null,
           phone_number: extraData?.phone_number || null,
+          date_of_birth: (extraData as any)?.date_of_birth || null,
         };
         
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
