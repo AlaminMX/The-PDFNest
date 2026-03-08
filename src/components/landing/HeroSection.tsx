@@ -9,7 +9,11 @@ export function HeroSection() {
       {/* Subtle grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--muted)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--muted)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem] dark:opacity-[0.4]" />
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
-      {/* Hero radial glow - dark mode only */}
+
+      {/* Light mode hero warm glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-[hsl(25_80%_65%/0.07)] blur-[140px] dark:hidden" />
+
+      {/* Dark mode hero radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.06] blur-[120px] hidden dark:block" />
 
       <div className="relative container mx-auto px-4 py-24 md:py-36 lg:py-44 max-w-4xl">
