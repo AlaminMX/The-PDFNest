@@ -75,7 +75,7 @@ export default function AIFeatures() {
     }
     
     if (files.length === 0) {
-      navigate("/?upload=true");
+      navigate("/dashboard?upload=true");
       return;
     }
     
