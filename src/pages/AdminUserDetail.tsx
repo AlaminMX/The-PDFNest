@@ -46,7 +46,8 @@ interface UserProfile {
   school: string | null;
   is_student: boolean | null;
   financial_literacy_interest: boolean | null;
-  age: number | null;
+  date_of_birth: string | null;
+  phone_number: string | null;
   created_at: string;
   total_storage_used: number;
 }
