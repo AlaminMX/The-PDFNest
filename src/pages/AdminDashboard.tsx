@@ -563,9 +563,9 @@ export default function AdminDashboard() {
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
-                  <TableHead className="hidden xl:table-cell">Age</TableHead>
+                  <TableHead className="hidden xl:table-cell">DOB</TableHead>
+                  <TableHead className="hidden xl:table-cell">Phone</TableHead>
                   <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
-                  <TableHead className="hidden xl:table-cell">Nickname</TableHead>
                   <TableHead className="hidden xl:table-cell">Joined</TableHead>
                   <TableHead className="text-center">PDFs</TableHead>
                   <TableHead className="text-right">Total Size</TableHead>
