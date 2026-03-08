@@ -202,7 +202,7 @@ export function EditProfileModal({
                 <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                <SelectItem value="">No department</SelectItem>
+                <SelectItem value="none">No department</SelectItem>
                 {departments.map((dept) => (
                   <SelectItem key={dept.id} value={dept.id}>
                     {dept.icon && <span className="mr-2">{dept.icon}</span>}
