@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 export function TrustSection() {
   return (
-    <section className="py-20 md:py-28 border-b border-border/40">
+    <section className="py-20 md:py-28 border-b border-border/40 dark:border-white/[0.06]">
       <div className="container mx-auto px-4 max-w-3xl text-center space-y-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
