@@ -271,7 +271,7 @@ export default function RepUpload() {
         open={showDisplayNamePrompt}
         onClose={() => {
           setShowDisplayNamePrompt(false);
-          navigate("/");
+          navigate("/dashboard");
         }}
       />
 
