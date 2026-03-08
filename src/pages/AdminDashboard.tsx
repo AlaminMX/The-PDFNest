@@ -604,9 +604,9 @@ export default function AdminDashboard() {
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.age ?? "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.phoneNumber || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.nickname || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
