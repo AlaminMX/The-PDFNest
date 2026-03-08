@@ -1,4 +1,5 @@
 import { LandingNav } from "@/components/landing/LandingNav";
+import { CursorFollowEffect } from "@/components/landing/CursorFollowEffect";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
