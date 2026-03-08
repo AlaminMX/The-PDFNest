@@ -129,7 +129,7 @@ export default function AdminUserDetail() {
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, nickname, preferred_theme, discovery_source, usage_reason, school, is_student, financial_literacy_interest, age, created_at, total_storage_used")
+        .select("id, email, full_name, nickname, preferred_theme, discovery_source, usage_reason, school, is_student, financial_literacy_interest, date_of_birth, phone_number, created_at, total_storage_used")
         .eq("id", userId)
         .maybeSingle();
 
