@@ -891,10 +891,12 @@ export default function Index() {
 
   const fileCount = sortedFiles.length;
 
-  const handleAutoOrganize = async () => {
-    const uncategorized = files.filter((f) => f.category_id === null);
-    if (uncategorized.length === 0) {
-      toast.info("All files are already categorized!");
+  const handleAutoOrganize = async (organizeAll = false) => {
+    const filesToOrganize = organizeAll
+      ? files
+      : files.filter((f) => f.category_id === null);
+    if (filesToOrganize.length === 0) {
+      toast.info(organizeAll ? "No files to organize!" : "All files are already categorized!");
       return;
     }
     const customCategories = categories.filter(
@@ -905,11 +907,11 @@ export default function Index() {
       return;
     }
     setIsOrganizing(true);
-    toast.loading("AI is organizing your files...", { id: "organize" });
+    toast.loading(`AI is organizing ${filesToOrganize.length} file${filesToOrganize.length !== 1 ? "s" : ""}...`, { id: "organize" });
     try {
       const { data, error } = await supabase.functions.invoke("organize-pdfs", {
         body: {
-          files: uncategorized.map((f) => ({ id: f.id, name: f.name })),
+          files: filesToOrganize.map((f) => ({ id: f.id, name: f.name })),
           categories: customCategories.map((c) => ({ id: c.id, name: c.name })),
         },
       });
