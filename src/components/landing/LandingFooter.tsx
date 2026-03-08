@@ -21,7 +21,7 @@ export function LandingFooter() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground/60 mt-8">
-          Built for students who value organized learning.
+          Built by Nexel 🖤<br /> for students who value organized learning.
         </p>
       </div>
     </footer>
