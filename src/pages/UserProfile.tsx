@@ -240,7 +240,7 @@ export default function UserProfile() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />

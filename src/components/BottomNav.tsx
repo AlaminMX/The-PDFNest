@@ -23,7 +23,7 @@ export function BottomNav({
   // For guests: show Home and AI Features (AI features will prompt login)
   // For logged-in users: show Home, AI Features, and Profile (goes to /profile for their own profile)
   const tabs = [
-    { icon: Home, label: "Home", path: "/", showDot: false },
+    { icon: Home, label: "Home", path: "/dashboard", showDot: false },
     { icon: Sparkles, label: "AI Features", path: "/ai-features", showDot: false },
     ...(isLoggedIn && userId
       ? [{ icon: Bell, label: "Notifications", path: "/notifications", showDot: false, badge: unreadNotifications }]
