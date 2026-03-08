@@ -347,7 +347,7 @@ function AppSidebar({
                       <SidebarMenuItem key={category.id}>
                         <SidebarMenuButton 
                           isActive={selectedCategory === category.id}
-                          onClick={() => onSelectCategory(category.id)}
+                          onClick={() => handleCategoryClick(category.id)}
                           className="py-2.5 px-3 rounded-lg transition-all duration-150"
                         >
                           {category.id === "favorites" ? (
