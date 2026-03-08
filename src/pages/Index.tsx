@@ -216,7 +216,7 @@ function AppSidebar({
             <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-sidebar-foreground" />
             </div>
-            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">AFIT Resources</span>
+            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Resources</span>
           </SidebarGroupLabel>
           <SidebarGroupContent className="pl-1">
             <SidebarMenu>

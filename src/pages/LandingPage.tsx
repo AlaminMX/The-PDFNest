@@ -12,7 +12,8 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative">
+      <CursorFollowEffect />
       <LandingNav />
       <main>
         <HeroSection />
