@@ -1,67 +1,37 @@
 
 
-## Plan: Fix AI Features, Bottom Nav, and Sidebar Restructure
+## Plan: Semester-Aware Course Management in Admin Dashboard
 
-### Three Issues to Address
+### Current State
+- The `courses` table already has a `semester` column (default: `'first'`), so **no database migration is needed**.
+- The **RepUpload** page already has semester selection working correctly -- it passes `selectedSemester` to `useCourses` and filters properly.
+- The **Admin Reps** page (create and edit dialogs) is the problem: it has no semester awareness. All courses are fetched/created without a semester filter, and new courses are inserted without specifying a semester (defaulting to `'first'`).
 
----
+### Changes Required
 
-### 1. AI Features Page — File Picker Not Showing
+#### 1. `src/pages/AdminReps.tsx` — Edit Dialog: Add Semester Tabs
+- Add `editSemester` state (default: `"first"`).
+- Update `fetchCoursesForDepartment` to accept and filter by semester.
+- Add a semester tab/select above the course list in the edit dialog so admin can switch between first and second semester courses.
+- When switching semesters, re-fetch courses for that semester.
+- When inserting new courses in the edit flow, include `semester: editSemester`.
 
-**Root cause:** In `AIFeatures.tsx`, `handleFeatureClick` checks `files.length === 0` and redirects to `/dashboard?upload=true`. But `usePDFFiles(user?.id)` loads files asynchronously — if the user clicks a feature before files finish loading, `files` is still an empty array, triggering the redirect.
+#### 2. `src/pages/AdminReps.tsx` — Create Dialog: Add Semester per Course
+- Add a `selectedCreateSemester` state to the create dialog.
+- Add semester tabs/select in the "Courses Offered" section of the create dialog.
+- Track courses separately per semester, or add a semester field to each course entry.
+- When inserting courses during rep creation, include the correct `semester` value.
 
-**Fix:** Check `filesLoading` before evaluating `files.length`. If still loading, wait or show a loading state. Only redirect if loading is complete AND files are truly empty.
+#### 3. `src/pages/AdminReps.tsx` — Course Interface Update
+- Extend the `Course` interface to include `semester?: string`.
+- Pass semester through all course CRUD operations (add, update, delete).
 
----
+### Files Modified
+- `src/pages/AdminReps.tsx` (sole file)
 
-### 2. Bottom Nav — Show All 4 Tabs Always
-
-**Root cause:** `BottomNav.tsx` conditionally adds Notifications and Profile tabs only when `isLoggedIn && userId` is truthy. For guests (or before auth loads), only Home and AI Features appear.
-
-**Fix:** Always render all 4 tabs. For guests, tapping Notifications or Profile will navigate to `/auth` instead. This ensures the nav looks consistent and works offline.
-
----
-
-### 3. Sidebar Layout Restructure
-
-Reorganize `AppSidebar` in `Index.tsx` to follow the requested hierarchy:
-
-```text
-AFIT Resources
-  └ AFIT PDFs
-
-Admin Tools          (admin only)
-  └ Reps Profile
-
-Recent Files         (collapsible)
-
-Favorites            (standalone item, not inside Files)
-
-Files                (collapsible)
-  └ All Files (count)
-
-Categories           (collapsible, separate from Files)
-  └ Uncategorized
-  └ School Stuff
-  └ Finance
-  └ ...
-  └ + New Category
-```
-
-**Typography levels:**
-- Level 1 (section headers like "AFIT Resources", "Files"): larger, bold, uppercase
-- Level 2 (sub-sections like "Admin Tools", "Recent Files", "Categories"): medium weight
-- Level 3 (individual items): normal weight
-
-**Spacing:** Clear separator lines between major groups.
-
----
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/pages/AIFeatures.tsx` | Guard `files.length === 0` check with `filesLoading` |
-| `src/components/BottomNav.tsx` | Always show all 4 tabs; guest taps on Notifications/Profile go to `/auth` |
-| `src/pages/Index.tsx` | Restructure `AppSidebar` sections, typography, and spacing per spec |
+### What Stays Unchanged
+- Database schema (semester column already exists)
+- RepUpload page (already working)
+- `useCourses` hook (already supports semester filtering)
+- All other pages and components
 
