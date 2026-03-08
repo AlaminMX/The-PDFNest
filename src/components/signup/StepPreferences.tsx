@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Check, Sun, Moon, Monitor } from "lucide-react";
+import { ArrowLeft, Check, Sun, Moon, Monitor, CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import type { SignupData } from "./SignupWizard";
 
 const themeOptions = [
@@ -26,6 +30,17 @@ interface Props {
 }
 
 export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const selectedDate = data.dateOfBirth ? new Date(data.dateOfBirth) : undefined;
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      updateData({ dateOfBirth: format(date, "yyyy-MM-dd") });
+      setCalendarOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -79,41 +94,40 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
               </button>
             ))}
           </div>
-          {data.usageReason === "other" && (
-            <Input
-              placeholder="Tell us why..."
-              value={data.usageReasonOther}
-              onChange={e => updateData({ usageReasonOther: e.target.value })}
-              autoFocus
-              className="h-11"
-            />
-          )}
         </div>
 
-        {/* Age & Nickname row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Age</Label>
-            <Input
-              type="number"
-              placeholder="e.g. 22"
-              min={10}
-              max={100}
-              value={data.age}
-              onChange={e => updateData({ age: e.target.value })}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Nickname</Label>
-            <Input
-              placeholder="Study name"
-              value={data.nickname}
-              onChange={e => updateData({ nickname: e.target.value })}
-              maxLength={30}
-              className="h-11"
-            />
-          </div>
+        {/* Date of Birth */}
+        <div className="space-y-2">
+          <Label>Date of Birth</Label>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full h-11 justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : "Pick your date of birth"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                disabled={(date) =>
+                  date > new Date() || date < new Date("1900-01-01")
+                }
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+                captionLayout="dropdown-buttons"
+                fromYear={1950}
+                toYear={new Date().getFullYear()}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

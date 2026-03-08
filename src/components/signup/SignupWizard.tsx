@@ -26,7 +26,7 @@ export interface SignupData {
   preferredTheme: string;
   usageReason: string;
   usageReasonOther: string;
-  age: string;
+  dateOfBirth: string;
   nickname: string;
 }
 
@@ -45,7 +45,7 @@ const initialData: SignupData = {
   preferredTheme: "system",
   usageReason: "",
   usageReasonOther: "",
-  age: "",
+  dateOfBirth: "",
   nickname: "",
 };
 
@@ -102,14 +102,13 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       is_student: data.isStudent ?? false,
       school: school || null,
       preferred_theme: data.preferredTheme || "system",
-      
       usage_reason: usageReason || null,
       terms_accepted: data.termsAccepted,
       terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null,
     };
 
-    if (data.age && !Number.isNaN(Number.parseInt(data.age, 10))) {
-      profilePayload.age = Number.parseInt(data.age, 10);
+    if (data.dateOfBirth) {
+      profilePayload.date_of_birth = data.dateOfBirth;
     }
 
     if (data.departmentId) {
