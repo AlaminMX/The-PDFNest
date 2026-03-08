@@ -197,7 +197,7 @@ export function EditProfileModal({
 
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
+            <Select value={departmentId || "none"} onValueChange={(val) => setDepartmentId(val === "none" ? "" : val)}>
               <SelectTrigger id="department">
                 <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
               </SelectTrigger>
