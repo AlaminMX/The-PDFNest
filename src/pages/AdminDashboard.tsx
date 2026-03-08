@@ -34,7 +34,8 @@ interface UserData {
   nickname: string | null;
   preferredTheme: string | null;
   usageReason: string | null;
-  age: number | null;
+  dateOfBirth: string | null;
+  phoneNumber: string | null;
 }
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
