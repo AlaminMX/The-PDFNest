@@ -6,8 +6,8 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 dark:border-white/[0.06] bg-background/80 backdrop-blur-lg">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between max-w-5xl">
-        <Link to="/" className="flex items-center gap-2.5">
-          <img src="/pdfnest-logo.png" alt="PDFNest" className="h-7 w-7" />
+        <Link to="/" className="flex items-center gap-2.5 text-lg">
+          
           <span className="font-semibold text-foreground text-lg">PDFNest</span>
         </Link>
 
@@ -21,6 +21,6 @@ export function LandingNav() {
           </Button>
         </div>
       </div>
-    </header>
-  );
+    </header>);
+
 }
