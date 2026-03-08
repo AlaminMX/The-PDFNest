@@ -157,7 +157,7 @@ export default function Auth() {
 
   const handleFinishOnboarding = () => {
     isOnboarding.current = false;
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleAbortOnboarding = () => {

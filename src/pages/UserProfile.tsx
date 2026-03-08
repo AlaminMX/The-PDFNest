@@ -491,7 +491,7 @@ export default function UserProfile() {
                   <div
                     key={category.id}
                     className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
