@@ -303,14 +303,45 @@ export default function UserProfile() {
         <Card className="overflow-hidden">
           <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
-            <div className="flex flex-col items-center gap-4 -mt-10 sm:flex-row sm:items-end">
+            {/* Mobile: centered stack */}
+            <div className="flex flex-col items-center -mt-10 gap-3 sm:hidden">
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg [&>img]:object-cover [&>img]:object-center">
+                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
+                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                  {getInitials(displayName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-center space-y-1">
+                <h2 className="text-2xl font-bold">{displayName}</h2>
+                {profile.email && (
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                )}
+                {departmentName && (
+                  <Badge variant="secondary" className="mt-1">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {departmentName}
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit Profile
+              </Button>
+            </div>
+            {/* Desktop: row layout */}
+            <div className="hidden sm:flex items-end gap-4 -mt-10">
               <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0 [&>img]:object-cover [&>img]:object-center">
                 <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-center sm:text-left space-y-1 pb-1">
+              <div className="flex-1 space-y-1 pb-1">
                 <h2 className="text-2xl font-bold">{displayName}</h2>
                 {profile.email && (
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
