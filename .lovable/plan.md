@@ -1,53 +1,37 @@
 
 
-## Plan: Modern Dark Theme Landing Page Background
+## Plan: Semester-Aware Course Management in Admin Dashboard
 
-### Approach
-Add layered ambient depth to the landing page dark mode — radial gradient orbs, subtle grid texture, soft glow behind hero, and thin glowing section dividers. All using CSS only (no JS animations), dark-mode-only via `dark:` classes.
+### Current State
+- The `courses` table already has a `semester` column (default: `'first'`), so **no database migration is needed**.
+- The **RepUpload** page already has semester selection working correctly -- it passes `selectedSemester` to `useCourses` and filters properly.
+- The **Admin Reps** page (create and edit dialogs) is the problem: it has no semester awareness. All courses are fetched/created without a semester filter, and new courses are inserted without specifying a semester (defaulting to `'first'`).
 
-### Changes
+### Changes Required
 
-**1. `src/pages/LandingPage.tsx`** — Add global ambient background layer:
-- Fixed overlay with 2-3 large, blurred radial gradient orbs (primary at ~5%, purple at ~3%, blue at ~3%)
-- Only visible in dark mode (`hidden dark:block`)
+#### 1. `src/pages/AdminReps.tsx` — Edit Dialog: Add Semester Tabs
+- Add `editSemester` state (default: `"first"`).
+- Update `fetchCoursesForDepartment` to accept and filter by semester.
+- Add a semester tab/select above the course list in the edit dialog so admin can switch between first and second semester courses.
+- When switching semesters, re-fetch courses for that semester.
+- When inserting new courses in the edit flow, include `semester: editSemester`.
 
-**2. `src/components/landing/HeroSection.tsx`** — Enhanced hero atmosphere:
-- Replace existing grid with a lower-opacity dark-mode grid (`dark:` variant)
-- Add a centered radial glow behind the hero content (primary color, very soft ~8% opacity, large blur)
-- Change `border-b border-border/40` to a thin glowing divider: `dark:border-primary/10 dark:shadow-[0_1px_0_0_hsl(var(--primary)/0.08)]`
+#### 2. `src/pages/AdminReps.tsx` — Create Dialog: Add Semester per Course
+- Add a `selectedCreateSemester` state to the create dialog.
+- Add semester tabs/select in the "Courses Offered" section of the create dialog.
+- Track courses separately per semester, or add a semester field to each course entry.
+- When inserting courses during rep creation, include the correct `semester` value.
 
-**3. All section components** — Glowing dividers instead of flat borders:
-- `ProblemSection`, `SolutionSection`, `FeaturesSection`, `HowItWorksSection`, `TrustSection`, `ResourcesSection`: Replace `border-b border-border/40` with `border-b border-border/40 dark:border-white/[0.06]`
-- Sections with `bg-muted/20` get `dark:bg-white/[0.02]` for subtle surface differentiation
-- Cards get `dark:bg-white/[0.03] dark:border-white/[0.06]` for elevated surfaces
+#### 3. `src/pages/AdminReps.tsx` — Course Interface Update
+- Extend the `Course` interface to include `semester?: string`.
+- Pass semester through all course CRUD operations (add, update, delete).
 
-**4. `src/components/landing/FinalCTASection.tsx`** — Add subtle radial glow behind CTA
+### Files Modified
+- `src/pages/AdminReps.tsx` (sole file)
 
-**5. `src/components/landing/LandingFooter.tsx`** — Subtle top glow border
-
-**6. `src/components/landing/LandingNav.tsx`** — Thin bottom glow: `dark:border-white/[0.06]`
-
-### Design Tokens (Dark Mode Only)
-- Ambient orbs: `bg-red-500/[0.04]`, `bg-purple-500/[0.03]`, `bg-blue-500/[0.03]` with `blur-[150px]`
-- Hero glow: `bg-primary/[0.06]` with `blur-[120px]`
-- Section borders: `dark:border-white/[0.06]` (replaces `border-border/40`)
-- Card surfaces: `dark:bg-white/[0.03]`
-- Alternating section backgrounds: `dark:bg-white/[0.02]`
-
-Light mode remains completely unchanged.
-
-### Files to Modify
-| File | Change |
-|------|--------|
-| `src/pages/LandingPage.tsx` | Add ambient gradient overlay |
-| `src/components/landing/HeroSection.tsx` | Radial glow + enhanced grid |
-| `src/components/landing/ProblemSection.tsx` | Dark card surfaces + glow border |
-| `src/components/landing/SolutionSection.tsx` | Dark surfaces + glow border |
-| `src/components/landing/FeaturesSection.tsx` | Dark card surfaces + glow border |
-| `src/components/landing/HowItWorksSection.tsx` | Dark surfaces + glow border |
-| `src/components/landing/TrustSection.tsx` | Dark card surfaces + glow border |
-| `src/components/landing/ResourcesSection.tsx` | Dark surfaces + glow border |
-| `src/components/landing/FinalCTASection.tsx` | Radial glow behind CTA |
-| `src/components/landing/LandingFooter.tsx` | Glow top border |
-| `src/components/landing/LandingNav.tsx` | Glow bottom border |
+### What Stays Unchanged
+- Database schema (semester column already exists)
+- RepUpload page (already working)
+- `useCourses` hook (already supports semester filtering)
+- All other pages and components
 

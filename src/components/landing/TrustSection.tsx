@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 export function TrustSection() {
   return (
-    <section className="py-20 md:py-28 border-b border-border/40">
+    <section className="py-20 md:py-28 border-b border-border/40 dark:border-white/[0.06]">
       <div className="container mx-auto px-4 max-w-3xl text-center space-y-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -31,7 +31,7 @@ export function TrustSection() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.3 }}
-              className="p-6 rounded-xl border border-border/50 bg-muted/30"
+              className="p-6 rounded-xl border border-border/50 bg-muted/30 dark:bg-white/[0.03] dark:border-white/[0.06]"
             >
               <div className="text-2xl md:text-3xl font-bold text-primary">{stat.value}</div>
               <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>

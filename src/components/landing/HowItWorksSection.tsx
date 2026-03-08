@@ -8,7 +8,7 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section className="py-20 md:py-28 border-b border-border/40 bg-muted/20">
+    <section className="py-20 md:py-28 border-b border-border/40 dark:border-white/[0.06] bg-muted/20 dark:bg-white/[0.02]">
       <div className="container mx-auto px-4 max-w-3xl space-y-12">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

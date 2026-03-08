@@ -11,7 +11,7 @@ const solutions = [
 
 export function SolutionSection() {
   return (
-    <section className="py-20 md:py-28 border-b border-border/40 bg-muted/20">
+    <section className="py-20 md:py-28 border-b border-border/40 dark:border-white/[0.06] bg-muted/20 dark:bg-white/[0.02]">
       <div className="container mx-auto px-4 max-w-3xl text-center space-y-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -36,7 +36,7 @@ export function SolutionSection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.3 }}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background"
+              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background dark:bg-white/[0.03] dark:border-white/[0.06]"
             >
               <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                 <item.icon className="w-5 h-5 text-primary" />

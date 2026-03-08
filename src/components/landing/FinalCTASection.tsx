@@ -4,8 +4,10 @@ import { ArrowRight } from "lucide-react";
 
 export function FinalCTASection() {
   return (
-    <section className="py-24 md:py-32">
-      <div className="container mx-auto px-4 max-w-3xl text-center space-y-8">
+    <section className="py-24 md:py-32 relative overflow-hidden">
+      {/* CTA radial glow - dark mode only */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/[0.05] blur-[120px] hidden dark:block" />
+      <div className="relative container mx-auto px-4 max-w-3xl text-center space-y-8">
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
           Start organizing your academic life.
         </h2>
