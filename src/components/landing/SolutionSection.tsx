@@ -36,7 +36,7 @@ export function SolutionSection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.3 }}
-              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background"
+              className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background dark:bg-white/[0.03] dark:border-white/[0.06]"
             >
               <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                 <item.icon className="w-5 h-5 text-primary" />

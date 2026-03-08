@@ -5,10 +5,12 @@ import { motion } from "framer-motion";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden border-b border-border/40">
+    <section className="relative overflow-hidden border-b border-border/40 dark:border-white/[0.06] dark:shadow-[0_1px_0_0_hsl(0_0%_100%/0.04)]">
       {/* Subtle grid background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--muted)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--muted)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--muted)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--muted)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem] dark:opacity-[0.4]" />
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
+      {/* Hero radial glow - dark mode only */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.06] blur-[120px] hidden dark:block" />
 
       <div className="relative container mx-auto px-4 py-24 md:py-36 lg:py-44 max-w-4xl">
         <motion.div

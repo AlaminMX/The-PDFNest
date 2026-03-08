@@ -28,6 +28,7 @@ export function FinalCTASection() {
           </Button>
         </div>
       </div>
+      </div>
     </section>
   );
 }

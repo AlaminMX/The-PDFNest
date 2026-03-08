@@ -61,7 +61,7 @@ export function FeaturesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.06, duration: 0.3 }}
-              className="p-6 rounded-xl border border-border/50 bg-card hover:border-border transition-colors space-y-3"
+              className="p-6 rounded-xl border border-border/50 bg-card hover:border-border transition-colors space-y-3 dark:bg-white/[0.03] dark:border-white/[0.06] dark:hover:border-white/[0.1]"
             >
               <div className="p-2.5 rounded-lg bg-primary/10 w-fit">
                 <f.icon className="w-5 h-5 text-primary" />

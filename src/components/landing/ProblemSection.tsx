@@ -35,7 +35,7 @@ export function ProblemSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.3 }}
-              className="flex flex-col items-center gap-3 p-5 rounded-xl border border-border/50 bg-muted/30"
+              className="flex flex-col items-center gap-3 p-5 rounded-xl border border-border/50 bg-muted/30 dark:bg-white/[0.03] dark:border-white/[0.06]"
             >
               <item.icon className="w-6 h-6 text-muted-foreground" />
               <span className="text-sm text-muted-foreground text-center leading-snug">{item.text}</span>
