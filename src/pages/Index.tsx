@@ -323,7 +323,7 @@ function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       isActive={selectedCategory === "all"}
-                      onClick={() => onSelectCategory("all")}
+                      onClick={() => handleCategoryClick("all")}
                       className="py-2.5 px-3 rounded-lg transition-all duration-150"
                     >
                       <Folder className="w-[18px] h-[18px] shrink-0" />
