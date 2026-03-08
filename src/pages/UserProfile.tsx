@@ -452,7 +452,7 @@ export default function UserProfile() {
                   <div
                     key={file.id}
                     className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div className="p-2 rounded bg-primary/10">
                       <FileText className="w-4 h-4 text-primary" />
