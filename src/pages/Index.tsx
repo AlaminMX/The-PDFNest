@@ -527,6 +527,7 @@ export default function Index() {
   });
   const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
   const [showViewHint, setShowViewHint] = useState(false);
+  const [isOrganizing, setIsOrganizing] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
