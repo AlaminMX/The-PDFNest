@@ -35,7 +35,7 @@ export default function AdminFaculties() {
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
       toast.error("Access denied.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, authLoading, adminLoading, navigate]);
 
