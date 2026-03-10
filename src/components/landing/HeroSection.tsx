@@ -38,20 +38,6 @@ export function HeroSection() {
             Upload, organize, and access your course materials in one place.
             Built for students who are tired of losing files across WhatsApp groups, downloads, and folders.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-            <Button asChild size="lg" className="gap-2 text-base px-8 h-12 rounded-xl shadow-lg shadow-primary/20">
-              <Link to="/auth">
-                Start Using PDFNest
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="gap-2 text-base px-8 h-12 rounded-xl">
-              <Link to="/afit-pdfs">
-                Browse AFIT PDFs
-              </Link>
-            </Button>
-          </div>
         </motion.div>
       </div>
     </section>
