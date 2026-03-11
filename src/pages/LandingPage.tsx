@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSession } from "@/hooks/useSession";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { CursorFollowEffect } from "@/components/landing/CursorFollowEffect";
 import { HeroSection } from "@/components/landing/HeroSection";
@@ -14,6 +16,14 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
+  const { user, loading } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     let ticking = false;
@@ -29,6 +39,8 @@ export default function LandingPage() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  if (loading || user) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
