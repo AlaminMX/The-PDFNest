@@ -12,7 +12,7 @@ export function RepBottomNav({ repUserId, unreadNotifications = 0 }: RepBottomNa
   const location = useLocation();
   
   const tabs = [
-    { icon: Home, label: "Home", path: "/" },
+    { icon: Home, label: "Home", path: "/dashboard" },
     { icon: Upload, label: "Upload", path: "/rep/upload" },
     { icon: Bell, label: "Notifications", path: "/notifications", badge: unreadNotifications },
     { icon: User, label: "Profile", path: `/rep/${repUserId}` },

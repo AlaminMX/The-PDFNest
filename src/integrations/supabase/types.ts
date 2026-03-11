@@ -68,6 +68,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -220,6 +238,7 @@ export type Database = {
           color: string | null
           created_at: string | null
           display_order: number | null
+          faculty_id: string | null
           icon: string | null
           id: string
           is_visible: boolean
@@ -231,6 +250,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -242,6 +262,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -256,7 +277,47 @@ export type Database = {
             referencedRelation: "department_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "departments_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      faculties: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_visible: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       lecture_notes: {
         Row: {
@@ -481,6 +542,7 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           created_at: string | null
+          date_of_birth: string | null
           default_category_id: string | null
           default_sort_order: string | null
           department_id: string | null
@@ -506,6 +568,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null
@@ -531,6 +594,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null
@@ -568,6 +632,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      store_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
       }
       study_guides: {
         Row: {
@@ -804,6 +892,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user_account: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       get_rep_public_info: {
         Args: { rep_user_id: string }
         Returns: {
@@ -835,6 +927,29 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      insert_activity_event: {
+        Args: {
+          p_action: string
+          p_context?: Json
+          p_resource: string
+          p_session_id: string
+          p_status: string
+          p_timestamp: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      purge_old_session_data: { Args: never; Returns: undefined }
+      record_failed_login_attempt: {
+        Args: {
+          p_context?: Json
+          p_identifier: string
+          p_ip_address?: string
+          p_session_id?: string
+          p_user_agent?: string
+        }
+        Returns: number
       }
       update_user_storage: {
         Args: { p_size_delta: number; p_user_id: string }

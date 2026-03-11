@@ -19,7 +19,7 @@ export function ProfileSkeleton() {
               asChild
               className="shrink-0"
             >
-              <Link to="/">
+              <Link to="/dashboard">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
             </Button>
