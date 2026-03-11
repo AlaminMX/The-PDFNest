@@ -54,6 +54,7 @@ export async function cachePDF(
     db.close();
   } catch (err) {
     console.warn("Failed to cache PDF offline:", err);
+    throw err;
   }
 }
 
