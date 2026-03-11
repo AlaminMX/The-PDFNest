@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { CursorFollowEffect } from "@/components/landing/CursorFollowEffect";
 import { HeroSection } from "@/components/landing/HeroSection";
@@ -14,6 +16,16 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
+  const navigate = useNavigate();
+
+  // Redirect logged-in users to dashboard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/dashboard", { replace: true });
+      }
+    });
+  }, [navigate]);
 
   useEffect(() => {
     let ticking = false;
