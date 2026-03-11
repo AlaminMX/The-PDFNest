@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { CursorFollowEffect } from "@/components/landing/CursorFollowEffect";
 import { HeroSection } from "@/components/landing/HeroSection";
