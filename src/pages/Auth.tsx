@@ -197,10 +197,12 @@ export default function Auth() {
         },
       });
       if (error) throw error;
+      const { startSession, logActivity } = await import("@/lib/sessionLogger");
       await startSession();
       await logActivity("login_success", { provider: "google", flow: "oauth_redirect_started" });
       toast.success("Redirecting to Google...");
     } catch (error: any) {
+      const { logActivity } = await import("@/lib/sessionLogger");
       await logActivity("login_failed", { provider: "google", reason: error?.message || "oauth_error" });
       if (isGoogleProviderDisabled(error?.message)) {
         toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
