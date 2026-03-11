@@ -219,7 +219,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at summarizing documents. Provide a comprehensive summary highlighting key points, main arguments, important details, and conclusions. Structure your summary with clear sections and use bullet points for better readability. For longer documents, ensure you capture the full scope of the content.'
+            content: 'You are an expert at summarizing documents. Provide a comprehensive summary highlighting key points, main arguments, important details, and conclusions. Structure your summary with clear sections and use bullet points for better readability. For longer documents, ensure you capture the full scope of the content. Do NOT use emojis. Keep formatting clean and professional.'
           },
           {
             role: 'user',
