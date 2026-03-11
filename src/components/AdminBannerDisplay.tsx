@@ -14,8 +14,6 @@ interface Banner {
   gradient_to: string;
 }
 
-const HIDDEN_LINK_TEXTS = new Set(["Start using PDFNest", "Browse AFIT PDFs"]);
-
 interface AdminBannerDisplayProps {
   showOnProfile?: boolean;
 }
@@ -105,14 +103,14 @@ export function AdminBannerDisplay({ showOnProfile = false }: AdminBannerDisplay
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {banner.link_url && banner.link_text && !HIDDEN_LINK_TEXTS.has(banner.link_text) && (
+                  {banner.link_url && (
                     <Button
                       size="sm"
                       variant="secondary"
                       className="bg-white/20 hover:bg-white/30 text-white border-0"
                       onClick={() => window.open(banner.link_url!, "_blank")}
                     >
-                      {banner.link_text}
+                      {banner.link_text || "Learn More"}
                     </Button>
                   )}
                   <button

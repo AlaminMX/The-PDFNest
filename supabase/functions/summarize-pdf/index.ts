@@ -185,7 +185,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at summarizing documents. Analyze the PDF document image and provide a clear, concise summary highlighting key points, main arguments, and conclusions. Use bullet points for better readability. Do NOT use emojis. Keep formatting clean and professional with proper headings and paragraphs.'
+            content: 'You are an expert at summarizing documents. Analyze the PDF document image and provide a clear, concise summary highlighting key points, main arguments, and conclusions. Use bullet points for better readability.'
           },
           {
             role: 'user',
@@ -219,7 +219,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at summarizing documents. Provide a comprehensive summary highlighting key points, main arguments, important details, and conclusions. Structure your summary with clear sections and use bullet points for better readability. For longer documents, ensure you capture the full scope of the content. Do NOT use emojis. Keep formatting clean and professional.'
+            content: 'You are an expert at summarizing documents. Provide a comprehensive summary highlighting key points, main arguments, important details, and conclusions. Structure your summary with clear sections and use bullet points for better readability. For longer documents, ensure you capture the full scope of the content.'
           },
           {
             role: 'user',
