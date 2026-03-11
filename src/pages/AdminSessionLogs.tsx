@@ -72,24 +72,6 @@ function shortId(value: string): string {
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
 }
 
-
-function summarizeContext(context: Record<string, unknown> | null | undefined): string {
-  if (!context || Object.keys(context).length === 0) {
-    return "No extra context captured for this event.";
-  }
-
-  const preferredKeys = ["reason", "provider", "identifier", "fileName", "path", "error", "source"];
-  for (const key of preferredKeys) {
-    const value = context[key];
-    if (typeof value === "string" && value.trim()) {
-      return `${key}: ${value}`;
-    }
-  }
-
-  const [firstKey] = Object.keys(context);
-  return `${firstKey}: ${String(context[firstKey])}`;
-}
-
 export default function AdminSessionLogs() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
@@ -106,7 +88,7 @@ export default function AdminSessionLogs() {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [adminLoading, isAdmin, navigate]);
 
@@ -123,33 +105,59 @@ export default function AdminSessionLogs() {
       const actionParam = actionFilter === "ALL" ? null : actionFilter;
       const searchParam = searchQuery.trim() ? searchQuery.trim() : null;
 
-      const [eventsRes, failedRes, sessionsRes] = await Promise.all([
-        supabase.rpc("get_admin_activity_events", {
-          p_limit: 1000,
-          p_offset: 0,
-          p_action: actionParam,
-          p_search: searchParam,
-          p_session_id: null,
-        }),
-        supabase.rpc("get_admin_failed_login_events", {
-          p_limit: 500,
-          p_offset: 0,
-          p_search: searchParam,
-        }),
-        supabase.rpc("get_admin_activity_sessions", {
-          p_limit: 300,
-          p_offset: 0,
-          p_search: searchParam,
-        }),
+      const [eventsRes, sessionsRes] = await Promise.all([
+        supabase
+          .from("user_activity_logs")
+          .select("id, activity_type, details, created_at, user_id, ip_address, user_agent")
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        supabase
+          .from("user_sessions")
+          .select("id, user_id, login_at, logout_at, is_active, duration_seconds, user_agent")
+          .order("login_at", { ascending: false })
+          .limit(300),
       ]);
 
       if (eventsRes.error) throw eventsRes.error;
-      if (failedRes.error) throw failedRes.error;
       if (sessionsRes.error) throw sessionsRes.error;
 
-      setActivityEvents((eventsRes.data || []) as ActivityEvent[]);
-      setFailedLoginEvents((failedRes.data || []) as FailedLoginEvent[]);
-      setSessionSummaries((sessionsRes.data || []) as SessionSummary[]);
+      const rawEvents = eventsRes.data || [];
+      const mappedEvents: ActivityEvent[] = rawEvents.map((e: any) => ({
+        id: e.id,
+        timestamp: e.created_at,
+        user_id: e.user_id,
+        session_id: (e.details as any)?.session_id || "",
+        action: e.activity_type,
+        resource: (e.details as any)?.resource || "",
+        status: (e.details as any)?.status || "ok",
+        context: (e.details as Record<string, unknown>) || {},
+      }));
+
+      const mappedFailed: FailedLoginEvent[] = rawEvents
+        .filter((e: any) => e.activity_type === "login_failed")
+        .map((e: any, i: number) => ({
+          id: i,
+          identifier: (e.details as any)?.identifier || e.user_id,
+          attempted_at: e.created_at,
+          ip_address: e.ip_address,
+          user_agent: e.user_agent,
+          session_id: (e.details as any)?.session_id || null,
+          context: (e.details as Record<string, unknown>) || {},
+        }));
+
+      const mappedSessions: SessionSummary[] = (sessionsRes.data || []).map((s: any) => ({
+        session_id: s.id,
+        user_id: s.user_id,
+        started_at: s.login_at,
+        ended_at: s.logout_at || "",
+        event_count: 0,
+        error_count: 0,
+        security_count: 0,
+      }));
+
+      setActivityEvents(mappedEvents);
+      setFailedLoginEvents(mappedFailed);
+      setSessionSummaries(mappedSessions);
     } catch (error) {
       console.error("Failed to fetch activity logs", error);
       toast.error("Failed to load activity logs");
@@ -272,20 +280,11 @@ export default function AdminSessionLogs() {
                             <span className="text-xs text-muted-foreground">user: {shortId(event.user_id)}</span>
                             <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>
                             <span className="text-xs">{event.resource}</span>
-                            <span className="text-xs text-muted-foreground">{summarizeContext(event.context)}</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
                           <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
-                            {JSON.stringify({
-                              timestamp: event.timestamp,
-                              user_id: event.user_id,
-                              session_id: event.session_id,
-                              action: event.action,
-                              resource: event.resource,
-                              status: event.status,
-                              context: event.context || {},
-                            }, null, 2)}
+                            {JSON.stringify(event.context || {}, null, 2)}
                           </pre>
                         </AccordionContent>
                       </AccordionItem>

@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "LOGIN_FAILED") {
+    if (action === "LOGIN_FAILED" && token && userId !== "guest") {
       const identifier =
         typeof body.context?.identifier === "string" && body.context.identifier.trim()
           ? body.context.identifier.trim().toLowerCase()
