@@ -1074,8 +1074,12 @@ export default function Index() {
                 Organize Your PDFs
               </h1>
               <p className="text-muted-foreground text-lg">
-                Upload, categorize, and manage your documents effortlessly
+                Upload, organize, and access your course materials in one place. Built for students who are tired of losing files across WhatsApp groups, downloads, and folders.
               </p>
+              <div className="mt-4 flex flex-col items-center justify-center">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
+                <ChevronDown className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
