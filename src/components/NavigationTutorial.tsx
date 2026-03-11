@@ -78,7 +78,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     ],
   },
   {
-    title: "AFIT Resources",
+    title: "Resources",
     description: "Access lecture notes uploaded by course reps. Browse by department and course.",
     icon: FolderOpen,
     color: "from-amber-500/20 to-amber-500/5",

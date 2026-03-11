@@ -8,6 +8,8 @@ import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { uploadManager } from "@/lib/uploadManager";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +17,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle, Tag } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -162,11 +164,19 @@ function AppSidebar({
   recentFiles: RecentFile[];
   onOpenRecentFile: (fileId: string) => void;
 }) {
-  const { open } = useSidebar();
+  const { open, isMobile, setOpenMobile } = useSidebar();
+  
+  const handleCategoryClick = (id: string) => {
+    onSelectCategory(id);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [aiSectionOpen, setAiSectionOpen] = useState(true);
-  const [filesSectionOpen, setFilesSectionOpen] = useState(true);
+  const [filesSectionOpen, setFilesSectionOpen] = useState(false);
   const [recentSectionOpen, setRecentSectionOpen] = useState(false);
+  const [categoriesSectionOpen, setCategoriesSectionOpen] = useState(true);
   
   const handleAddCategoryLocal = async () => {
     if (!newCategoryName.trim()) {
@@ -178,7 +188,7 @@ function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground">
       {/* Header with subtle gradient accent */}
       <SidebarHeader className="pb-0">
         <div className="flex items-center gap-3 px-3 py-4">
@@ -206,7 +216,7 @@ function AppSidebar({
             <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
               <GraduationCap className="w-4 h-4 text-sidebar-foreground" />
             </div>
-            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">AFIT Resources</span>
+            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Resources</span>
           </SidebarGroupLabel>
           <SidebarGroupContent className="pl-1">
             <SidebarMenu>
@@ -294,7 +304,33 @@ function AppSidebar({
         {/* Separator */}
         <div className="mx-4 h-px bg-sidebar-border" />
 
-        {/* Files / Categories Section */}
+        {/* Favorites */}
+        <SidebarGroup className="py-1">
+          <SidebarGroupContent className="pl-1">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={selectedCategory === "favorites"}
+                  onClick={() => handleCategoryClick("favorites")}
+                  className="py-2.5 px-3 rounded-lg transition-all duration-150"
+                >
+                  <Star className="w-[18px] h-[18px] text-[hsl(var(--chart-4))] shrink-0" />
+                  <span className="text-[13px] ml-0.5 font-medium">Favorites</span>
+                  {open && (
+                    <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                      {files.filter((f) => f.is_favorite).length}
+                    </span>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Separator */}
+        <div className="mx-4 h-px bg-sidebar-border" />
+
+        {/* Files Section */}
         <Collapsible open={filesSectionOpen} onOpenChange={setFilesSectionOpen}>
           <SidebarGroup className="py-2">
             <CollapsibleTrigger asChild>
@@ -303,7 +339,7 @@ function AppSidebar({
                   <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
                     <Folder className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
-                  <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
+                  <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground">Files</span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
@@ -314,7 +350,7 @@ function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       isActive={selectedCategory === "all"}
-                      onClick={() => onSelectCategory("all")}
+                      onClick={() => handleCategoryClick("all")}
                       className="py-2.5 px-3 rounded-lg transition-all duration-150"
                     >
                       <Folder className="w-[18px] h-[18px] shrink-0" />
@@ -326,10 +362,34 @@ function AppSidebar({
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  
-                  {categories.map((category) => {
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        {/* Separator */}
+        <div className="mx-4 h-px bg-sidebar-border" />
+
+        {/* Categories Section */}
+        <Collapsible open={categoriesSectionOpen} onOpenChange={setCategoriesSectionOpen}>
+          <SidebarGroup className="py-2">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+                    <Tag className="w-4 h-4 text-sidebar-foreground/80" />
+                  </div>
+                  <span className="font-medium text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Categories</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${categoriesSectionOpen ? 'rotate-180' : ''}`} />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1.5 pl-1">
+                <SidebarMenu>
+                  {categories.filter(c => c.id !== "favorites").map((category) => {
                     const count = files.filter((f) => 
-                      category.id === "favorites" ? f.is_favorite :
                       category.id === "uncategorized" ? !f.category_id :
                       f.category_id === category.id
                     ).length;
@@ -338,14 +398,10 @@ function AppSidebar({
                       <SidebarMenuItem key={category.id}>
                         <SidebarMenuButton 
                           isActive={selectedCategory === category.id}
-                          onClick={() => onSelectCategory(category.id)}
-                          className="py-2.5 px-3 rounded-lg transition-all duration-150"
+                          onClick={() => handleCategoryClick(category.id)}
+                          className="py-2 px-3 rounded-lg transition-all duration-150"
                         >
-                          {category.id === "favorites" ? (
-                            <Star className="w-[18px] h-[18px] text-[#f1b824] shrink-0" />
-                          ) : (
-                            <Folder className="w-[18px] h-[18px] shrink-0" />
-                          )}
+                          <Folder className="w-[16px] h-[16px] shrink-0" />
                           <span className="truncate text-[13px] ml-0.5">{category.name}</span>
                           {open && count > 0 && (
                             <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
@@ -353,7 +409,7 @@ function AppSidebar({
                             </span>
                           )}
                         </SidebarMenuButton>
-                        {category.id !== "uncategorized" && category.id !== "favorites" && (
+                        {category.id !== "uncategorized" && (
                           <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
                             <Trash2 className="w-3.5 h-3.5" />
                           </SidebarMenuAction>
@@ -369,7 +425,7 @@ function AppSidebar({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground border border-dashed border-sidebar-border hover:border-sidebar-ring/50 transition-colors"
+                    className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground border border-dashed border-sidebar-border hover:border-sidebar-foreground/50 transition-colors"
                     onClick={() => setShowNewCategoryForm(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -485,6 +541,15 @@ export default function Index() {
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { data: profileStorageUsed } = useQuery({
+    queryKey: ["user-storage", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { data } = await supabase.from("profiles").select("total_storage_used").eq("id", user.id).maybeSingle();
+      return data?.total_storage_used || 0;
+    },
+    enabled: !!user?.id,
+  });
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -503,7 +568,7 @@ export default function Index() {
   const [bulkMoveCategory, setBulkMoveCategory] = useState<string>("");
   const [showTutorial, setShowTutorial] = useState(!localStorage.getItem("tutorial-completed"));
   const [viewMode, setViewMode] = useState<"list" | "grid">(
-    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "list"
+    () => (localStorage.getItem("pdfnest-view-mode") as "list" | "grid") || "grid"
   );
   const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
   const [selectedFileForAI, setSelectedFileForAI] = useState<{ id: string; name: string } | null>(null);
@@ -515,6 +580,8 @@ export default function Index() {
     return !localStorage.getItem(`checklist-dismissed-${user?.id}`);
   });
   const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>([]);
+  const [showViewHint, setShowViewHint] = useState(false);
+  const [isOrganizing, setIsOrganizing] = useState(false);
 
   const categoryColors = [
     'bg-red-100 text-red-700',
@@ -542,6 +609,18 @@ export default function Index() {
       console.error("Failed to load recent files:", error);
     }
   }, [user?.id, files]);
+
+  // One-time view mode hint
+  useEffect(() => {
+    if (!user?.id) return;
+    const hintKey = `pdfnest-view-hint-${user.id}`;
+    if (localStorage.getItem(hintKey)) return;
+    const timer = setTimeout(() => {
+      setShowViewHint(true);
+      localStorage.setItem(hintKey, "true");
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
 
   // Online/offline listener
   useEffect(() => {
@@ -584,8 +663,14 @@ export default function Index() {
   }, [authLoading, repLoading, isRep, user?.id, navigate]);
 
   if (authLoading) {
-    // Avoid rendering an intermediate full-screen loader which can feel like a page flash.
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground text-sm">Loading your workspace...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -655,10 +740,26 @@ export default function Index() {
     }
   };
 
-  const handleOpenPreview = (file: any) => {
+  const handleOpenPreview = async (file: any) => {
     if (!file.url && !file.isOfflineAvailable) return;
+    
+    let previewUrl = file.url || '';
+    
+    // For offline files or when offline, try to get cached blob
+    if (file.isOfflineAvailable && (!file.url || !navigator.onLine)) {
+      try {
+        const { getCachedPDF } = await import("@/lib/offlineStorage");
+        const blob = await getCachedPDF(file.id);
+        if (blob) {
+          previewUrl = URL.createObjectURL(blob);
+        }
+      } catch (err) {
+        console.error("Error loading cached PDF:", err);
+      }
+    }
+    
     setPreviewPdf({ 
-      url: file.url || '', 
+      url: previewUrl, 
       name: file.name,
       fileSize: file.file_size,
       fileId: file.id,
@@ -812,7 +913,7 @@ export default function Index() {
     uploadManager.addFiles(droppedFiles, selectedCategory === "all" ? null : selectedCategory);
   };
 
-  const storageUsed = files.reduce((total, file) => total + (file.file_size || 0), 0);
+  const storageUsed = profileStorageUsed ?? 0;
 
   const filteredFiles = selectedCategory === "all" 
     ? files 
@@ -843,6 +944,53 @@ export default function Index() {
   });
 
   const fileCount = sortedFiles.length;
+
+  const handleAutoOrganize = async (organizeAll = false) => {
+    const filesToOrganize = organizeAll
+      ? files
+      : files.filter((f) => f.category_id === null);
+    if (filesToOrganize.length === 0) {
+      toast.info(organizeAll ? "No files to organize!" : "All files are already categorized!");
+      return;
+    }
+    const customCategories = categories.filter(
+      (c) => c.id !== "favorites" && c.id !== "uncategorized"
+    );
+    if (customCategories.length === 0) {
+      toast.error("Create some categories first so AI can organize your files.");
+      return;
+    }
+    setIsOrganizing(true);
+    toast.loading(`AI is organizing ${filesToOrganize.length} file${filesToOrganize.length !== 1 ? "s" : ""}...`, { id: "organize" });
+    try {
+      const { data, error } = await supabase.functions.invoke("organize-pdfs", {
+        body: {
+          files: filesToOrganize.map((f) => ({ id: f.id, name: f.name })),
+          categories: customCategories.map((c) => ({ id: c.id, name: c.name })),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const assignments: { fileId: string; categoryId: string }[] = data.assignments || [];
+      if (assignments.length === 0) {
+        toast.info("AI couldn't find matching categories for your files.", { id: "organize" });
+        return;
+      }
+      let successCount = 0;
+      for (const { fileId, categoryId } of assignments) {
+        try {
+          await updateFileCategory(fileId, categoryId);
+          successCount++;
+        } catch { /* skip */ }
+      }
+      toast.success(`Organized ${successCount} file${successCount !== 1 ? "s" : ""} into categories!`, { id: "organize" });
+    } catch (err: any) {
+      console.error("Auto-organize error:", err);
+      toast.error(err.message || "Failed to organize files", { id: "organize" });
+    } finally {
+      setIsOrganizing(false);
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -882,11 +1030,11 @@ export default function Index() {
               <h1 className="text-xl font-semibold">PDFNest</h1>
               <DesktopHeaderNav />
               <div className="ml-auto flex items-center gap-2">
-                <div id="view-toggle" className="flex items-center border rounded-md">
+                <div id="view-toggle" className="relative flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => { setViewMode("list"); localStorage.setItem("pdfnest-view-mode", "list"); }}
                     className="rounded-r-none"
                   >
                     <LayoutList className="w-4 h-4" />
@@ -894,11 +1042,18 @@ export default function Index() {
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setViewMode("grid")}
+                    onClick={() => { setViewMode("grid"); localStorage.setItem("pdfnest-view-mode", "grid"); }}
                     className="rounded-l-none"
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
+                  {showViewHint && (
+                    <div className="absolute top-full right-0 mt-2 w-56 p-3 rounded-lg bg-popover border shadow-lg z-50 animate-in fade-in slide-in-from-top-2">
+                      <p className="text-xs text-foreground font-medium mb-1">💡 View Mode</p>
+                      <p className="text-xs text-muted-foreground mb-2">Switch between Grid and List view using this toggle.</p>
+                      <Button size="sm" variant="secondary" className="w-full h-7 text-xs" onClick={() => setShowViewHint(false)}>Got it</Button>
+                    </div>
+                  )}
                 </div>
                 <InstallPWA />
                 <div id="theme-toggle">
@@ -1043,6 +1198,27 @@ export default function Index() {
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isOrganizing}
+                          title="Auto-organize files with AI"
+                        >
+                          <Sparkles className={`w-4 h-4 mr-1 ${isOrganizing ? "animate-spin" : ""}`} />
+                          <span className="hidden sm:inline">{isOrganizing ? "Organizing..." : "Auto-Organize"}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAutoOrganize(false)}>
+                          Organize uncategorized only
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAutoOrganize(true)}>
+                          Re-organize all files
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>

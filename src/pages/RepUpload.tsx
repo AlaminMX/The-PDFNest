@@ -63,7 +63,7 @@ export default function RepUpload() {
   useEffect(() => {
     if (!repLoading && !isRep) {
       toast.error("Access denied. Rep role required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isRep, repLoading, navigate]);
 
@@ -271,7 +271,7 @@ export default function RepUpload() {
         open={showDisplayNamePrompt}
         onClose={() => {
           setShowDisplayNamePrompt(false);
-          navigate("/");
+          navigate("/dashboard");
         }}
       />
 
@@ -318,7 +318,7 @@ export default function RepUpload() {
           title="Upload Lecture Notes"
           subtitle={departmentName || ""}
           showBack
-          backTo="/"
+          backTo="/dashboard"
         />
 
         <main className="container mx-auto px-4 py-6 md:py-8 max-w-2xl space-y-6">
