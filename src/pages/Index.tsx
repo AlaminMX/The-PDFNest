@@ -1076,6 +1076,10 @@ export default function Index() {
               <p className="text-muted-foreground text-lg">
                 Upload, categorize, and manage your documents effortlessly   
               </p>
+              <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
+                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
