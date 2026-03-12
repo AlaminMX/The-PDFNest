@@ -33,6 +33,7 @@ import RepProfile from "./pages/RepProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
 import Notifications from "./pages/Notifications";
+import CommunityUpload from "./pages/CommunityUpload";
 import NotFound from "./pages/NotFound";
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 

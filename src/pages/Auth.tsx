@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { startSession, logActivity } from "@/lib/sessionLogger";
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4">
