@@ -401,7 +401,7 @@ function CommunityUploadContent() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-background pb-20">
-        <PageHeader title="Material Submitted" onBack={() => navigate("/dashboard")} />
+        <PageHeader title="Material Submitted" showBack backTo="/dashboard" />
         <div className="max-w-lg mx-auto px-4 pt-8">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
