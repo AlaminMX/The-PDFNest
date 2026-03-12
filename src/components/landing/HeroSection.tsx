@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
 export function HeroSection() {
   return (
