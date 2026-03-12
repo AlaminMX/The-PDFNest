@@ -17,7 +17,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, WifiOff, CloudDownload, CheckCircle, Tag } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle, Tag } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -1076,10 +1076,6 @@ export default function Index() {
               <p className="text-muted-foreground text-lg">
                 Upload, categorize, and manage your documents effortlessly   
               </p>
-              <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
-                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
-              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
