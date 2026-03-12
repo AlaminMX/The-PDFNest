@@ -68,6 +68,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -106,6 +124,152 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      community_uploads: {
+        Row: {
+          course_id: string | null
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          faculty_id: string | null
+          file_hash: string | null
+          file_path: string
+          file_size: number
+          id: string
+          level: number
+          material_type: string
+          original_file_name: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          semester: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          faculty_id?: string | null
+          file_hash?: string | null
+          file_path: string
+          file_size?: number
+          id?: string
+          level?: number
+          material_type?: string
+          original_file_name: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          semester?: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          faculty_id?: string | null
+          file_hash?: string | null
+          file_path?: string
+          file_size?: number
+          id?: string
+          level?: number
+          material_type?: string
+          original_file_name?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          semester?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_uploads_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_uploads_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_with_note_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_uploads_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_uploads_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contributor_badges: {
+        Row: {
+          badge_type: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_type: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contributor_points: {
+        Row: {
+          approved_count: number
+          id: string
+          pending_count: number
+          rejected_count: number
+          total_points: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_count?: number
+          id?: string
+          pending_count?: number
+          rejected_count?: number
+          total_points?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_count?: number
+          id?: string
+          pending_count?: number
+          rejected_count?: number
+          total_points?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       course_timetable_slots: {
         Row: {
@@ -220,6 +384,7 @@ export type Database = {
           color: string | null
           created_at: string | null
           display_order: number | null
+          faculty_id: string | null
           icon: string | null
           id: string
           is_visible: boolean
@@ -231,6 +396,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -242,6 +408,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           display_order?: number | null
+          faculty_id?: string | null
           icon?: string | null
           id?: string
           is_visible?: boolean
@@ -256,7 +423,47 @@ export type Database = {
             referencedRelation: "department_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "departments_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      faculties: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_visible: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       lecture_notes: {
         Row: {
@@ -481,6 +688,7 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           created_at: string | null
+          date_of_birth: string | null
           default_category_id: string | null
           default_sort_order: string | null
           department_id: string | null
@@ -506,6 +714,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null
@@ -531,6 +740,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           default_category_id?: string | null
           default_sort_order?: string | null
           department_id?: string | null
@@ -568,6 +778,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      store_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
       }
       study_guides: {
         Row: {
@@ -745,6 +979,27 @@ export type Database = {
       }
     }
     Views: {
+      contributor_leaderboard: {
+        Row: {
+          approved_count: number | null
+          avatar_url: string | null
+          department_id: string | null
+          department_name: string | null
+          display_name: string | null
+          overall_rank: number | null
+          total_points: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses_with_note_counts: {
         Row: {
           code: string | null
@@ -804,6 +1059,29 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user_account: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      approve_community_upload: {
+        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Returns: undefined
+      }
+      check_duplicate_upload: {
+        Args: {
+          p_course_id: string
+          p_file_hash: string
+          p_file_name: string
+          p_file_size: number
+        }
+        Returns: {
+          created_at: string
+          id: string
+          original_file_name: string
+          status: string
+          title: string
+        }[]
+      }
       get_rep_public_info: {
         Args: { rep_user_id: string }
         Returns: {
@@ -835,6 +1113,33 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      insert_activity_event: {
+        Args: {
+          p_action: string
+          p_context?: Json
+          p_resource: string
+          p_session_id: string
+          p_status: string
+          p_timestamp: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      purge_old_session_data: { Args: never; Returns: undefined }
+      record_failed_login_attempt: {
+        Args: {
+          p_context?: Json
+          p_identifier: string
+          p_ip_address?: string
+          p_session_id?: string
+          p_user_agent?: string
+        }
+        Returns: number
+      }
+      reject_community_upload: {
+        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Returns: undefined
       }
       update_user_storage: {
         Args: { p_size_delta: number; p_user_id: string }
