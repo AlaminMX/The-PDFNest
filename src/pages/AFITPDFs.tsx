@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useFaculties } from "@/hooks/useFaculties";
 import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
@@ -10,7 +11,18 @@ import { DepartmentTile } from "@/components/DepartmentTile";
 
 function AFITPDFsContent() {
   const navigate = useNavigate();
-  const { departments, loading } = useDepartments();
+  const { facultySlug } = useParams<{ facultySlug: string }>();
+  const { departments, loading: deptLoading } = useDepartments({ visibleOnly: true });
+  const { faculties, loading: facLoading } = useFaculties();
+
+  const currentFaculty = faculties.find((f) => f.slug === facultySlug);
+
+  // Filter departments by faculty_id
+  const filteredDepartments = departments.filter(
+    (dept: any) => currentFaculty && dept.faculty_id === currentFaculty.id
+  );
+
+  const loading = deptLoading || facLoading;
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -21,14 +33,16 @@ function AFITPDFsContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/afit-pdfs")}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">AFIT PDFs</h1>
-              <p className="text-xs text-muted-foreground">Academic Resources</p>
+              <h1 className="text-lg font-semibold">
+                {currentFaculty?.name || "Departments"}
+              </h1>
+              <p className="text-xs text-muted-foreground">Select a department</p>
             </div>
           </div>
           <ThemeToggle />
@@ -45,7 +59,7 @@ function AFITPDFsContent() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 text-primary text-xs font-medium mb-3">
             <BookOpen className="w-3.5 h-3.5" />
-            Academic Resources
+            {currentFaculty?.name || "Academic Resources"}
           </div>
           <h2 className="text-xl md:text-2xl font-semibold mb-2">
             Select Your Department
@@ -64,7 +78,7 @@ function AFITPDFsContent() {
                   <div className="h-3 w-2/3 bg-muted/50 rounded" />
                 </div>
               ))
-            : departments.map((dept, index) => (
+            : filteredDepartments.map((dept, index) => (
                 <DepartmentTile
                   key={dept.id}
                   id={dept.id}
@@ -72,39 +86,12 @@ function AFITPDFsContent() {
                   color={(dept as any).color}
                   icon={(dept as any).icon}
                   index={index}
-                  onClick={() => navigate(`/afit-pdfs/${dept.slug}`)}
+                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${dept.slug}`)}
                 />
               ))}
-
-          {/* School Store Tile */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: departments.length * 0.08 }}
-          >
-            <button
-              onClick={() => navigate("/school-store")}
-              className="w-full text-left p-5 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 hover:from-amber-500/15 hover:via-orange-500/15 hover:to-red-500/15 border border-amber-500/20 transition-all duration-200 group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30">
-                  <ShoppingBag className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium mb-0.5">
-                    School Store
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Coming Soon
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </button>
-          </motion.div>
         </div>
 
-          {!loading && departments.length === 0 && (
+        {!loading && filteredDepartments.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -113,7 +100,7 @@ function AFITPDFsContent() {
             <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
               <BookOpen className="w-5 h-5 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground">No departments available</p>
+            <p className="text-sm text-muted-foreground">No departments in this faculty yet</p>
           </motion.div>
         )}
       </main>

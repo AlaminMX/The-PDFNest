@@ -29,7 +29,7 @@ const formatBytes = (bytes: number) => {
   return `${(bytes / Math.pow(1024, idx)).toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
 };
 
-export function RepModeration() {
+export default function RepModeration() {
   const navigate = useNavigate();
   const { isRep, departmentId, departmentName, loading: repLoading } = useRepStatus();
   const [uploads, setUploads] = useState<CommunityUploadRow[]>([]);
@@ -245,6 +245,3 @@ export function RepModeration() {
     </div>
   );
 }
-
-
-export default RepModeration;
