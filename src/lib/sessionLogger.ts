@@ -248,7 +248,6 @@ export async function logActivity(activityType: ActivityType, details?: Activity
     context: {
       ...(details || {}),
       activity_type: activityType,
-      user_agent: navigator.userAgent,
     },
   });
 
