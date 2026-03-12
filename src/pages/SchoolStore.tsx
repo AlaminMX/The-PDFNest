@@ -1,17 +1,73 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShoppingBag, Bell, Sparkles } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, ShoppingBag, Bell, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const waitlistSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name too long"),
+  email: z.string().trim().email("Invalid email address").max(255),
+  whatsapp_number: z
+    .string()
+    .trim()
+    .min(7, "WhatsApp number too short")
+    .max(15, "WhatsApp number too long")
+    .regex(/^\+?[0-9]{7,15}$/, "Enter a valid WhatsApp number (digits only, optional + prefix)"),
+});
 
 function SchoolStoreContent() {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleNotifyMe = () => {
-    toast.success("You'll be notified when the store launches!");
+  const handleSubmit = async () => {
+    setErrors({});
+    const result = waitlistSchema.safeParse({
+      name,
+      email,
+      whatsapp_number: whatsapp,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((e) => {
+        const field = e.path[0] as string;
+        fieldErrors[field] = e.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("store_waitlist" as any).insert({
+        name: result.data.name,
+        email: result.data.email,
+        whatsapp_number: result.data.whatsapp_number,
+      } as any);
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      toast.success("You're on the waitlist! We'll notify you when the store launches.");
+    } catch (error: any) {
+      console.error("Waitlist submission error:", error);
+      toast.error("Failed to join waitlist. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -44,7 +100,7 @@ function SchoolStoreContent() {
       </header>
 
       <main className="container mx-auto px-4 py-8 relative z-10">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -114,19 +170,74 @@ function SchoolStoreContent() {
             ))}
           </motion.div>
 
-          {/* CTA Button */}
+          {/* Waitlist Form */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
+            transition={{ delay: 0.7 }}
+            className="text-left space-y-4 mb-6"
           >
-            <Button 
-              onClick={handleNotifyMe}
-              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-500/25"
-            >
-              <Bell className="w-4 h-4" />
-              Notify Me When It Launches
-            </Button>
+            {submitted ? (
+              <div className="flex flex-col items-center gap-3 py-6 px-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+                <p className="text-sm font-medium text-green-600 dark:text-green-400 text-center">
+                  You're on the waitlist! We'll reach out when the store is ready.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="waitlist-name">Name</Label>
+                  <Input
+                    id="waitlist-name"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={100}
+                  />
+                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="waitlist-email">Email</Label>
+                  <Input
+                    id="waitlist-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    maxLength={255}
+                  />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="waitlist-whatsapp">WhatsApp Number</Label>
+                  <Input
+                    id="waitlist-whatsapp"
+                    type="tel"
+                    placeholder="+2348012345678"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    maxLength={15}
+                  />
+                  {errors.whatsapp_number && (
+                    <p className="text-xs text-destructive">{errors.whatsapp_number}</p>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-500/25"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Bell className="w-4 h-4" />
+                  )}
+                  {submitting ? "Joining..." : "Notify Me When It Launches"}
+                </Button>
+              </>
+            )}
           </motion.div>
 
           {/* Placeholder for future ads */}

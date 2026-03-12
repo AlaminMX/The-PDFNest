@@ -74,8 +74,15 @@ export default function AIFeatures() {
       return;
     }
     
+    if (filesLoading) {
+      // Still loading, open picker anyway — it will show loading state
+      setPendingFeature(featureId);
+      setShowFilePicker(true);
+      return;
+    }
+    
     if (files.length === 0) {
-      navigate("/?upload=true");
+      navigate("/dashboard?upload=true");
       return;
     }
     
