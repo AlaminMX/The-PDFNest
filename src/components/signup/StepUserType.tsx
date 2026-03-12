@@ -29,8 +29,8 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
           onClick={() => updateData({ isStudent: true })}
           className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl border text-sm font-medium transition-all ${
             data.isStudent === true
-              ? "border-primary bg-primary/10 text-foreground"
-              : "border-border bg-card/50 hover:border-primary/40 text-foreground"
+              ? "border-primary bg-primary/10 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_20px_hsl(var(--primary)/0.22)]"
+              : "border-border bg-card/50 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.28),0_0_14px_hsl(var(--primary)/0.15)] text-foreground"
           }`}
         >
           <GraduationCap className="w-7 h-7" />
@@ -41,8 +41,8 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
           onClick={() => updateData({ isStudent: false, school: "", schoolOther: "", departmentId: "" })}
           className={`flex-1 flex flex-col items-center gap-2 p-5 rounded-xl border text-sm font-medium transition-all ${
             data.isStudent === false
-              ? "border-primary bg-primary/10 text-foreground"
-              : "border-border bg-card/50 hover:border-primary/40 text-foreground"
+              ? "border-primary bg-primary/10 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_20px_hsl(var(--primary)/0.22)]"
+              : "border-border bg-card/50 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.28),0_0_14px_hsl(var(--primary)/0.15)] text-foreground"
           }`}
         >
           <User className="w-7 h-7" />
@@ -60,8 +60,8 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
                 onClick={() => updateData({ school: "AFIT", schoolOther: "" })}
                 className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                   data.school === "AFIT"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
+                    ? "border-primary bg-primary/10 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_18px_hsl(var(--primary)/0.22)]"
+                    : "border-border bg-card/50 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.28),0_0_12px_hsl(var(--primary)/0.14)] text-foreground"
                 }`}
               >
                 AFIT
@@ -71,8 +71,8 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
                 onClick={() => updateData({ school: "others" })}
                 className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                   data.school === "others"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-card/50 hover:border-primary/40 text-foreground"
+                    ? "border-primary bg-primary/10 text-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_18px_hsl(var(--primary)/0.22)]"
+                    : "border-border bg-card/50 hover:border-primary/50 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.28),0_0_12px_hsl(var(--primary)/0.14)] text-foreground"
                 }`}
               >
                 Others
