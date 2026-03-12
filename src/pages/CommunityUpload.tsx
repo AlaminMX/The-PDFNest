@@ -447,7 +447,7 @@ function CommunityUploadContent() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Contribute Material" onBack={() => navigate(-1)} />
+      <PageHeader title="Contribute Material" showBack />
 
       <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
         {/* Step progress */}
