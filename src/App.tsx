@@ -33,6 +33,7 @@ import RepProfile from "./pages/RepProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
 import Notifications from "./pages/Notifications";
+import CommunityUpload from "./pages/CommunityUpload";
 import NotFound from "./pages/NotFound";
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/ai-features" element={<AIFeatures />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/contribute" element={<CommunityUpload />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
