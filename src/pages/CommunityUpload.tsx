@@ -774,7 +774,7 @@ function CommunityUploadContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-500" /> Possible Duplicate
+              <AlertCircle className="w-5 h-5 text-destructive" /> Possible Duplicate
             </DialogTitle>
             <DialogDescription>
               Similar materials already exist for this course:

@@ -77,6 +77,7 @@ const App = () => (
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/ai-features" element={<AIFeatures />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/contribute" element={<CommunityUpload />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
