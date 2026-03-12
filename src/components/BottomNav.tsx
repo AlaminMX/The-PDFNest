@@ -2,20 +2,17 @@ import { Home, Sparkles, User, Bell } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Badge } from "./ui/badge";
 
 interface BottomNavProps {
   isLoggedIn: boolean;
   userId?: string;
   showProfileDot?: boolean;
-  unreadNotifications?: number;
 }
 
-export function BottomNav({ 
-  isLoggedIn, 
-  userId, 
+export function BottomNav({
+  isLoggedIn,
+  userId,
   showProfileDot = false,
-  unreadNotifications = 0,
 }: BottomNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
