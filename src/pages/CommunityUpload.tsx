@@ -210,7 +210,8 @@ function CommunityUploadContent() {
       if (!res.ok) throw new Error("Conversion failed");
       const result = await res.json();
       const pdfBytes = Uint8Array.from(atob(result.pdf), c => c.charCodeAt(0));
-      const converted = new File([pdfBytes], result.convertedName || "converted.pdf", { type: "application/pdf" });
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const converted = new window.File([blob], result.convertedName || "converted.pdf", { type: "application/pdf" });
       setConvertedFile(converted);
       setShowConversionDialog(false);
       toast.success("File converted to PDF successfully!");
