@@ -408,8 +408,8 @@ function CommunityUploadContent() {
             animate={{ scale: 1, opacity: 1 }}
             className="text-center space-y-6"
           >
-            <div className="w-20 h-20 mx-auto rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-500" />
+            <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-primary" />
             </div>
             <div className="space-y-2">
               <h2 className="text-xl font-semibold text-foreground">Submitted for Review</h2>
