@@ -5,8 +5,9 @@ import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
+import { useNotifications } from "@/hooks/useNotifications";
 import { uploadManager } from "@/lib/uploadManager";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, Bell, ChevronDown as ChevronDownIcon, WifiOff, CloudDownload, CheckCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -80,6 +81,41 @@ import { DownloadProgress } from "@/components/DownloadProgress";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
 
+
+function DesktopHeaderNav() {
+  const baseLinkClass =
+    "px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+
+  return (
+    <nav aria-label="Desktop navigation" className="hidden lg:flex items-center gap-1 ml-6">
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          `${baseLinkClass} ${
+            isActive
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`
+        }
+      >
+        Profile
+      </NavLink>
+      <NavLink
+        to="/ai-features"
+        className={({ isActive }) =>
+          `${baseLinkClass} ${
+            isActive
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`
+        }
+      >
+        AI Features
+      </NavLink>
+    </nav>
+  );
+}
+
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
 export type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
@@ -143,18 +179,18 @@ function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border/60">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       {/* Header with subtle gradient accent */}
       <SidebarHeader className="pb-0">
         <div className="flex items-center gap-3 px-3 py-4">
           <div className="relative">
             <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="size-10 rounded-xl shadow-md object-contain ring-1 ring-border/30" />
-            <div className="absolute -bottom-0.5 -right-0.5 size-3 bg-green-500 rounded-full border-2 border-sidebar-background" />
+            <div className="absolute -bottom-0.5 -right-0.5 size-3 bg-white rounded-full border-2 border-sidebar-background" />
           </div>
           {open && (
             <div className="flex flex-col gap-0.5 leading-none">
               <span className="font-bold text-base tracking-tight">PDFNest</span>
-              <span className="text-[11px] text-muted-foreground/70">Smart PDF Manager</span>
+              <span className="text-[11px] text-sidebar-foreground/70">Smart PDF Manager</span>
             </div>
           )}
         </div>
@@ -163,22 +199,22 @@ function AppSidebar({
       <SidebarContent className="px-2 gap-1 overflow-y-auto">
         {/* AI Features Section */}
         {/* Separator */}
-        <div className="mx-4 h-px bg-border/40" />
+        <div className="mx-4 h-px bg-sidebar-border" />
 
         {/* AFIT Resources */}
         <SidebarGroup className="py-2">
           <SidebarGroupLabel className="px-3 py-2.5 flex items-center gap-3">
-            <div className="size-7 rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 dark:from-primary/25 dark:to-primary/10 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-primary" />
+            <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-sidebar-foreground" />
             </div>
-            <span className="font-semibold text-[11px] uppercase tracking-widest text-foreground/60">AFIT Resources</span>
+            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">AFIT Resources</span>
           </SidebarGroupLabel>
           <SidebarGroupContent className="pl-1">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to="/afit-pdfs">
-                    <Folder className="w-[18px] h-[18px] text-primary/60 shrink-0" />
+                    <Folder className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
                     {open && <span className="text-[13px] ml-0.5">AFIT PDFs</span>}
                   </Link>
                 </SidebarMenuButton>
@@ -189,20 +225,20 @@ function AppSidebar({
 
         {isAdmin && (
           <>
-            <div className="mx-4 h-px bg-border/40" />
+            <div className="mx-4 h-px bg-sidebar-border" />
             <SidebarGroup className="py-2">
               <SidebarGroupLabel className="px-3 py-2.5 flex items-center gap-3">
-                <div className="size-7 rounded-lg bg-gradient-to-br from-amber-500/15 to-amber-500/5 dark:from-amber-400/25 dark:to-amber-400/10 flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-sidebar-foreground" />
                 </div>
-                <span className="font-semibold text-[11px] uppercase tracking-widest text-foreground/60">Admin Tools</span>
+                <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Admin Tools</span>
               </SidebarGroupLabel>
               <SidebarGroupContent className="pl-1">
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                       <Link to="/admin/reps">
-                        <Users className="w-[18px] h-[18px] text-amber-600/60 dark:text-amber-400/60 shrink-0" />
+                        <Users className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
                         {open && <span className="text-[13px] ml-0.5">Reps Profile</span>}
                       </Link>
                     </SidebarMenuButton>
@@ -214,20 +250,20 @@ function AppSidebar({
         )}
 
         {/* Separator */}
-        <div className="mx-4 h-px bg-border/40" />
+        <div className="mx-4 h-px bg-sidebar-border" />
 
         {/* Recent Files */}
         <Collapsible open={recentSectionOpen} onOpenChange={setRecentSectionOpen}>
           <SidebarGroup className="py-2">
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/30 rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
                 <div className="flex items-center gap-3">
-                  <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-muted-foreground/60" />
+                  <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
-                  <span className="font-semibold text-[11px] uppercase tracking-widest text-foreground/60">Recent Files</span>
+                  <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Recent Files</span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -236,15 +272,15 @@ function AppSidebar({
                   {recentFiles.length === 0 ? (
                     <SidebarMenuItem>
                       <div className="px-3 py-4 text-center">
-                        <FileText className="w-8 h-8 text-muted-foreground/15 mx-auto mb-2" />
-                        <span className="text-[11px] text-muted-foreground/40">No recent files yet</span>
+                        <FileText className="w-8 h-8 text-sidebar-foreground/30 mx-auto mb-2" />
+                        <span className="text-[11px] text-sidebar-foreground/60">No recent files yet</span>
                       </div>
                     </SidebarMenuItem>
                   ) : (
                     recentFiles.map((file) => (
                       <SidebarMenuItem key={file.id}>
                         <SidebarMenuButton onClick={() => onOpenRecentFile(file.id)} className="py-2 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
-                          <FileText className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                          <FileText className="w-4 h-4 text-sidebar-foreground/80 shrink-0" />
                           <span className="truncate text-[13px]">{file.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -257,27 +293,27 @@ function AppSidebar({
         </Collapsible>
 
         {/* Separator */}
-        <div className="mx-4 h-px bg-border/40" />
+        <div className="mx-4 h-px bg-sidebar-border" />
 
         {/* Files / Categories Section */}
         <Collapsible open={filesSectionOpen} onOpenChange={setFilesSectionOpen}>
           <SidebarGroup className="py-2">
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-accent/30 rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg px-3 py-2.5 transition-all duration-200 flex items-center justify-between group">
                 <div className="flex items-center gap-3">
-                  <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center">
-                    <Folder className="w-4 h-4 text-muted-foreground/60" />
+                  <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
+                    <Folder className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
-                  <span className="font-semibold text-[11px] uppercase tracking-widest text-foreground/60">Files</span>
+                  <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/40 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <SidebarGroupContent className="mt-1.5 pl-1">
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton 
+                    <SidebarMenuButton
                       isActive={selectedCategory === "all"}
                       onClick={() => onSelectCategory("all")}
                       className="py-2.5 px-3 rounded-lg transition-all duration-150"
@@ -285,35 +321,37 @@ function AppSidebar({
                       <Folder className="w-[18px] h-[18px] shrink-0" />
                       <span className="text-[13px] ml-0.5">All Files</span>
                       {open && (
-                        <span className="ml-auto text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                        <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                           {files.length}
                         </span>
                       )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  
+
                   {categories.map((category) => {
-                    const count = files.filter((f) => 
-                      category.id === "favorites" ? f.is_favorite :
-                      category.id === "uncategorized" ? !f.category_id :
-                      f.category_id === category.id
+                    const count = files.filter((f) =>
+                      category.id === "favorites"
+                        ? f.is_favorite
+                        : category.id === "uncategorized"
+                          ? !f.category_id
+                          : f.category_id === category.id
                     ).length;
-                    
+
                     return (
                       <SidebarMenuItem key={category.id}>
-                        <SidebarMenuButton 
+                        <SidebarMenuButton
                           isActive={selectedCategory === category.id}
                           onClick={() => onSelectCategory(category.id)}
                           className="py-2.5 px-3 rounded-lg transition-all duration-150"
                         >
                           {category.id === "favorites" ? (
-                            <Star className="w-[18px] h-[18px] text-amber-500 shrink-0" />
+                            <Star className="w-[18px] h-[18px] text-[#f1b824] shrink-0" />
                           ) : (
                             <Folder className="w-[18px] h-[18px] shrink-0" />
                           )}
                           <span className="truncate text-[13px] ml-0.5">{category.name}</span>
                           {open && count > 0 && (
-                            <span className="ml-auto text-[11px] font-medium bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                            <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                               {count}
                             </span>
                           )}
@@ -328,20 +366,20 @@ function AppSidebar({
                   })}
                 </SidebarMenu>
               </SidebarGroupContent>
-              
+
               <SidebarGroupContent className="mt-2 px-1">
                 {!showNewCategoryForm ? (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-muted-foreground/70 hover:text-foreground border border-dashed border-border/60 hover:border-primary/30 transition-colors"
+                    className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground border border-dashed border-sidebar-border hover:border-sidebar-ring/50 transition-colors"
                     onClick={() => setShowNewCategoryForm(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     {open && <span className="text-sm">New Category</span>}
                   </Button>
                 ) : (
-                  <div className="space-y-2 p-2 bg-muted/30 rounded-lg border border-border/40">
+                  <div className="space-y-2 p-2 bg-sidebar-accent rounded-lg border border-sidebar-border">
                     <Input
                       value={newCategoryName}
                       onChange={(e) => onNewCategoryNameChange(e.target.value)}
@@ -357,8 +395,8 @@ function AppSidebar({
                       autoFocus
                     />
                     <div className="flex gap-1.5">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="flex-1 h-7 text-xs"
                         onClick={handleAddCategoryLocal}
                       >
@@ -382,20 +420,21 @@ function AppSidebar({
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+
       </SidebarContent>
       
       <SidebarFooter className="px-2 pb-4 pt-2">
         <div id="storage-indicator">
           <StorageIndicator storageUsed={storageUsed} />
         </div>
-        <div className="mx-3 my-2 h-px bg-border/40" />
+        <div className="mx-3 my-2 h-px bg-sidebar-border" />
         <SidebarMenu className="space-y-0.5">
           {isRep && (
             <>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to="/rep/upload">
-                    <Upload className="w-[18px] h-[18px] text-emerald-500 dark:text-emerald-400 shrink-0" />
+                    <Upload className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
                     {open && <span className="text-[13px] ml-0.5">Upload Lecture Notes</span>}
                   </Link>
                 </SidebarMenuButton>
@@ -403,7 +442,7 @@ function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                   <Link to={`/rep/${repUserId}`}>
-                    <Users className="w-[18px] h-[18px] text-blue-500 dark:text-blue-400 shrink-0" />
+                    <Users className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
                     {open && <span className="text-[13px] ml-0.5">My Profile</span>}
                   </Link>
                 </SidebarMenuButton>
@@ -412,9 +451,18 @@ function AppSidebar({
           )}
           
           <SidebarMenuItem>
+            <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+              <Link to="/contribute">
+                <Upload className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
+                {open && <span className="text-[13px] ml-0.5">Contribute Material</span>}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={onOpenTutorial} className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
-              <HelpCircle className="w-[18px] h-[18px] text-muted-foreground/50 shrink-0" />
-              {open && <span className="text-[13px] ml-0.5 text-muted-foreground">Help & Tutorial</span>}
+              <HelpCircle className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
+              {open && <span className="text-[13px] ml-0.5 text-sidebar-foreground">Help & Tutorial</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
           
@@ -422,7 +470,7 @@ function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
                 <Link to="/admin">
-                  <Shield className="w-[18px] h-[18px] text-amber-600 dark:text-amber-400 shrink-0" />
+                  <Shield className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
                   {open && <span className="text-[13px] ml-0.5">Admin Dashboard</span>}
                 </Link>
               </SidebarMenuButton>
@@ -430,16 +478,24 @@ function AppSidebar({
           )}
           
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:bg-destructive/10 hover:text-destructive">
+            <SidebarMenuButton onClick={onSignOut} className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground">
               <LogOut className="w-[18px] h-[18px] shrink-0" />
               {open && <span className="text-[13px] ml-0.5">Sign Out</span>}
             </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <div className="px-3 py-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40">
+              {open && <p className="text-[11px] uppercase tracking-wider text-sidebar-foreground/70 mb-2">Appearance</p>}
+              <ThemeToggle />
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -448,6 +504,7 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
+  const { unreadCount } = useNotifications(user?.id);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -844,6 +901,7 @@ export default function Index() {
             <div className="flex items-center gap-2 p-4">
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">PDFNest</h1>
+              <DesktopHeaderNav />
               <div className="ml-auto flex items-center gap-2">
                 <div id="view-toggle" className="flex items-center border rounded-md">
                   <Button
@@ -864,9 +922,16 @@ export default function Index() {
                   </Button>
                 </div>
                 <InstallPWA />
-                <div id="theme-toggle">
-                  <ThemeToggle />
-                </div>
+                <Button asChild variant="ghost" size="icon" className="relative" aria-label="Open notifications">
+                  <Link to="/notifications">
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                </Button>
               </div>
             </div>
           </header>
@@ -882,8 +947,20 @@ export default function Index() {
                 Organize Your PDFs
               </h1>
               <p className="text-muted-foreground text-lg">
-                Upload, categorize, and manage your documents effortlessly
+                Upload, organize, and access your course materials in one place. Built for students who are tired of losing files across WhatsApp groups, downloads, and folders.
               </p>
+              <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
+                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Button asChild>
+                  <Link to="/contribute">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Contribute Material
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
@@ -928,7 +1005,7 @@ export default function Index() {
                     <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
-                          progress.status === "error" ? "bg-destructive" : progress.status === "complete" ? "bg-green-500" : "bg-primary"
+                          progress.status === "error" ? "bg-destructive" : progress.status === "complete" ? "bg-white" : "bg-primary"
                         }`}
                         style={{ width: `${progress.progress}%` }}
                       />
@@ -1153,10 +1230,12 @@ export default function Index() {
                                     </button>
                                   )}
                                   <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (!file.isOfflineAvailable && file.url) {
-                                        cacheForOffline(file.id, file.url, file.name);
-                                        toast.success("Saved for offline access");
+                                        const saved = await cacheForOffline(file.id, file.url, file.name);
+                                        if (saved) {
+                                          toast.success("Saved for offline access");
+                                        }
                                       }
                                     }}
                                     className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
@@ -1271,10 +1350,12 @@ export default function Index() {
                                   )}
                                  </>
                                 )}
-                               <DropdownMenuItem onClick={() => {
+                               <DropdownMenuItem onClick={async () => {
                                  if (!file.isOfflineAvailable && file.url) {
-                                   cacheForOffline(file.id, file.url, file.name);
-                                   toast.success("Saved for offline access");
+                                   const saved = await cacheForOffline(file.id, file.url, file.name);
+                                   if (saved) {
+                                     toast.success("Saved for offline access");
+                                   }
                                  }
                                }}>
                                  {file.isOfflineAvailable ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <CloudDownload className="w-4 h-4 mr-2" />}
@@ -1439,10 +1520,12 @@ export default function Index() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!file.isOfflineAvailable && file.url) {
-                              cacheForOffline(file.id, file.url, file.name);
-                              toast.success("Saved for offline access");
+                              const saved = await cacheForOffline(file.id, file.url, file.name);
+                              if (saved) {
+                                toast.success("Saved for offline access");
+                              }
                             }
                           }}
                           className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}

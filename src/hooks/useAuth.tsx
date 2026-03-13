@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { startSession, endSession, setupIdleDetection } from "@/lib/sessionLogger";
+import { startSession, endSession, setupIdleDetection, logActivity } from "@/lib/sessionLogger";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -56,6 +56,7 @@ export function useAuth() {
   }, [navigate]);
 
   const signOut = async () => {
+    await logActivity("logout", { source: "manual_sign_out" });
     await endSession();
     await supabase.auth.signOut();
     navigate("/auth");
