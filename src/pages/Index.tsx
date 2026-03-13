@@ -5,7 +5,6 @@ import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
-import { useNotifications } from "@/hooks/useNotifications";
 import { uploadManager } from "@/lib/uploadManager";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
@@ -504,15 +503,6 @@ function AppSidebar({
           }
           
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
-              <Link to="/contribute">
-                <Upload className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
-                {open && <span className="text-[13px] ml-0.5">Contribute Material</span>}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
             <SidebarMenuButton onClick={onOpenTutorial} className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
               <HelpCircle className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
               {open && <span className="text-[13px] ml-0.5 text-sidebar-foreground">Help & Tutorial</span>}
@@ -536,13 +526,6 @@ function AppSidebar({
               {open && <span className="text-[13px] ml-0.5">Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <div className="px-3 py-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40">
-              {open && <p className="text-[11px] uppercase tracking-wider text-sidebar-foreground/70 mb-2">Appearance</p>}
-              <ThemeToggle />
-            </div>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>);
@@ -557,7 +540,6 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
-  const { unreadCount } = useNotifications(user?.id);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { data: profileStorageUsed } = useQuery({
     queryKey: ["user-storage", user?.id],
@@ -1074,16 +1056,9 @@ export default function Index() {
                   }
                 </div>
                 <InstallPWA />
-                <Button asChild variant="ghost" size="icon" className="relative" aria-label="Open notifications">
-                  <Link to="/notifications">
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none flex items-center justify-center">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                </Button>
+                <div id="theme-toggle">
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
           </header>
@@ -1101,18 +1076,6 @@ export default function Index() {
               <p className="text-muted-foreground text-lg">
                 Upload, categorize, and manage your documents effortlessly   
               </p>
-              <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
-                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
-              </div>
-              <div className="mt-6 flex justify-center">
-                <Button asChild>
-                  <Link to="/contribute">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Contribute Material
-                  </Link>
-                </Button>
-              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
