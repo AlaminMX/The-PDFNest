@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, FileText, Calendar, Award, Edit2 } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, Award, Edit2, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { EditProfileModal } from "@/components/EditProfileModal";
@@ -204,15 +204,26 @@ export default function RepProfile() {
                   </div>
                   
                   {isOwnProfile && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEditModal(true)}
-                      className="w-full md:w-auto"
-                    >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit Profile
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEditModal(true)}
+                        className="w-full md:w-auto"
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Edit Profile
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/rep/moderation")}
+                        className="w-full md:w-auto"
+                      >
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                        Review Uploads
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

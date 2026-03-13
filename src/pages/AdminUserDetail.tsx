@@ -29,6 +29,14 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
+  nickname: string | null;
+  preferred_theme: string | null;
+  discovery_source: string | null;
+  usage_reason: string | null;
+  school: string | null;
+  is_student: boolean | null;
+  financial_literacy_interest: boolean | null;
+  age: number | null;
   created_at: string;
   total_storage_used: number;
 }
@@ -68,6 +76,7 @@ export default function AdminUserDetail() {
   const [sortBy, setSortBy] = useState<"date" | "name" | "size">("date");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ url: string; name: string } | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const filteredPdfs = useMemo(() => {
     let filtered = pdfs.filter(pdf => 
@@ -108,7 +117,7 @@ export default function AdminUserDetail() {
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, created_at, total_storage_used")
+        .select("id, email, full_name, nickname, preferred_theme, discovery_source, usage_reason, school, is_student, financial_literacy_interest, age, created_at, total_storage_used")
         .eq("id", userId)
         .maybeSingle();
 
@@ -200,6 +209,45 @@ export default function AdminUserDetail() {
     }
   };
 
+
+  const handleDeleteUserAccount = async () => {
+    if (isDeletingAccount) return;
+    if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
+
+    setIsDeletingAccount(true);
+    try {
+      const { error: rpcError } = await (supabase as any).rpc("admin_delete_user_account", {
+        p_user_id: userId,
+      });
+
+      const shouldFallbackToEdgeFunction =
+        !!rpcError &&
+        /could not find the function public\.admin_delete_user_account|schema cache|function\s+public\.admin_delete_user_account/i.test(
+          rpcError.message || ""
+        );
+
+      if (rpcError && !shouldFallbackToEdgeFunction) {
+        throw rpcError;
+      }
+
+      if (shouldFallbackToEdgeFunction) {
+        const { error: fnError } = await supabase.functions.invoke("delete-user-account", {
+          body: { userId },
+        });
+
+        if (fnError) {
+          throw new Error(fnError.message || "Failed to delete user account via fallback function");
+        }
+      }
+
+      toast.success("User account deleted successfully");
+      navigate("/admin");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete user account");
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
   const handleDelete = async (pdf: PDFFile) => {
     if (!confirm(`Are you sure you want to delete "${pdf.name}"?`)) return;
 
@@ -217,7 +265,7 @@ export default function AdminUserDetail() {
 
       if (dbError) throw dbError;
 
-      setPdfs(pdfs.filter(p => p.id !== pdf.id));
+      setPdfs((prev) => prev.filter((p) => p.id !== pdf.id));
       toast.success("File deleted successfully");
     } catch (error) {
       console.error("Error deleting file:", error);
@@ -280,6 +328,31 @@ export default function AdminUserDetail() {
                   <p className="font-medium">{formatBytes(user.total_storage_used || 0)}</p>
                 </div>
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Nickname</p>
+                <p className="font-medium">{user.nickname || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Theme</p>
+                <p className="font-medium">{user.preferred_theme || "system"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Discovery Source</p>
+                <p className="font-medium">{user.discovery_source || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Usage Reason</p>
+                <p className="font-medium">{user.usage_reason || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">School</p>
+                <p className="font-medium">{user.school || "—"}</p>
+              </div>
+            </div>
+            <div className="pt-4">
+              <Button variant="destructive" onClick={handleDeleteUserAccount} disabled={isDeletingAccount}>
+                {isDeletingAccount ? "Deleting Account..." : "Delete User Account"}
+              </Button>
             </div>
           </CardContent>
         </Card>
