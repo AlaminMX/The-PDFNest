@@ -1,126 +1,158 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
-import { Search, Activity, Filter, Calendar, User, RefreshCw, Clock, ChevronDown, ChevronRight, LogIn, LogOut } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Activity, AlertTriangle, Clock, Database, RefreshCw, Search, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { getActivityDisplayName, formatDuration } from "@/lib/sessionLogger";
 
-interface SessionActivity {
-  type: string;
-  timestamp: string;
-  details?: Record<string, any>;
-}
-
-interface UserSession {
+interface ActivityEvent {
   id: string;
+  timestamp: string;
   user_id: string;
-  login_at: string;
-  logout_at: string | null;
-  duration_seconds: number | null;
-  is_active: boolean;
-  activities: SessionActivity[];
-  activity_summary: Record<string, number>;
-  user_email?: string;
-  user_name?: string;
+  session_id: string;
+  action: string;
+  resource: string;
+  status: string;
+  context: Record<string, unknown>;
 }
 
-type SessionFilter = "all" | "active" | "completed" | "long" | "short";
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+interface FailedLoginEvent {
+  id: number;
+  identifier: string;
+  attempted_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  session_id: string | null;
+  context: Record<string, unknown>;
 }
 
-function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+interface SessionSummary {
+  session_id: string;
+  user_id: string;
+  started_at: string;
+  ended_at: string;
+  event_count: number;
+  error_count: number;
+  security_count: number;
+}
+
+const ACTION_FILTERS = [
+  "ALL",
+  "PAGE_VIEW",
+  "LOGIN_SUCCESS",
+  "LOGIN_FAILED",
+  "MULTI_FAILED_LOGIN",
+  "FILE_UPLOAD",
+  "FILE_DOWNLOAD",
+  "FILE_DELETE",
+  "AI_SUMMARY_GENERATE",
+  "AI_CHAT_ASK",
+] as const;
+
+function formatDateTime(value: string | null): string {
+  if (!value) return "—";
+
+  return new Date(value).toLocaleString();
+}
+
+function shortId(value: string): string {
+  if (!value) return "—";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+
+function summarizeContext(context: Record<string, unknown> | null | undefined): string {
+  if (!context || Object.keys(context).length === 0) {
+    return "No extra context captured for this event.";
+  }
+
+  const preferredKeys = ["reason", "provider", "identifier", "fileName", "path", "error", "source"];
+  for (const key of preferredKeys) {
+    const value = context[key];
+    if (typeof value === "string" && value.trim()) {
+      return `${key}: ${value}`;
+    }
+  }
+
+  const [firstKey] = Object.keys(context);
+  return `${firstKey}: ${String(context[firstKey])}`;
 }
 
 export default function AdminSessionLogs() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
-  const [sessions, setSessions] = useState<UserSession[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sessionFilter, setSessionFilter] = useState<SessionFilter>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [actionFilter, setActionFilter] = useState<string>("ALL");
+
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [failedLoginEvents, setFailedLoginEvents] = useState<FailedLoginEvent[]>([]);
+  const [sessionSummaries, setSessionSummaries] = useState<SessionSummary[]>([]);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
       navigate("/");
     }
-  }, [isAdmin, adminLoading, navigate]);
+  }, [adminLoading, isAdmin, navigate]);
 
   useEffect(() => {
     if (isAdmin) {
-      fetchSessions();
+      void fetchAllLogs();
     }
   }, [isAdmin]);
 
-  const fetchSessions = async () => {
+  const fetchAllLogs = async () => {
     try {
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .order("login_at", { ascending: false })
-        .limit(200);
+      setLoading(true);
 
-      if (sessionsError) throw sessionsError;
+      const actionParam = actionFilter === "ALL" ? null : actionFilter;
+      const searchParam = searchQuery.trim() ? searchQuery.trim() : null;
 
-      // Get unique user IDs
-      const userIds = [...new Set(sessionsData?.map(s => s.user_id) || [])];
+      const [eventsRes, failedRes, sessionsRes] = await Promise.all([
+        supabase.rpc("get_admin_activity_events", {
+          p_limit: 1000,
+          p_offset: 0,
+          p_action: actionParam,
+          p_search: searchParam,
+          p_session_id: null,
+        }),
+        supabase.rpc("get_admin_failed_login_events", {
+          p_limit: 500,
+          p_offset: 0,
+          p_search: searchParam,
+        }),
+        supabase.rpc("get_admin_activity_sessions", {
+          p_limit: 300,
+          p_offset: 0,
+          p_search: searchParam,
+        }),
+      ]);
 
-      // Fetch user profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, display_name")
-        .in("id", userIds);
+      if (eventsRes.error) throw eventsRes.error;
+      if (failedRes.error) throw failedRes.error;
+      if (sessionsRes.error) throw sessionsRes.error;
 
-      if (profilesError) throw profilesError;
-
-      // Map profiles by ID
-      const profilesMap = new Map(
-        profilesData?.map(p => [p.id, { 
-          email: p.email, 
-          name: p.display_name || p.full_name 
-        }]) || []
-      );
-
-      // Combine sessions with user info
-      const enrichedSessions: UserSession[] = (sessionsData || []).map(session => ({
-        ...session,
-        activities: Array.isArray(session.activities) ? session.activities as unknown as SessionActivity[] : [],
-        activity_summary: (typeof session.activity_summary === 'object' && session.activity_summary !== null) 
-          ? session.activity_summary as Record<string, number> 
-          : {},
-        user_email: profilesMap.get(session.user_id)?.email || "Unknown",
-        user_name: profilesMap.get(session.user_id)?.name || undefined
-      }));
-
-      setSessions(enrichedSessions);
+      setActivityEvents((eventsRes.data || []) as ActivityEvent[]);
+      setFailedLoginEvents((failedRes.data || []) as FailedLoginEvent[]);
+      setSessionSummaries((sessionsRes.data || []) as SessionSummary[]);
     } catch (error) {
-      console.error("Error fetching sessions:", error);
-      toast.error("Failed to load session logs");
+      console.error("Failed to fetch activity logs", error);
+      toast.error("Failed to load activity logs");
     } finally {
       setLoading(false);
     }
@@ -128,275 +160,205 @@ export default function AdminSessionLogs() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchSessions();
+    await fetchAllLogs();
     setRefreshing(false);
-    toast.success("Sessions refreshed");
+    toast.success("Activity logs refreshed");
   };
 
-  const toggleSession = (sessionId: string) => {
-    const newExpanded = new Set(expandedSessions);
-    if (newExpanded.has(sessionId)) {
-      newExpanded.delete(sessionId);
-    } else {
-      newExpanded.add(sessionId);
-    }
-    setExpandedSessions(newExpanded);
-  };
-
-  const filteredSessions = useMemo(() => {
-    let filtered = sessions;
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(session =>
-        session.user_email?.toLowerCase().includes(query) ||
-        session.user_name?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply session filter
-    switch (sessionFilter) {
-      case "active":
-        filtered = filtered.filter(s => s.is_active);
-        break;
-      case "completed":
-        filtered = filtered.filter(s => !s.is_active);
-        break;
-      case "long":
-        filtered = filtered.filter(s => (s.duration_seconds || 0) > 1800); // > 30 min
-        break;
-      case "short":
-        filtered = filtered.filter(s => s.duration_seconds !== null && s.duration_seconds < 300); // < 5 min
-        break;
-    }
-
-    return filtered;
-  }, [sessions, searchQuery, sessionFilter]);
-
-  // Calculate stats
   const stats = useMemo(() => {
-    const activeSessions = sessions.filter(s => s.is_active).length;
-    const todaySessions = sessions.filter(s => 
-      new Date(s.login_at).toDateString() === new Date().toDateString()
-    ).length;
-    const completedSessions = sessions.filter(s => !s.is_active && s.duration_seconds);
-    const avgDuration = completedSessions.length > 0
-      ? Math.round(completedSessions.reduce((acc, s) => acc + (s.duration_seconds || 0), 0) / completedSessions.length)
-      : 0;
-    const totalAIUsage = sessions.reduce((acc, s) => {
-      const summary = s.activity_summary || {};
-      return acc + (summary.ai_summary || 0) + (summary.ai_chat || 0) + (summary.ai_study_guide || 0) + (summary.ai_voice || 0) + (summary.ai_translate || 0);
-    }, 0);
+    const total = activityEvents.length;
+    const failed = activityEvents.filter((event) => event.action === "LOGIN_FAILED").length;
+    const securityAlerts = activityEvents.filter((event) => event.action === "MULTI_FAILED_LOGIN").length;
+    const activeSessions = sessionSummaries.filter((session) => {
+      const endedAt = new Date(session.ended_at).getTime();
+      return Date.now() - endedAt < 15 * 60 * 1000;
+    }).length;
 
-    return { activeSessions, todaySessions, avgDuration, totalAIUsage };
-  }, [sessions]);
+    return { total, failed, securityAlerts, activeSessions };
+  }, [activityEvents, sessionSummaries]);
 
   if (adminLoading || loading) {
-    return <LoadingState message="Loading session logs..." />;
+    return <LoadingState message="Loading activity logs..." />;
   }
 
-  if (!isAdmin) {
-    return null;
-  }
+  if (!isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
       <PageHeader
-        title="Session Logs"
-        subtitle="Track user sessions and activities"
+        title="Activity Logs"
+        subtitle="Complete structured audit trail: events, sessions, and security signals"
         showBack
-        icon={<Activity className="h-6 w-6 text-primary" />}
+        icon={<Database className="h-6 w-6 text-primary" />}
       />
 
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-        {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Active Now</p>
-            <p className="text-2xl font-bold text-green-500">{stats.activeSessions}</p>
+            <p className="text-sm text-muted-foreground">Total Events</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Today's Sessions</p>
-            <p className="text-2xl font-bold">{stats.todaySessions}</p>
+            <p className="text-sm text-muted-foreground">Failed Logins</p>
+            <p className="text-2xl font-bold text-amber-500">{stats.failed}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Avg Duration</p>
-            <p className="text-2xl font-bold">{formatDuration(stats.avgDuration)}</p>
+            <p className="text-sm text-muted-foreground">Security Alerts</p>
+            <p className="text-2xl font-bold text-red-500">{stats.securityAlerts}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">AI Feature Uses</p>
-            <p className="text-2xl font-bold">{stats.totalAIUsage}</p>
+            <p className="text-sm text-muted-foreground">Recent Sessions</p>
+            <p className="text-2xl font-bold">{stats.activeSessions}</p>
           </Card>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-col lg:flex-row gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by user..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search user, action, status, resource, context, or session..."
               className="pl-10"
             />
           </div>
-
-          <Select value={sessionFilter} onValueChange={(v) => setSessionFilter(v as SessionFilter)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter sessions" />
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-full lg:w-[220px]">
+              <SelectValue placeholder="Filter action" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Sessions</SelectItem>
-              <SelectItem value="active">Active Now</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="long">Long (&gt;30min)</SelectItem>
-              <SelectItem value="short">Short (&lt;5min)</SelectItem>
+              {ACTION_FILTERS.map((action) => (
+                <SelectItem key={action} value={action}>
+                  {action}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-
-          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          <Button variant="outline" onClick={() => void fetchAllLogs()}>
+            <Search className="h-4 w-4 mr-2" />
+            Apply
+          </Button>
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
           </Button>
         </div>
 
-        {/* Results count */}
-        {(searchQuery || sessionFilter !== "all") && (
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredSessions.length} of {sessions.length} sessions
-          </p>
-        )}
+        <Tabs defaultValue="events" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="events"><Activity className="h-4 w-4 mr-2" />Events</TabsTrigger>
+            <TabsTrigger value="sessions"><Clock className="h-4 w-4 mr-2" />Sessions</TabsTrigger>
+            <TabsTrigger value="security"><ShieldAlert className="h-4 w-4 mr-2" />Security</TabsTrigger>
+          </TabsList>
 
-        {/* Sessions List */}
-        <div className="space-y-3">
-          {filteredSessions.length === 0 ? (
-            <Card className="p-8">
-              <EmptyState
-                icon={<Activity className="h-8 w-8 text-muted-foreground" />}
-                title="No sessions found"
-                description={searchQuery || sessionFilter !== "all" 
-                  ? "No sessions match your filters" 
-                  : "User sessions will appear here once logged"}
-              />
+          <TabsContent value="events">
+            <Card className="p-4">
+              {activityEvents.length === 0 ? (
+                <EmptyState
+                  icon={<Activity className="h-8 w-8 text-muted-foreground" />}
+                  title="No activity events"
+                  description="No events match your current filters"
+                />
+              ) : (
+                <ScrollArea className="h-[70vh] pr-2">
+                  <Accordion type="multiple" className="w-full">
+                    {activityEvents.map((event) => (
+                      <AccordionItem key={event.id} value={event.id}>
+                        <AccordionTrigger>
+                          <div className="flex flex-wrap items-center gap-2 text-left">
+                            <Badge variant="outline">{event.action}</Badge>
+                            <Badge variant={event.status === "SUCCESS" ? "default" : "destructive"}>{event.status}</Badge>
+                            <span className="text-xs text-muted-foreground">{formatDateTime(event.timestamp)}</span>
+                            <span className="text-xs text-muted-foreground">user: {shortId(event.user_id)}</span>
+                            <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>
+                            <span className="text-xs">{event.resource}</span>
+                            <span className="text-xs text-muted-foreground">{summarizeContext(event.context)}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
+                            {JSON.stringify({
+                              timestamp: event.timestamp,
+                              user_id: event.user_id,
+                              session_id: event.session_id,
+                              action: event.action,
+                              resource: event.resource,
+                              status: event.status,
+                              context: event.context || {},
+                            }, null, 2)}
+                          </pre>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </ScrollArea>
+              )}
             </Card>
-          ) : (
-            filteredSessions.map((session) => (
-              <Card key={session.id} className="overflow-hidden">
-                <Collapsible 
-                  open={expandedSessions.has(session.id)}
-                  onOpenChange={() => toggleSession(session.id)}
-                >
-                  <CollapsibleTrigger className="w-full">
-                    <div className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="flex items-center gap-2">
-                          {expandedSessions.has(session.id) ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-medium">
-                            {session.user_name || session.user_email?.split("@")[0]}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {session.user_email}
-                          </p>
-                        </div>
+          </TabsContent>
+
+          <TabsContent value="sessions">
+            <Card className="p-4">
+              {sessionSummaries.length === 0 ? (
+                <EmptyState
+                  icon={<Clock className="h-8 w-8 text-muted-foreground" />}
+                  title="No session summaries"
+                  description="Session summaries will appear once events are captured"
+                />
+              ) : (
+                <div className="space-y-3">
+                  {sessionSummaries.map((session) => (
+                    <Card key={session.session_id} className="p-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <Badge variant="outline">{shortId(session.session_id)}</Badge>
+                        <span className="text-sm">user: {shortId(session.user_id)}</span>
                       </div>
-
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="hidden md:flex items-center gap-2 text-muted-foreground">
-                          <LogIn className="h-4 w-4" />
-                          <span>{formatDate(session.login_at)}</span>
-                        </div>
-
-                        {session.logout_at && (
-                          <div className="hidden lg:flex items-center gap-2 text-muted-foreground">
-                            <LogOut className="h-4 w-4" />
-                            <span>{formatTime(session.logout_at)}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {formatDuration(session.duration_seconds)}
-                          </span>
-                        </div>
-
-                        <Badge variant={session.is_active ? "default" : "secondary"}>
-                          {session.is_active ? "Active" : "Ended"}
-                        </Badge>
+                      <div className="grid md:grid-cols-2 gap-2 text-sm">
+                        <p><span className="text-muted-foreground">Started:</span> {formatDateTime(session.started_at)}</p>
+                        <p><span className="text-muted-foreground">Ended:</span> {formatDateTime(session.ended_at)}</p>
+                        <p><span className="text-muted-foreground">Events:</span> {session.event_count}</p>
+                        <p><span className="text-muted-foreground">Errors/Alerts:</span> {session.error_count}</p>
+                        <p><span className="text-muted-foreground">Security Signals:</span> {session.security_count}</p>
                       </div>
-                    </div>
-                  </CollapsibleTrigger>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
 
-                  <CollapsibleContent>
-                    <div className="border-t bg-muted/30 p-4">
-                      {/* Activity Summary */}
-                      {Object.keys(session.activity_summary || {}).length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-sm font-medium mb-2">Activity Summary</p>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(session.activity_summary).map(([type, count]) => (
-                              <Badge key={type} variant="outline">
-                                {getActivityDisplayName(type)}: {count}
-                              </Badge>
-                            ))}
-                          </div>
+          <TabsContent value="security">
+            <Card className="p-4">
+              {failedLoginEvents.length === 0 ? (
+                <EmptyState
+                  icon={<AlertTriangle className="h-8 w-8 text-muted-foreground" />}
+                  title="No failed login records"
+                  description="Failed login attempts will be listed here"
+                />
+              ) : (
+                <ScrollArea className="h-[70vh] pr-2">
+                  <div className="space-y-3">
+                    {failedLoginEvents.map((event) => (
+                      <Card key={event.id} className="p-3">
+                        <div className="flex flex-wrap gap-2 items-center mb-2">
+                          <Badge variant="destructive">LOGIN_FAILED</Badge>
+                          <span className="text-xs text-muted-foreground">{formatDateTime(event.attempted_at)}</span>
+                          <span className="text-xs">identifier: {event.identifier}</span>
+                          {event.session_id && <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>}
                         </div>
-                      )}
-
-                      {/* Activity Timeline */}
-                      {session.activities.length > 0 ? (
-                        <div>
-                          <p className="text-sm font-medium mb-2">Activity Timeline</p>
-                          <div className="max-h-64 overflow-y-auto space-y-2">
-                            {session.activities.slice().reverse().map((activity, idx) => (
-                              <div 
-                                key={idx} 
-                                className="flex items-center justify-between text-sm py-1.5 px-3 rounded-md bg-background"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span className="text-muted-foreground text-xs">
-                                    {formatTime(activity.timestamp)}
-                                  </span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {getActivityDisplayName(activity.type)}
-                                  </Badge>
-                                </div>
-                                {activity.details && Object.keys(activity.details).length > 0 && (
-                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {activity.details.fileName || activity.details.pdfName || activity.details.page || ""}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                        <div className="text-xs space-y-1">
+                          <p><span className="text-muted-foreground">IP:</span> {event.ip_address || "—"}</p>
+                          <p><span className="text-muted-foreground">User Agent:</span> {event.user_agent || "—"}</p>
+                          <pre className="bg-muted p-2 rounded-md overflow-x-auto">{JSON.stringify(event.context || {}, null, 2)}</pre>
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No activities recorded in this session</p>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            ))
-          )}
-        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
-
-      <footer className="mt-auto py-6 border-t border-border/40">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            Made with love ❤️ by Nexel
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
