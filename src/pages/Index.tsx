@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
 import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle, Tag } from "lucide-react";
+import { ChevronDownIcon } from "@radix-ui/react-icons";
 import {
   Select,
   SelectContent,
@@ -343,9 +344,6 @@ function AppSidebar({
                   </div>
                   <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
                 </div>
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
-                  <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground">Files</span>
-                </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
@@ -416,7 +414,7 @@ function AppSidebar({
                             <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                               {count}
                             </span>
-                          }
+                          )}
                         </SidebarMenuButton>
                         {category.id !== "uncategorized" &&
                         <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
