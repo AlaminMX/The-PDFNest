@@ -1528,7 +1528,7 @@ export default function Index() {
                                      </DropdownMenuItem>
                             }
                                  </>
-                                )}
+                                }
                                <DropdownMenuItem onClick={async () => {
                                  if (!file.isOfflineAvailable && file.url) {
                                    const saved = await cacheForOffline(file.id, file.url, file.name);
