@@ -8,11 +8,29 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { 
-  Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
-  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Menu, X, FolderTree, ListOrdered, Inbox
-  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
-  Menu, X, FolderTree, Moon, ShoppingBag
+import {
+  Search,
+  LogOut,
+  Users,
+  FileText,
+  HardDrive,
+  ChevronRight,
+  ArrowUpDown,
+  Filter,
+  Activity,
+  Building2,
+  Megaphone,
+  ArrowLeft,
+  LayoutDashboard,
+  UserCog,
+  Menu,
+  X,
+  FolderTree,
+  ListOrdered,
+  Inbox,
+  Clock,
+  Moon,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
