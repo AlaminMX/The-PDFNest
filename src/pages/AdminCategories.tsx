@@ -27,7 +27,7 @@ export default function AdminCategories() {
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, adminLoading, navigate]);
 
