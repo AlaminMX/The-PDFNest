@@ -223,7 +223,8 @@ export default function AdminUserDetail() {
 
 
   const handleDeleteUserAccount = async () => {
-    if (isDeletingAccount || !userId) return;
+    if (isDeletingAccount) return;
+    if (!userId || !confirm(`Delete this user account and all associated data? This cannot be undone.`)) return;
 
     setIsDeletingAccount(true);
     try {

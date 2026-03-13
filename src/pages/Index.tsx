@@ -5,6 +5,7 @@ import { useRepStatus } from "@/hooks/useRepStatus";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
+import { useNotifications } from "@/hooks/useNotifications";
 import { uploadManager } from "@/lib/uploadManager";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
@@ -85,7 +86,7 @@ import { SparkleBackground } from "@/components/SparkleBackground";
 
 function DesktopHeaderNav() {
   const baseLinkClass =
-  "px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+        "px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
 
   return (
     <nav aria-label="Desktop navigation" className="hidden lg:flex items-center gap-1 ml-6">
@@ -272,6 +273,7 @@ function AppSidebar({
                   </div>
                   <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Recent Files</span>
                 </div>
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
@@ -339,6 +341,9 @@ function AppSidebar({
                   <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
                     <Folder className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
+                  <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
+                </div>
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
                   <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground">Files</span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
@@ -398,13 +403,17 @@ function AppSidebar({
                       <SidebarMenuItem key={category.id}>
                         <SidebarMenuButton
                           isActive={selectedCategory === category.id}
-                          onClick={() => handleCategoryClick(category.id)}
-                          className="py-2 px-3 rounded-lg transition-all duration-150">
-                          
-                          <Folder className="w-[16px] h-[16px] shrink-0" />
+                          onClick={() => onSelectCategory(category.id)}
+                          className="py-2.5 px-3 rounded-lg transition-all duration-150"
+                        >
+                          {category.id === "favorites" ? (
+                            <Star className="w-[18px] h-[18px] text-[#f1b824] shrink-0" />
+                          ) : (
+                            <Folder className="w-[18px] h-[18px] shrink-0" />
+                          )}
                           <span className="truncate text-[13px] ml-0.5">{category.name}</span>
-                          {open && count > 0 &&
-                          <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                          {open && count > 0 && (
+                            <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                               {count}
                             </span>
                           }
@@ -503,6 +512,15 @@ function AppSidebar({
           }
           
           <SidebarMenuItem>
+            <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+              <Link to="/contribute">
+                <Upload className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
+                {open && <span className="text-[13px] ml-0.5">Contribute Material</span>}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={onOpenTutorial} className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
               <HelpCircle className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
               {open && <span className="text-[13px] ml-0.5 text-sidebar-foreground">Help & Tutorial</span>}
@@ -526,6 +544,13 @@ function AppSidebar({
               {open && <span className="text-[13px] ml-0.5">Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <div className="px-3 py-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40">
+              {open && <p className="text-[11px] uppercase tracking-wider text-sidebar-foreground/70 mb-2">Appearance</p>}
+              <ThemeToggle />
+            </div>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>);
@@ -540,6 +565,7 @@ export default function Index() {
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
   const { categories, addCategory, deleteCategory } = useCategories(user?.id);
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
+  const { unreadCount } = useNotifications(user?.id);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { data: profileStorageUsed } = useQuery({
     queryKey: ["user-storage", user?.id],
@@ -1056,9 +1082,16 @@ export default function Index() {
                   }
                 </div>
                 <InstallPWA />
-                <div id="theme-toggle">
-                  <ThemeToggle />
-                </div>
+                <Button asChild variant="ghost" size="icon" className="relative" aria-label="Open notifications">
+                  <Link to="/notifications">
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                </Button>
               </div>
             </div>
           </header>
@@ -1076,6 +1109,18 @@ export default function Index() {
               <p className="text-muted-foreground text-lg">
                 Upload, categorize, and manage your documents effortlessly   
               </p>
+              <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
+                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Button asChild>
+                  <Link to="/contribute">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Contribute Material
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             {/* Getting Started Checklist for new users */}
@@ -1119,11 +1164,11 @@ export default function Index() {
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
-                    className={`h-full transition-all duration-300 ${
-                    progress.status === "error" ? "bg-destructive" : progress.status === "complete" ? "bg-white" : "bg-primary"}`
-                    }
-                    style={{ width: `${progress.progress}%` }} />
-                  
+                        className={`h-full transition-all duration-300 ${
+                          progress.status === "error" ? "bg-destructive" : progress.status === "complete" ? "bg-white" : "bg-primary"
+                        }`}
+                        style={{ width: `${progress.progress}%` }}
+                      />
                     </div>
                     {progress.status === "error" &&
                 <div className="flex items-center gap-2 mt-1">
@@ -1366,17 +1411,17 @@ export default function Index() {
                                     </button>
                           }
                                   <button
-                            onClick={async () => {
-                              if (!file.isOfflineAvailable && file.url) {
-                                const saved = await cacheForOffline(file.id, file.url, file.name);
-                                if (saved) {
-                                  toast.success("Saved for offline access");
-                                }
-                              }
-                            }}
-                            className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
-                            title={file.isOfflineAvailable ? "Available offline" : "Save offline"}>
-                            
+                                    onClick={async () => {
+                                      if (!file.isOfflineAvailable && file.url) {
+                                        const saved = await cacheForOffline(file.id, file.url, file.name);
+                                        if (saved) {
+                                          toast.success("Saved for offline access");
+                                        }
+                                      }
+                                    }}
+                                    className={`p-2 hover:bg-accent rounded-lg flex-shrink-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
+                                    title={file.isOfflineAvailable ? "Available offline" : "Save offline"}
+                                  >
                                     {file.isOfflineAvailable ? <CheckCircle className="w-5 h-5" /> : <CloudDownload className="w-5 h-5" />}
                                   </button>
                                </>
@@ -1485,15 +1530,15 @@ export default function Index() {
                                      </DropdownMenuItem>
                             }
                                  </>
-                          }
+                                )}
                                <DropdownMenuItem onClick={async () => {
-                            if (!file.isOfflineAvailable && file.url) {
-                              const saved = await cacheForOffline(file.id, file.url, file.name);
-                              if (saved) {
-                                toast.success("Saved for offline access");
-                              }
-                            }
-                          }}>
+                                 if (!file.isOfflineAvailable && file.url) {
+                                   const saved = await cacheForOffline(file.id, file.url, file.name);
+                                   if (saved) {
+                                     toast.success("Saved for offline access");
+                                   }
+                                 }
+                               }}>
                                  {file.isOfflineAvailable ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <CloudDownload className="w-4 h-4 mr-2" />}
                                  {file.isOfflineAvailable ? "Saved Offline" : "Save Offline"}
                                </DropdownMenuItem>
@@ -1654,13 +1699,14 @@ export default function Index() {
                           <Star className={`w-3 h-3 ${file.is_favorite ? "fill-yellow-400 text-yellow-400" : ""}`} />
                         </Button>
                         <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={async () => {
-                          if (!file.isOfflineAvailable && file.url) {
-                            const saved = await cacheForOffline(file.id, file.url, file.name);
-                            if (saved) {
-                              toast.success("Saved for offline access");
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            if (!file.isOfflineAvailable && file.url) {
+                              const saved = await cacheForOffline(file.id, file.url, file.name);
+                              if (saved) {
+                                toast.success("Saved for offline access");
+                              }
                             }
                           }
                         }}

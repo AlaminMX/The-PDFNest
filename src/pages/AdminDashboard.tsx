@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
+  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Menu, X, FolderTree, ListOrdered, Inbox
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
   Menu, X, FolderTree, Moon, ShoppingBag
 } from "lucide-react";
@@ -73,6 +74,8 @@ const sidebarItems = [
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
+  { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
+  { id: "commits", label: "Implemented Commits", icon: ListOrdered, path: "/admin/commits" },
   { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
   { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
 ];

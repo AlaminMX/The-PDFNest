@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { logActivity, startSession } from "@/lib/sessionLogger";
 import { startSession, logActivity } from "@/lib/sessionLogger";
 
 const GoogleIcon = () => (
@@ -212,6 +213,34 @@ export default function Auth() {
     }
   };
 
+  const authResetOnboardingState = () => {
+    isOnboarding.current = false;
+  };
+
+  const startGoogleOAuthFlow = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) throw error;
+      await startSession();
+      await logActivity("login_success", { provider: "google", flow: "oauth_redirect_started" });
+      toast.success("Redirecting to Google...");
+    } catch (error: any) {
+      await logActivity("login_failed", { provider: "google", reason: error?.message || "oauth_error" });
+      if (isGoogleProviderDisabled(error?.message)) {
+        toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
+      } else {
+        toast.error(error.message || "Unable to continue with Google");
+      }
+      setLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -230,6 +259,8 @@ export default function Auth() {
         password,
       });
       if (error) throw error;
+      await startSession();
+      await logActivity("login_success", { provider: "email_password", rememberMe });
 
       if (!rememberMe) {
         sessionStorage.setItem("tempSession", "true");
@@ -361,7 +392,7 @@ export default function Auth() {
             </form>
           ) : (
             <form onSubmit={handleAuth} className="space-y-4">
-              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+              <Button type="button" variant="outline" className="w-full" onClick={startGoogleOAuthFlow} disabled={loading}>
                 <GoogleIcon />
                 Continue with Google
               </Button>
