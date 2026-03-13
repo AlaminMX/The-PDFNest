@@ -10,7 +10,7 @@ export function RepBottomNav({ repUserId }: RepBottomNavProps) {
   const location = useLocation();
 
   const tabs = [
-    { icon: Home, label: "Home", path: "/" },
+    { icon: Home, label: "Home", path: "/dashboard" },
     { icon: Upload, label: "Upload", path: "/rep/upload" },
     { icon: Upload, label: "Contribute", path: "/contribute" },
     { icon: User, label: "Profile", path: `/rep/${repUserId}` },
