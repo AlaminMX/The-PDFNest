@@ -29,6 +29,9 @@ interface UserProfileData {
   department_id: string | null;
   department_name: string | null;
   pdf_count: number;
+  nickname: string | null;
+  phone_number: string | null;
+  date_of_birth: string | null;
 }
 
 interface RecentFile {
@@ -83,6 +86,14 @@ export default function UserProfile() {
 
       if (data && data.length > 0) {
         const summary = data[0];
+        
+        // Also fetch extra fields not in the RPC
+        const { data: extraData } = await supabase
+          .from("profiles")
+          .select("nickname, phone_number, date_of_birth")
+          .eq("id", user.id)
+          .maybeSingle();
+
         const profile: UserProfileData = {
           id: summary.id,
           display_name: summary.display_name,
@@ -94,9 +105,11 @@ export default function UserProfile() {
           department_id: summary.department_id,
           department_name: summary.department_name,
           pdf_count: Number(summary.pdf_count),
+          nickname: extraData?.nickname || null,
+          phone_number: extraData?.phone_number || null,
+          date_of_birth: (extraData as any)?.date_of_birth || null,
         };
         
-        // Cache to localStorage
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
         return profile;
       }
@@ -227,7 +240,7 @@ export default function UserProfile() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -290,14 +303,45 @@ export default function UserProfile() {
         <Card className="overflow-hidden">
           <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
           <CardContent className="relative pt-0 pb-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-10">
-              <Avatar className="w-20 h-20 border-4 border-background shadow-lg">
-                <AvatarImage src={profile.avatar_url || undefined} />
+            {/* Mobile: centered stack */}
+            <div className="flex flex-col items-center -mt-10 gap-3 sm:hidden">
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg [&>img]:object-cover [&>img]:object-center">
+                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                   {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-center sm:text-left space-y-1 pb-1">
+              <div className="text-center space-y-1">
+                <h2 className="text-2xl font-bold">{displayName}</h2>
+                {profile.email && (
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                )}
+                {departmentName && (
+                  <Badge variant="secondary" className="mt-1">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {departmentName}
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit Profile
+              </Button>
+            </div>
+            {/* Desktop: row layout */}
+            <div className="hidden sm:flex items-end gap-4 -mt-10">
+              <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0 [&>img]:object-cover [&>img]:object-center">
+                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
+                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                  {getInitials(displayName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-1 pb-1">
                 <h2 className="text-2xl font-bold">{displayName}</h2>
                 {profile.email && (
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
@@ -408,7 +452,7 @@ export default function UserProfile() {
                   <div
                     key={file.id}
                     className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div className="p-2 rounded bg-primary/10">
                       <FileText className="w-4 h-4 text-primary" />
@@ -447,7 +491,7 @@ export default function UserProfile() {
                   <div
                     key={category.id}
                     className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
@@ -482,6 +526,9 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
+          currentPhoneNumber={profile.phone_number}
+          currentFullName={profile.full_name}
+          currentDateOfBirth={profile.date_of_birth}
           onUpdateComplete={() => {
             localStorage.removeItem(PROFILE_CACHE_KEY);
             refetch();
