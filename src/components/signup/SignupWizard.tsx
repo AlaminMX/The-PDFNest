@@ -24,10 +24,9 @@ export interface SignupData {
   schoolOther: string;
   departmentId: string;
   preferredTheme: string;
-  financialLiteracyInterest: boolean;
   usageReason: string;
   usageReasonOther: string;
-  age: string;
+  dateOfBirth: string;
   nickname: string;
 }
 
@@ -44,10 +43,9 @@ const initialData: SignupData = {
   schoolOther: "",
   departmentId: "",
   preferredTheme: "system",
-  financialLiteracyInterest: false,
   usageReason: "",
   usageReasonOther: "",
-  age: "",
+  dateOfBirth: "",
   nickname: "",
 };
 
@@ -104,14 +102,13 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       is_student: data.isStudent ?? false,
       school: school || null,
       preferred_theme: data.preferredTheme || "system",
-      financial_literacy_interest: data.financialLiteracyInterest,
       usage_reason: usageReason || null,
       terms_accepted: data.termsAccepted,
       terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null,
     };
 
-    if (data.age && !Number.isNaN(Number.parseInt(data.age, 10))) {
-      profilePayload.age = Number.parseInt(data.age, 10);
+    if (data.dateOfBirth) {
+      profilePayload.date_of_birth = data.dateOfBirth;
     }
 
     if (data.departmentId) {
@@ -148,14 +145,11 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
         preferredTheme: data.preferredTheme || "system",
       }));
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-        },
+      const { lovable } = await import("@/integrations/lovable/index");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
       });
-
-      if (error) throw error;
+      if (result?.error) throw result.error;
       toast.success("Redirecting to Google...");
     } catch (error: any) {
       if (isGoogleProviderDisabled(error?.message)) {

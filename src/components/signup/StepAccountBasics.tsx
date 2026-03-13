@@ -95,6 +95,20 @@ export function StepAccountBasics({ data, updateData, onNext, onGoogleSignup, on
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="nickname">Display Name / Nickname</Label>
+          <Input
+            id="nickname"
+            placeholder="What should we call you? (optional)"
+            value={data.nickname}
+            onChange={e => updateData({ nickname: e.target.value })}
+            disabled={loading}
+            maxLength={30}
+            className="h-11"
+          />
+          <p className="text-xs text-muted-foreground">Defaults to your full name if left empty</p>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"

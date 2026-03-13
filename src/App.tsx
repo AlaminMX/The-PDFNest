@@ -1,9 +1,11 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
@@ -18,8 +20,12 @@ import AdminCategories from "./pages/AdminCategories";
 import AdminUserDetail from "./pages/AdminUserDetail";
 import AdminSessionLogs from "./pages/AdminSessionLogs";
 import AdminCommitsLog from "./pages/AdminCommitsLog";
+import AdminActivityLogs from "./pages/AdminActivityLogs";
 import AFITPDFs from "./pages/AFITPDFs";
+import FacultySelection from "./pages/FacultySelection";
+import AdminFaculties from "./pages/AdminFaculties";
 import SchoolStore from "./pages/SchoolStore";
+import AdminWaitlist from "./pages/AdminWaitlist";
 import SemesterSelection from "./pages/SemesterSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
@@ -42,10 +48,12 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <RamadanDecoration />
         <BrowserRouter>
           <ActivityRouteTracker />
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
@@ -60,11 +68,14 @@ const App = () => (
             <Route path="/admin/commits" element={<AdminCommitsLog />} />
             <Route path="/admin/uploads" element={<AdminUploads />} />
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
-            <Route path="/afit-pdfs" element={<AFITPDFs />} />
+            <Route path="/admin/faculties" element={<AdminFaculties />} />
+            <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+            <Route path="/afit-pdfs" element={<FacultySelection />} />
+            <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
             <Route path="/school-store" element={<SchoolStore />} />
-            <Route path="/afit-pdfs/:deptSlug" element={<SemesterSelection />} />
-            <Route path="/afit-pdfs/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
-            <Route path="/afit-pdfs/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
             <Route path="/rep/upload" element={<RepUpload />} />
             <Route path="/rep/moderation" element={<RepModeration />} />
             <Route path="/rep/:userId" element={<RepProfile />} />
