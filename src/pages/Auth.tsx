@@ -13,6 +13,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { logActivity, startSession } from "@/lib/sessionLogger";
+import { startSession, logActivity } from "@/lib/sessionLogger";
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4">
@@ -118,7 +119,7 @@ export default function Auth() {
           sessionStorage.removeItem("redirectAfterLogin");
           navigate(redirectPath);
         } else {
-          navigate("/");
+          navigate("/dashboard");
         }
       } finally {
         redirectingRef.current = false;
@@ -158,7 +159,58 @@ export default function Auth() {
 
   const handleFinishOnboarding = () => {
     isOnboarding.current = false;
-    navigate("/");
+    navigate("/dashboard");
+  };
+
+  const handleAbortOnboarding = () => {
+    isOnboarding.current = false;
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { lovable } = await import("@/integrations/lovable/index");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result?.error) throw result.error;
+      toast.success("Redirecting to Google...");
+    } catch (error: any) {
+      if (isGoogleProviderDisabled(error?.message)) {
+        toast.error("Google sign-in is not available at the moment. Please try again later.");
+      } else {
+        toast.error(error.message || "Unable to continue with Google");
+      }
+      setLoading(false);
+    }
+  };
+
+  const resetOnboardingState = () => {
+    isOnboarding.current = false;
+  };
+
+  const handleGoogleOAuthLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) throw error;
+      await startSession();
+      await logActivity("login_success", { provider: "google", flow: "oauth_redirect_started" });
+      toast.success("Redirecting to Google...");
+    } catch (error: any) {
+      await logActivity("login_failed", { provider: "google", reason: error?.message || "oauth_error" });
+      if (isGoogleProviderDisabled(error?.message)) {
+        toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
+      } else {
+        toast.error(error.message || "Unable to continue with Google");
+      }
+      setLoading(false);
+    }
   };
 
   const authResetOnboardingState = () => {
@@ -217,6 +269,7 @@ export default function Auth() {
       }
       toast.success("Welcome back!");
     } catch (error: any) {
+      const { logActivity } = await import("@/lib/sessionLogger");
       await logActivity("login_failed", {
         provider: "email_password",
         identifier: email.trim().toLowerCase(),
@@ -258,7 +311,7 @@ export default function Auth() {
         onSwitchToLogin={() => setIsLogin(true)}
         onStartOnboarding={handleStartOnboarding}
         onFinishOnboarding={handleFinishOnboarding}
-        onAbortOnboarding={authResetOnboardingState}
+        onAbortOnboarding={handleAbortOnboarding}
       />
     );
   }

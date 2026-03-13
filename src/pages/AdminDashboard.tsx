@@ -2,12 +2,17 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Menu, X, FolderTree, ListOrdered, Inbox
+  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
+  Menu, X, FolderTree, Moon, ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -30,6 +35,8 @@ interface UserData {
   nickname: string | null;
   preferredTheme: string | null;
   usageReason: string | null;
+  dateOfBirth: string | null;
+  phoneNumber: string | null;
 }
 
 type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
@@ -61,6 +68,7 @@ function formatDate(dateString: string): string {
 
 const sidebarItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+  { id: "faculties", label: "Faculties", icon: Building2, path: "/admin/faculties" },
   { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
   { id: "categories", label: "Categories", icon: FolderTree, path: "/admin/categories" },
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
@@ -68,7 +76,39 @@ const sidebarItems = [
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
   { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
   { id: "commits", label: "Implemented Commits", icon: ListOrdered, path: "/admin/commits" },
+  { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
+  { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
 ];
+
+function RamadanToggleControl() {
+  const { settings, updateSetting } = useAppSettings();
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggle = async (checked: boolean) => {
+    setToggling(true);
+    const success = await updateSetting("ramadan_theme_enabled", checked ? "true" : "false");
+    if (success) {
+      toast.success(checked ? "Ramadan theme enabled" : "Ramadan theme disabled");
+    } else {
+      toast.error("Failed to update setting");
+    }
+    setToggling(false);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-1 py-2">
+      <div className="flex items-center gap-2">
+        <Moon className="h-4 w-4 text-muted-foreground" />
+        <Label className="text-xs">Ramadan Theme</Label>
+      </div>
+      <Switch
+        checked={settings.ramadan_theme_enabled}
+        onCheckedChange={handleToggle}
+        disabled={toggling}
+      />
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -91,7 +131,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isAdmin, adminLoading, navigate]);
 
@@ -113,6 +153,8 @@ export default function AdminDashboard() {
           nickname,
           preferred_theme,
           usage_reason,
+          date_of_birth,
+          phone_number,
           created_at,
           department_id,
           departments (
@@ -162,10 +204,12 @@ export default function AdminDashboard() {
           totalStorage: pdfStats.storage,
           createdAt: profile.created_at,
           departmentId: profile.department_id,
-          departmentName: profile.departments?.name || null,
+          departmentName: (profile as any).departments?.name || null,
           nickname: profile.nickname || null,
           preferredTheme: profile.preferred_theme || null,
           usageReason: profile.usage_reason || null,
+          dateOfBirth: (profile as any).date_of_birth || null,
+          phoneNumber: profile.phone_number || null,
         };
       });
 
@@ -271,7 +315,7 @@ export default function AdminDashboard() {
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-2" 
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to App
@@ -298,6 +342,7 @@ export default function AdminDashboard() {
 
       {/* Footer */}
       <div className="p-4 border-t space-y-2">
+        <RamadanToggleControl />
         <ThemeToggle />
         <Button 
           variant="outline" 
@@ -520,9 +565,10 @@ export default function AdminDashboard() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Department</TableHead>
-                  <TableHead className="hidden xl:table-cell">Nickname</TableHead>
-                  <TableHead className="hidden xl:table-cell">Theme</TableHead>
+                  <TableHead className="hidden md:table-cell">Department</TableHead>
+                  <TableHead className="hidden xl:table-cell">DOB</TableHead>
+                  <TableHead className="hidden xl:table-cell">Phone</TableHead>
+                  <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
                   <TableHead className="hidden xl:table-cell">Joined</TableHead>
                   <TableHead className="text-center">PDFs</TableHead>
                   <TableHead className="text-right">Total Size</TableHead>
@@ -532,7 +578,7 @@ export default function AdminDashboard() {
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -552,7 +598,7 @@ export default function AdminDashboard() {
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {user.email}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell className="hidden md:table-cell">
                         {user.departmentName ? (
                           <Badge variant="outline" className="font-normal">
                             {user.departmentName}
@@ -561,8 +607,9 @@ export default function AdminDashboard() {
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.nickname || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.preferredTheme || "system"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.phoneNumber || "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
