@@ -36,6 +36,8 @@ import Notifications from "./pages/Notifications";
 import CommunityUpload from "./pages/CommunityUpload";
 import NotFound from "./pages/NotFound";
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
+import AdminUploads from "./pages/AdminUploads";
+import Leaderboard from "./pages/Leaderboard";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +80,8 @@ const App = () => (
             <Route path="/ai-features" element={<AIFeatures />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/contribute" element={<CommunityUpload />} />
+            <Route path="/admin/uploads" element={<AdminUploads />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
