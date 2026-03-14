@@ -48,8 +48,10 @@ export default function RepUpload() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isRep, departmentId, departmentName, displayName, loading: repLoading } = useRepStatus();
+  const [selectedLevel, setSelectedLevel] = useState<number>(100);
   const [selectedSemester, setSelectedSemester] = useState<string>("");
-  const { courses, loading: coursesLoading } = useCourses(departmentId || undefined, 100, selectedSemester || undefined);
+  const [selectedMaterialType, setSelectedMaterialType] = useState<string>("lecture_note");
+  const { courses, loading: coursesLoading } = useCourses(departmentId || undefined, selectedLevel, selectedSemester || undefined);
   const { uploadNote, convertToPdf } = useLectureNotes();
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -216,7 +218,8 @@ export default function RepUpload() {
           fileToUpload,
           item.title.trim(),
           displayName,
-          departmentId || undefined
+          departmentId || undefined,
+          selectedMaterialType
         );
 
         if (success) {
@@ -263,7 +266,7 @@ export default function RepUpload() {
   }
 
   const pendingFiles = fileQueue.filter(f => f.status === 'pending');
-  const canUpload = selectedCourseId && selectedSemester && pendingFiles.length > 0 && !isProcessing;
+  const canUpload = selectedCourseId && selectedSemester && selectedLevel && pendingFiles.length > 0 && !isProcessing;
 
   return (
     <>
@@ -333,6 +336,30 @@ export default function RepUpload() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Level Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="level">Select Level</Label>
+                <Select
+                  value={String(selectedLevel)}
+                  onValueChange={(val) => {
+                    setSelectedLevel(Number(val));
+                    setSelectedCourseId("");
+                  }}
+                  disabled={isProcessing}
+                >
+                  <SelectTrigger id="level">
+                    <SelectValue placeholder="Choose a level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100 Level</SelectItem>
+                    <SelectItem value="200">200 Level</SelectItem>
+                    <SelectItem value="300">300 Level</SelectItem>
+                    <SelectItem value="400">400 Level</SelectItem>
+                    <SelectItem value="500">500 Level</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Semester Selection */}
               <div className="space-y-2">
                 <Label htmlFor="semester">Select Semester</Label>
@@ -354,16 +381,38 @@ export default function RepUpload() {
                 </Select>
               </div>
 
+              {/* Material Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="material-type">Material Type</Label>
+                <Select
+                  value={selectedMaterialType}
+                  onValueChange={setSelectedMaterialType}
+                  disabled={isProcessing}
+                >
+                  <SelectTrigger id="material-type">
+                    <SelectValue placeholder="Choose material type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lecture_note">Lecture Note</SelectItem>
+                    <SelectItem value="past_question">Past Question</SelectItem>
+                    <SelectItem value="handout">Handout</SelectItem>
+                    <SelectItem value="assignment">Assignment</SelectItem>
+                    <SelectItem value="tutorial">Tutorial</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Course Selection */}
               <div className="space-y-2">
                 <Label htmlFor="course">Select Course</Label>
                 <Select
                   value={selectedCourseId}
                   onValueChange={setSelectedCourseId}
-                  disabled={isProcessing || !selectedSemester}
+                  disabled={isProcessing || !selectedSemester || !selectedLevel}
                 >
                   <SelectTrigger id="course">
-                    <SelectValue placeholder={selectedSemester ? "Choose a course" : "Select semester first"} />
+                    <SelectValue placeholder={selectedSemester ? "Choose a course" : "Select level and semester first"} />
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((course) => (
@@ -384,7 +433,7 @@ export default function RepUpload() {
                     type="file"
                     accept={ACCEPT_TYPES}
                     onChange={handleFileChange}
-                    disabled={isProcessing || !selectedCourseId || !selectedSemester}
+                    disabled={isProcessing || !selectedCourseId || !selectedSemester || !selectedLevel}
                     className="hidden"
                     multiple
                   />
