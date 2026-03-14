@@ -9,45 +9,45 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const initialSessionChecked = useRef(false);
+  const sessionChecked = useRef(false);
 
   useEffect(() => {
     let cleanupIdleDetection: (() => void) | null = null;
 
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST before getSession
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      
-      // Start session on login
-      if (event === 'SIGNED_IN' && newSession) {
+
+      if (event === "SIGNED_IN" && newSession) {
+        // Defer side-effects so they don't block the render cycle
         setTimeout(() => {
-          startSession();
+          startSession().catch(() => {});
           cleanupIdleDetection = setupIdleDetection();
         }, 0);
       }
-      
-      // Only redirect to /auth on explicit SIGNED_OUT event, not on initial load
-      if (event === 'SIGNED_OUT') {
+
+      if (event === "SIGNED_OUT") {
         navigate("/auth");
       }
     });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      initialSessionChecked.current = true;
-      setLoading(false);
-      
-      if (!existingSession) {
-        navigate("/auth");
-      } else {
-        // Set up idle detection for existing sessions
-        cleanupIdleDetection = setupIdleDetection();
+      // Only update if onAuthStateChange hasn't already resolved this
+      if (!sessionChecked.current) {
+        sessionChecked.current = true;
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+
+        if (existingSession) {
+          cleanupIdleDetection = setupIdleDetection();
+        }
       }
+      // Always clear loading once we have a definitive answer
+      setLoading(false);
     });
 
     return () => {
@@ -56,11 +56,11 @@ export function useAuth() {
         cleanupIdleDetection();
       }
     };
-  }, [navigate]);
+  }, []); // Empty deps - navigate intentionally excluded to prevent re-subscribing
 
   const signOut = async () => {
-    await logActivity("logout", { source: "manual_sign_out" });
-    await endSession();
+    await logActivity("logout", { source: "manual_sign_out" }).catch(() => {});
+    await endSession().catch(() => {});
     await supabase.auth.signOut();
     navigate("/auth");
   };
