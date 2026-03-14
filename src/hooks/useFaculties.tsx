@@ -16,22 +16,29 @@ export interface Faculty {
 export function useFaculties() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchFaculties = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const { data, error } = await supabase
-        .from("faculties" as any)
+        .from("faculties")
         .select("*")
+        .eq("is_visible", true)
         .order("display_order", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("useFaculties fetch error:", error);
+        throw error;
+      }
 
-      // Get department counts per faculty
+      // Get department counts per faculty (anon-safe - departments have anon policy)
       const { data: deptData } = await supabase
         .from("departments")
         .select("faculty_id")
+        .eq("is_visible", true)
         .not("faculty_id", "is", null);
 
       const countMap = new Map<string, number>();
@@ -47,6 +54,7 @@ export function useFaculties() {
       setFaculties(enriched);
     } catch (err) {
       console.error("Error fetching faculties:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch faculties");
     } finally {
       setLoading(false);
     }
@@ -56,5 +64,5 @@ export function useFaculties() {
     fetchFaculties();
   }, []);
 
-  return { faculties, loading, refresh: fetchFaculties };
+  return { faculties, loading, error, refresh: fetchFaculties };
 }
