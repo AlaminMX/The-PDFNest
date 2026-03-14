@@ -23,9 +23,10 @@ const SEMESTER_LABELS: Record<string, string> = {
 
 function DepartmentCoursesContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug, semester } = useParams<{ facultySlug: string; deptSlug: string; semester: string }>();
+  const { facultySlug, deptSlug, level: levelParam, semester } = useParams<{ facultySlug: string; deptSlug: string; level: string; semester: string }>();
+  const levelNum = parseInt(levelParam || '100', 10);
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
-  const { courses, loading: coursesLoading, refresh: refreshCourses } = useCourses(currentDept?.id, 100, semester);
+  const { courses, loading: coursesLoading, refresh: refreshCourses } = useCourses(currentDept?.id, levelNum, semester);
   const { isAdmin } = useAdminStatus();
   const rep = useRepStatus();
 
@@ -52,7 +53,7 @@ function DepartmentCoursesContent() {
 
   // Validate semester param
   if (semester && !["first", "second"].includes(semester)) {
-    return <Navigate to={`/afit-pdfs/${facultySlug}/${deptSlug}`} replace />;
+    return <Navigate to={`/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam || '100'}`} replace />;
   }
 
   const canEditTimetable =
@@ -88,7 +89,7 @@ function DepartmentCoursesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}`)}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -97,7 +98,7 @@ function DepartmentCoursesContent() {
               <h1 className="text-lg font-semibold truncate max-w-[180px] md:max-w-none">
                 {currentDept?.name || "Loading…"}
               </h1>
-              <p className="text-xs text-muted-foreground">{semesterLabel}</p>
+              <p className="text-xs text-muted-foreground">{levelParam ? `${levelParam} Level · ` : ''}{semesterLabel}</p>
             </div>
           </div>
           <ThemeToggle />
@@ -143,7 +144,7 @@ function DepartmentCoursesContent() {
                       transition={{ duration: 0.2, delay: i * 0.03 }}
                     >
                       <button
-                        onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}/${course.code}`)}
+                        onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}/semester/${semester}/${course.code}`)}
                         className="w-full text-left p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group flex flex-col justify-between min-h-[120px]"
                       >
                         <div>
