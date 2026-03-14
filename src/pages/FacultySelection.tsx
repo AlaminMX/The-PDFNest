@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { useFaculties } from "@/hooks/useFaculties";
-import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -164,9 +163,5 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
 }
 
 export default function FacultySelection() {
-  return (
-    <AuthGate>
-      <FacultySelectionContent />
-    </AuthGate>
-  );
+  return <FacultySelectionContent />;
 }
