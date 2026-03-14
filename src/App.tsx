@@ -27,6 +27,7 @@ import AdminFaculties from "./pages/AdminFaculties";
 import SchoolStore from "./pages/SchoolStore";
 import AdminWaitlist from "./pages/AdminWaitlist";
 import SemesterSelection from "./pages/SemesterSelection";
+import LevelSelection from "./pages/LevelSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
@@ -123,9 +124,10 @@ const App = () => (
               <Route path="/afit-pdfs" element={<FacultySelection />} />
               <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
               <Route path="/school-store" element={<SchoolStore />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<LevelSelection />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
               <Route path="/rep/upload" element={<RepUpload />} />
               <Route path="/rep/:userId" element={<RepProfile />} />
               <Route path="/profile" element={<UserProfile />} />
