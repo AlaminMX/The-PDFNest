@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
-  Menu, X, FolderTree, Moon, ShoppingBag
+  Menu, X, FolderTree, ListOrdered, Inbox, Moon, ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
