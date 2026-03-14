@@ -22,10 +22,6 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete, loading = f
       toast.error("Please upload a PDF file");
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("File must be less than 50MB");
-      return;
-    }
 
     setUploading(true);
     try {
@@ -129,7 +125,7 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete, loading = f
         <p className="text-sm font-medium text-foreground">
           {uploading ? "Uploading..." : loading ? "Finalizing account..." : "Drop a PDF here or tap to browse"}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">Max 50MB</p>
+        
         <input
           id="onboarding-upload"
           type="file"
