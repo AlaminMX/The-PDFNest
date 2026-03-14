@@ -1,16 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useFaculties } from "@/hooks/useFaculties";
 import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, Upload, ArrowRight, ChevronDown,
-  GraduationCap, Users, Search, Building2,
+  GraduationCap, Users, Search, Building2, RefreshCw,
 } from "lucide-react";
 
-// ─── Nav ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface Faculty {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  display_order: number | null;
+  is_visible: boolean;
+  department_count?: number;
+}
+
+// ─── Nav ─────────────────────────────────────────────────────────────────────
 
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -47,7 +59,7 @@ function Nav() {
   );
 }
 
-// ─── Hero ────────────────────────────────────────────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 
 function Hero({ onBrowse }: { onBrowse: () => void }) {
   return (
@@ -95,7 +107,7 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             className="flex flex-col items-center gap-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
             aria-label="Scroll to faculties"
           >
-            <span className="text-xs">Choose your faculty</span>
+            <span className="text-xs">Choose your faculty below</span>
             <ChevronDown className="w-4 h-4 animate-bounce" />
           </button>
         </div>
@@ -104,27 +116,9 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-// ─── Faculty Grid ────────────────────────────────────────────────────────────
+// ─── Faculty Card ─────────────────────────────────────────────────────────────
 
-function FacultySkeleton() {
-  return (
-    <div className="rounded-xl border border-border/40 bg-muted/20 p-5 animate-pulse">
-      <div className="w-10 h-10 rounded-xl bg-muted/60 mb-4" />
-      <div className="h-4 bg-muted/60 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-muted/40 rounded w-1/2" />
-    </div>
-  );
-}
-
-function FacultyCard({
-  faculty,
-  index,
-  onClick,
-}: {
-  faculty: any;
-  index: number;
-  onClick: () => void;
-}) {
+function FacultyCard({ faculty, index, onClick }: { faculty: Faculty; index: number; onClick: () => void }) {
   const styles = getDepartmentStyles(faculty.color, index);
   const icon = getDepartmentIcon(faculty.icon, faculty.name);
   const [hovered, setHovered] = useState(false);
@@ -149,16 +143,14 @@ function FacultyCard({
       >
         {icon}
       </div>
-      <p
-        className="text-sm font-semibold leading-snug mb-1 line-clamp-2"
-        style={{ color: styles.accentText }}
-      >
+      <p className="text-sm font-semibold leading-snug mb-1 line-clamp-2" style={{ color: styles.accentText }}>
         {faculty.name}
       </p>
-      <p className="text-[11px] text-muted-foreground/60">
-        {faculty.department_count ?? 0}{" "}
-        {faculty.department_count === 1 ? "dept" : "depts"}
-      </p>
+      {typeof faculty.department_count === "number" && (
+        <p className="text-[11px] text-muted-foreground/60">
+          {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
+        </p>
+      )}
       <div className="flex items-center gap-1 mt-3">
         <span className="text-[11px] text-muted-foreground/50">Browse</span>
         <ArrowRight className="w-3 h-3 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -167,22 +159,82 @@ function FacultyCard({
   );
 }
 
+function FacultySkeleton() {
+  return (
+    <div className="rounded-xl border border-border/40 bg-muted/20 p-5 animate-pulse">
+      <div className="w-10 h-10 rounded-xl bg-muted/60 mb-4" />
+      <div className="h-4 bg-muted/60 rounded w-3/4 mb-2" />
+      <div className="h-3 bg-muted/40 rounded w-1/2" />
+    </div>
+  );
+}
+
+// ─── Faculty Grid ─────────────────────────────────────────────────────────────
+
 function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
-  const { faculties, loading, error } = useFaculties();
   const navigate = useNavigate();
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchFailed, setFetchFailed] = useState(false);
   const [search, setSearch] = useState("");
 
-  // useFaculties already filters is_visible at DB level
+  const fetchFaculties = async () => {
+    setLoading(true);
+    setFetchFailed(false);
+    try {
+      // Primary fetch using the Supabase client (works once anon policy is set)
+      const { data, error } = await supabase
+        .from("faculties")
+        .select("id, name, slug, icon, color, display_order, is_visible")
+        .eq("is_visible", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+
+      const rows = (data || []) as Faculty[];
+
+      if (rows.length === 0) {
+        // RLS is likely blocking anon — signal fallback UI
+        setFetchFailed(true);
+        setFaculties([]);
+        return;
+      }
+
+      // Enrich with dept counts (best-effort — won't crash if it fails)
+      try {
+        const { data: deptData } = await supabase
+          .from("departments")
+          .select("faculty_id")
+          .eq("is_visible", true)
+          .not("faculty_id", "is", null);
+
+        const countMap = new Map<string, number>();
+        (deptData || []).forEach((d: any) => {
+          countMap.set(d.faculty_id, (countMap.get(d.faculty_id) || 0) + 1);
+        });
+
+        setFaculties(rows.map((f) => ({ ...f, department_count: countMap.get(f.id) || 0 })));
+      } catch {
+        setFaculties(rows);
+      }
+    } catch {
+      setFetchFailed(true);
+      setFaculties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchFaculties(); }, []);
+
   const filtered = search.trim()
-    ? faculties.filter((f) =>
-        f.name.toLowerCase().includes(search.trim().toLowerCase())
-      )
+    ? faculties.filter((f) => f.name.toLowerCase().includes(search.trim().toLowerCase()))
     : faculties;
 
   return (
     <section ref={sectionRef} id="faculties" className="px-4 pb-16">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+
         <div className="mb-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Choose Your Faculty
@@ -192,74 +244,104 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm mx-auto mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search faculties..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border/50 bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50 transition-all"
-          />
-        </div>
-
-        {/* Grid */}
-        {loading ? (
+        {/* Loading */}
+        {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {Array.from({ length: 6 }).map((_, i) => <FacultySkeleton key={i} />)}
           </div>
-        ) : error ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-sm">Could not load faculties.</p>
-            <button onClick={() => window.location.reload()} className="text-xs text-primary underline mt-2">
-              Retry
-            </button>
-          </div>
-        ) : filtered.length === 0 && search.trim() ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-sm">No faculties found for "{search}"</p>
-            <button onClick={() => setSearch("")} className="text-xs text-primary underline mt-2">
-              Clear search
-            </button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-sm">No faculties available yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filtered.map((faculty, i) => (
-              <FacultyCard
-                key={faculty.id}
-                faculty={faculty}
-                index={i}
-                onClick={() => navigate(`/afit-pdfs/${faculty.slug}`)}
+        )}
+
+        {/* Faculties loaded — show search + grid */}
+        {!loading && !fetchFailed && faculties.length > 0 && (
+          <>
+            <div className="relative max-w-sm mx-auto mb-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search faculties..."
+                className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border/50 bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50 transition-all"
               />
-            ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <p className="text-sm">No match for "{search}"</p>
+                <button onClick={() => setSearch("")} className="text-xs text-primary underline mt-2">
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {filtered.map((faculty, i) => (
+                  <FacultyCard
+                    key={faculty.id}
+                    faculty={faculty}
+                    index={i}
+                    onClick={() => navigate(`/afit-pdfs/${faculty.slug}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Fallback — RLS blocking guest reads or empty DB */}
+        {!loading && (fetchFailed || faculties.length === 0) && (
+          <div className="text-center py-12 space-y-4">
+            <div className="w-14 h-14 rounded-full bg-primary/8 flex items-center justify-center mx-auto">
+              <Building2 className="w-6 h-6 text-primary/60" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Browse Academic Materials</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                Log in or sign up to access the full faculty and department library.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild className="rounded-xl gap-2">
+                <Link to="/afit-pdfs">
+                  <BookOpen className="w-4 h-4" />
+                  Browse All Materials
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-xl gap-2">
+                <Link to="/auth">
+                  Sign In to Continue
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </div>
+            {fetchFailed && (
+              <button
+                onClick={fetchFaculties}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground mx-auto transition-colors mt-2"
+              >
+                <RefreshCw className="w-3 h-3" /> Retry
+              </button>
+            )}
           </div>
         )}
 
-        {/* Browse by Department CTA */}
-        <div className="mt-8 text-center">
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-xl gap-2 border-border/50 text-sm"
-          >
-            <Link to="/afit-pdfs">
-              <Building2 className="w-3.5 h-3.5" />
-              Browse by Department
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </Button>
-        </div>
+        {/* Browse by Department link — always visible */}
+        {!loading && faculties.length > 0 && (
+          <div className="mt-8 text-center">
+            <Button asChild variant="outline" className="rounded-xl gap-2 border-border/50 text-sm">
+              <Link to="/afit-pdfs">
+                <Building2 className="w-3.5 h-3.5" />
+                Browse by Department
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-// ─── Contribute Section ──────────────────────────────────────────────────────
+// ─── Contribute Section ───────────────────────────────────────────────────────
 
 function ContributeSection() {
   return (
@@ -279,10 +361,7 @@ function ContributeSection() {
             <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
               Upload lecture notes, past questions, or handouts to help students in your department.
             </p>
-            <Button
-              asChild
-              className="rounded-xl gap-2 px-6 shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-shadow"
-            >
+            <Button asChild className="rounded-xl gap-2 px-6 shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-shadow">
               <Link to="/auth">
                 <Upload className="w-4 h-4" />
                 Upload Material
@@ -295,7 +374,7 @@ function ContributeSection() {
   );
 }
 
-// ─── About ───────────────────────────────────────────────────────────────────
+// ─── About ────────────────────────────────────────────────────────────────────
 
 function AboutSection() {
   return (
@@ -311,7 +390,7 @@ function AboutSection() {
   );
 }
 
-// ─── Footer ──────────────────────────────────────────────────────────────────
+// ─── Footer ───────────────────────────────────────────────────────────────────
 
 function Footer() {
   return (
@@ -341,7 +420,7 @@ function Footer() {
   );
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const navigate = useNavigate();
