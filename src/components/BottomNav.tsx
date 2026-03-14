@@ -1,4 +1,4 @@
-import { Home, Sparkles, User, Bell } from "lucide-react";
+import { Home, Sparkles, User, Bell, PlusCircle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ export function BottomNav({
   const tabs = [
     { icon: Home, label: "Home", path: "/dashboard", showDot: false, badge: 0, requiresAuth: false },
     { icon: Sparkles, label: "AI Features", path: "/ai-features", showDot: false, badge: 0, requiresAuth: false },
+    { icon: PlusCircle, label: "Contribute", path: "/contribute", showDot: false, badge: 0, requiresAuth: true },
     { icon: Bell, label: "Notifications", path: "/notifications", showDot: false, badge: unreadNotifications, requiresAuth: true },
     { icon: User, label: "Profile", path: "/profile", showDot: showProfileDot, badge: 0, requiresAuth: true },
   ];
