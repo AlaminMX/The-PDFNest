@@ -2,15 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRepStatus } from "@/hooks/useRepStatus";
+import { useCommunityUploads, CommunityUpload } from "@/hooks/useCommunityUploads";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, FileText, Calendar, Award, Edit2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, FileText, Calendar, Award, Edit2, Inbox, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface RepProfile {
   displayName: string;
@@ -41,12 +47,56 @@ export default function RepProfile() {
   const [showEditModal, setShowEditModal] = useState(false);
   
   const isOwnProfile = user?.id === userId;
+  const { departmentId: repDeptId } = useRepStatus();
+
+  // Moderation state — only used when isOwnProfile is true
+  const [reviewTarget, setReviewTarget] = useState<CommunityUpload | null>(null);
+  const [reviewAction, setReviewAction] = useState<"approve" | "reject" | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const {
+    uploads: pendingUploads,
+    loading: uploadsLoading,
+    approveUpload,
+    rejectUpload,
+  } = useCommunityUploads({
+    scope: "rep",
+    departmentId: isOwnProfile ? repDeptId : null,
+    statusFilter: "pending",
+  });
 
   useEffect(() => {
     if (userId) {
       fetchRepProfile();
     }
   }, [userId]);
+
+  const handleReview = (upload: CommunityUpload, action: "approve" | "reject") => {
+    setReviewTarget(upload);
+    setReviewAction(action);
+    setReviewNote("");
+  };
+
+  const handleConfirmReview = async () => {
+    if (!reviewTarget || !reviewAction) return;
+    setReviewLoading(true);
+    try {
+      if (reviewAction === "approve") {
+        await approveUpload(reviewTarget.id, reviewNote);
+        toast.success("Upload approved and added to lecture notes!");
+      } else {
+        await rejectUpload(reviewTarget.id, reviewNote);
+        toast.success("Upload rejected.");
+      }
+      setReviewTarget(null);
+      setReviewAction(null);
+    } catch (err: any) {
+      toast.error(err.message || "Action failed");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   const fetchRepProfile = async () => {
     try {
@@ -279,38 +329,94 @@ export default function RepProfile() {
               ))}
             </div>
           )}
-</div>
+        </div>
 
-        {/* Pending Uploads Moderation — only shown on own profile */}
+        {/* ── Moderation section (only shown on rep's own profile) ── */}
         {isOwnProfile && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Inbox className="w-5 h-5" />
-              Pending Uploads
-              {pendingUploads.length > 0 && (
-                <Badge variant="destructive">{pendingUploads.length}</Badge>
-              )}
-            </h2>
-            <p className="text-sm text-muted-foreground">Community materials in your department awaiting review</p>
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">
+                <Inbox className="w-5 h-5" />
+                Pending Uploads
+                {pendingUploads.length > 0 && (
+                  <Badge variant="destructive" className="ml-1">{pendingUploads.length}</Badge>
+                )}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Community materials in your department awaiting review
+              </p>
+            </div>
+
             {uploadsLoading ? (
-              <Card><CardContent className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></CardContent></Card>
+              <Card>
+                <CardContent className="py-8 flex justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </CardContent>
+              </Card>
             ) : pendingUploads.length === 0 ? (
-              <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">No pending uploads — all caught up!</CardContent></Card>
+              <Card>
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  <Inbox className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No pending uploads</p>
+                  <p className="text-xs mt-1">All caught up!</p>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-3">
                 {pendingUploads.map((upload) => (
                   <Card key={upload.id}>
                     <CardContent className="pt-4 pb-4 space-y-3">
+                      {/* Title + uploader */}
                       <div className="flex items-start justify-between gap-2">
-                        <div><p className="font-semibold text-sm">{upload.title}</p>
-                          <p className="text-xs text-muted-foreground">by {upload.uploader_name} · {upload.course_code} · {upload.material_type.replace("_"," ")}</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm leading-tight">{upload.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            by {upload.uploader_name}
+                            {upload.course_code ? ` · ${upload.course_code}` : ""}
+                            {" · "}{upload.material_type.replace("_", " ")}
+                          </p>
                         </div>
-                        <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600">Pending</Badge>
+                        <Badge variant="secondary" className="shrink-0 text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                          Pending
+                        </Badge>
                       </div>
-                      {upload.description && <p className="text-xs text-muted-foreground italic border-l-2 pl-2">{upload.description}</p>}
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1 text-green-600" onClick={() => handleReview(upload, "approve")}><CheckCircle className="w-4 h-4 mr-1" />Approve</Button>
-                        <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => handleReview(upload, "reject")}><XCircle className="w-4 h-4 mr-1" />Reject</Button>
+
+                      {/* File meta */}
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="truncate max-w-[200px]">{upload.original_file_name}</span>
+                        <span>{(upload.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                        {upload.created_at && (
+                          <span>{format(new Date(upload.created_at), "MMM d, yyyy")}</span>
+                        )}
+                      </div>
+
+                      {upload.description && (
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-border pl-2 line-clamp-2">
+                          {upload.description}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-1">
+                        <PreviewFileButton filePath={upload.file_path} />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-green-600 border-green-500/30 hover:bg-green-500/10 hover:text-green-700"
+                          onClick={() => handleReview(upload, "approve")}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1.5" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => handleReview(upload, "reject")}
+                        >
+                          <XCircle className="w-4 h-4 mr-1.5" />
+                          Reject
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -320,25 +426,62 @@ export default function RepProfile() {
           </div>
         )}
 
-        {/* Review dialog */}
+        {/* ── Review dialog ── */}
         {reviewTarget && reviewAction && (
-          <Dialog open onOpenChange={(o) => { if (!o) { setReviewTarget(null); setReviewAction(null); } }}>
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) { setReviewTarget(null); setReviewAction(null); }
+            }}
+          >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle className={reviewAction === "approve" ? "text-green-600" : "text-destructive"}>
-                  {reviewAction === "approve" ? "Approve Upload" : "Reject Upload"}
+                <DialogTitle
+                  className={`flex items-center gap-2 ${
+                    reviewAction === "approve" ? "text-green-600" : "text-destructive"
+                  }`}
+                >
+                  {reviewAction === "approve"
+                    ? <><CheckCircle className="w-5 h-5" /> Approve Upload</>
+                    : <><XCircle className="w-5 h-5" /> Reject Upload</>
+                  }
                 </DialogTitle>
-                <DialogDescription>{reviewTarget.title} by {reviewTarget.uploader_name}</DialogDescription>
+                <DialogDescription>
+                  <span className="font-medium text-foreground">{reviewTarget.title}</span>
+                  {" "}<span className="text-muted-foreground">by {reviewTarget.uploader_name}</span>
+                </DialogDescription>
               </DialogHeader>
+
               <div className="space-y-2">
-                <Label>{reviewAction === "reject" ? "Reason (recommended)" : "Note (optional)"}</Label>
-                <Textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} rows={3}
-                  placeholder={reviewAction === "reject" ? "e.g. Duplicate, wrong course..." : "e.g. Great material!"} />
+                <Label htmlFor="rep-review-note">
+                  {reviewAction === "reject" ? "Reason (recommended)" : "Note (optional)"}
+                </Label>
+                <Textarea
+                  id="rep-review-note"
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    reviewAction === "reject"
+                      ? "e.g. Duplicate file, wrong course, low quality..."
+                      : "e.g. Great material, thanks for contributing!"
+                  }
+                />
               </div>
+
               <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => { setReviewTarget(null); setReviewAction(null); }} disabled={reviewLoading}>Cancel</Button>
-                <Button onClick={handleConfirmReview} disabled={reviewLoading}
-                  variant={reviewAction === "approve" ? "default" : "destructive"}>
+                <Button
+                  variant="outline"
+                  onClick={() => { setReviewTarget(null); setReviewAction(null); }}
+                  disabled={reviewLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmReview}
+                  disabled={reviewLoading}
+                  variant={reviewAction === "approve" ? "default" : "destructive"}
+                >
                   {reviewLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {reviewAction === "approve" ? "Approve" : "Reject"}
                 </Button>
@@ -351,5 +494,34 @@ export default function RepProfile() {
       </main>
     </div>
     </>
+  );
+}
+
+// ── Helper: preview a file from storage ──
+function PreviewFileButton({ filePath }: { filePath: string }) {
+  const [loading, setLoading] = useState(false);
+
+  const handlePreview = async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase.storage
+        .from("school_pdfs")
+        .createSignedUrl(filePath, 300);
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+      } else {
+        toast.error("Could not generate preview link");
+      }
+    } catch {
+      toast.error("Preview failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={handlePreview} disabled={loading} title="Preview file">
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+    </Button>
   );
 }
