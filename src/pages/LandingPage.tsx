@@ -11,7 +11,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const departmentsRef = useRef<HTMLElement | null>(null);
   const { departments, loading: departmentsLoading } = useDepartments({ visibleOnly: true });
-  const { faculties, loading: facultiesLoading } = useFaculties();
+  const { faculties } = useFaculties();
 
   const facultySlugById = useMemo(
     () =>
@@ -78,19 +78,19 @@ export default function LandingPage() {
             Tap your department to go directly to your academic materials.
           </p>
 
-          {isDepartmentGridLoading ? (
+          {departmentsLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="h-24 rounded-lg border border-border/40 bg-muted/30" />
               ))}
             </div>
-          ) : departmentCards.length > 0 ? (
+          ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               {departmentCards.map((department) => (
                 <Link
                   key={department.id}
                   to={`/afit-pdfs/${department.facultySlug}/${department.slug}`}
-                  className="min-h-16 rounded-lg border border-border/50 bg-card px-4 py-4 text-sm md:text-base font-medium hover:bg-accent transition-colors flex items-center"
+                  className="rounded-lg border border-border/50 bg-card px-4 py-4 text-sm md:text-base font-medium hover:bg-accent transition-colors"
                 >
                   {department.name}
                 </Link>
