@@ -279,8 +279,74 @@ export default function RepProfile() {
               ))}
             </div>
           )}
-        </div>
-        
+</div>
+
+        {/* Pending Uploads Moderation — only shown on own profile */}
+        {isOwnProfile && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Inbox className="w-5 h-5" />
+              Pending Uploads
+              {pendingUploads.length > 0 && (
+                <Badge variant="destructive">{pendingUploads.length}</Badge>
+              )}
+            </h2>
+            <p className="text-sm text-muted-foreground">Community materials in your department awaiting review</p>
+            {uploadsLoading ? (
+              <Card><CardContent className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></CardContent></Card>
+            ) : pendingUploads.length === 0 ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">No pending uploads — all caught up!</CardContent></Card>
+            ) : (
+              <div className="space-y-3">
+                {pendingUploads.map((upload) => (
+                  <Card key={upload.id}>
+                    <CardContent className="pt-4 pb-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div><p className="font-semibold text-sm">{upload.title}</p>
+                          <p className="text-xs text-muted-foreground">by {upload.uploader_name} · {upload.course_code} · {upload.material_type.replace("_"," ")}</p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600">Pending</Badge>
+                      </div>
+                      {upload.description && <p className="text-xs text-muted-foreground italic border-l-2 pl-2">{upload.description}</p>}
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1 text-green-600" onClick={() => handleReview(upload, "approve")}><CheckCircle className="w-4 h-4 mr-1" />Approve</Button>
+                        <Button size="sm" variant="outline" className="flex-1 text-destructive" onClick={() => handleReview(upload, "reject")}><XCircle className="w-4 h-4 mr-1" />Reject</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Review dialog */}
+        {reviewTarget && reviewAction && (
+          <Dialog open onOpenChange={(o) => { if (!o) { setReviewTarget(null); setReviewAction(null); } }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className={reviewAction === "approve" ? "text-green-600" : "text-destructive"}>
+                  {reviewAction === "approve" ? "Approve Upload" : "Reject Upload"}
+                </DialogTitle>
+                <DialogDescription>{reviewTarget.title} by {reviewTarget.uploader_name}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label>{reviewAction === "reject" ? "Reason (recommended)" : "Note (optional)"}</Label>
+                <Textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} rows={3}
+                  placeholder={reviewAction === "reject" ? "e.g. Duplicate, wrong course..." : "e.g. Great material!"} />
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => { setReviewTarget(null); setReviewAction(null); }} disabled={reviewLoading}>Cancel</Button>
+                <Button onClick={handleConfirmReview} disabled={reviewLoading}
+                  variant={reviewAction === "approve" ? "default" : "destructive"}>
+                  {reviewLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {reviewAction === "approve" ? "Approve" : "Reject"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
         <SmartBottomNav />
       </main>
     </div>
