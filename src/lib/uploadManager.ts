@@ -16,7 +16,6 @@ export interface UploadItem {
 type Listener = (items: UploadItem[]) => void;
 
 const MAX_CONCURRENT = 2;
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
 
 class UploadManager {
@@ -57,10 +56,6 @@ class UploadManager {
     for (const file of files) {
       if (file.type !== "application/pdf") {
         this.addError(file.name, "Only PDF files are allowed");
-        continue;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        this.addError(file.name, "File size must be under 50MB");
         continue;
       }
       validFiles.push(file);
