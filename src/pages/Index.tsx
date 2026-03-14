@@ -674,7 +674,14 @@ export default function Index() {
   }
 
   if (!user) {
-    return null;
+    // Auth state settled but no user - redirect to login
+    // Using window.location to avoid stale navigate closure issues
+    window.location.replace("/auth");
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
