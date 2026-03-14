@@ -25,6 +25,7 @@ import FacultySelection from "./pages/FacultySelection";
 import AdminFaculties from "./pages/AdminFaculties";
 import SchoolStore from "./pages/SchoolStore";
 import AdminWaitlist from "./pages/AdminWaitlist";
+import AdminUploads from "./pages/AdminUploads";
 import SemesterSelection from "./pages/SemesterSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/admin/faculties" element={<AdminFaculties />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+            <Route path="/admin/uploads" element={<AdminUploads />} />
             <Route path="/afit-pdfs" element={<FacultySelection />} />
             <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
             <Route path="/school-store" element={<SchoolStore />} />

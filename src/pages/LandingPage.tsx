@@ -46,6 +46,43 @@ export default function LandingPage() {
     departmentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const renderDepartmentGrid = () => {
+    if (isDepartmentGridLoading) {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-24 rounded-lg border border-border/40 bg-muted/30" />
+          ))}
+        </div>
+      );
+    }
+
+    if (departmentCards.length > 0) {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          {departmentCards.map((department) => (
+            <Link
+              key={department.id}
+              to={`/afit-pdfs/${department.facultySlug}/${department.slug}`}
+              className="min-h-16 rounded-lg border border-border/50 bg-card px-4 py-4 text-sm md:text-base font-medium hover:bg-accent transition-colors flex items-center"
+            >
+              {department.name}
+            </Link>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-lg border border-border/40 bg-muted/20 p-6 text-center">
+        <p className="text-sm text-muted-foreground mb-3">Departments will appear here shortly.</p>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/afit-pdfs">Browse by Faculty</Link>
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <LandingNav />
@@ -76,6 +113,7 @@ export default function LandingPage() {
             Tap your department to go directly to your academic materials.
           </p>
 
+          {renderDepartmentGrid()}
           {departmentsLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Array.from({ length: 6 }).map((_, index) => (
