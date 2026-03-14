@@ -4,7 +4,6 @@ import { useDepartments } from "@/hooks/useDepartments";
 import { useCourses } from "@/hooks/useCourses";
 import { useLectureNotes } from "@/hooks/useLectureNotes";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,6 +59,16 @@ function CourseLectureNotesContent() {
   const { facultySlug, deptSlug, semester, courseCode } = useParams<{ facultySlug: string; deptSlug: string; semester: string; courseCode: string }>();
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
+
+  // Prompt unauthenticated users to log in before protected actions
+  const requireAuth = (action: () => void) => {
+    if (!user) {
+      sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+      navigate("/auth");
+      return;
+    }
+    action();
+  };
   const { session, user: sessionUser } = useSession();
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
@@ -130,20 +139,23 @@ function CourseLectureNotesContent() {
     }
   };
 
-  const handleDownload = async (filePath: string, title: string) => {
-    try {
-      const url = await getSignedUrl(filePath);
-      if (url) {
-        await downloadFile(url, `${title}.pdf`);
-      } else {
+  const handleDownload = (filePath: string, title: string) => {
+    requireAuth(async () => {
+      try {
+        const url = await getSignedUrl(filePath);
+        if (url) {
+          await downloadFile(url, `${title}.pdf`);
+        } else {
+          toast.error("Failed to download PDF");
+        }
+      } catch (err) {
         toast.error("Failed to download PDF");
       }
-    } catch (err) {
-      toast.error("Failed to download PDF");
-    }
+    });
   };
 
-  const handleBulkDownload = async () => {
+  const handleBulkDownload = () => {
+    requireAuth(async () => {
     const selectedList = filteredNotes.filter(note => selectedNotes.has(note.id));
     if (selectedList.length === 0) return;
     
@@ -162,9 +174,11 @@ function CourseLectureNotesContent() {
       await downloadMultiple(filesToDownload, 3);
       setSelectedNotes(new Set());
     }
+    });
   };
 
   const toggleNoteSelection = (noteId: string) => {
+    requireAuth(() => {
     setSelectedNotes(prev => {
       const newSet = new Set(prev);
       if (newSet.has(noteId)) {
@@ -174,14 +188,17 @@ function CourseLectureNotesContent() {
       }
       return newSet;
     });
+    });
   };
 
   const toggleSelectAll = () => {
-    if (selectedNotes.size === filteredNotes.length) {
-      setSelectedNotes(new Set());
-    } else {
-      setSelectedNotes(new Set(filteredNotes.map(n => n.id)));
-    }
+    requireAuth(() => {
+      if (selectedNotes.size === filteredNotes.length) {
+        setSelectedNotes(new Set());
+      } else {
+        setSelectedNotes(new Set(filteredNotes.map(n => n.id)));
+      }
+    });
   };
 
   const handleShare = (noteId: string, title: string) => {
@@ -196,6 +213,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleDeleteClick = (note: { id: string; title: string; file_path: string; file_size: number }) => {
+    requireAuth(() => {
     setNoteToDelete({
       id: note.id,
       title: note.title,
@@ -203,6 +221,7 @@ function CourseLectureNotesContent() {
       fileSize: note.file_size,
     });
     setDeleteDialogOpen(true);
+    });
   };
 
   const handleConfirmDelete = async () => {
@@ -239,6 +258,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleAIAction = (action: string, note: { id: string; title: string; filePath: string }) => {
+    requireAuth(() => {
     setSelectedNote(note);
     switch (action) {
       case 'summary':
@@ -257,6 +277,7 @@ function CourseLectureNotesContent() {
         setChatModalOpen(true);
         break;
     }
+    });
   };
 
   if (loading) {
@@ -703,9 +724,5 @@ function CourseLectureNotesContent() {
 }
 
 export default function CourseLectureNotes() {
-  return (
-    <AuthGate>
-      <CourseLectureNotesContent />
-    </AuthGate>
-  );
+  return <CourseLectureNotesContent />;
 }
