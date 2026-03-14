@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
 import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, ChevronDown, WifiOff, CloudDownload, CheckCircle, Tag } from "lucide-react";
-import { ChevronDownIcon } from "@radix-ui/react-icons";
 import {
   Select,
   SelectContent,
@@ -274,7 +273,6 @@ function AppSidebar({
                   </div>
                   <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Recent Files</span>
                 </div>
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
@@ -1109,7 +1107,7 @@ export default function Index() {
               </p>
               <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
                 <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
-                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+                <ChevronDown className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
               </div>
               <div className="mt-6 flex justify-center">
                 <Button asChild>
