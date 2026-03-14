@@ -53,7 +53,6 @@ const SUPPORTED_TYPES = [
   "image/webp",
 ];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const DAILY_UPLOAD_LIMIT = 10;
 
 interface Faculty { id: string; name: string; slug: string; }
@@ -169,11 +168,6 @@ function CommunityUploadContent() {
       toast.error("Unsupported file type. Please upload PDF, DOC, DOCX, PPT, PPTX, or image files.");
       return;
     }
-    if (selected.size > MAX_FILE_SIZE) {
-      toast.error("File too large. Maximum size is 50MB.");
-      return;
-    }
-
     if (selected.type !== "application/pdf") {
       setFile(selected);
       setShowConversionDialog(true);
@@ -636,7 +630,7 @@ function CommunityUploadContent() {
                       <Upload className="w-10 h-10 text-muted-foreground" />
                       <div className="text-center">
                         <p className="text-sm font-medium text-foreground">Tap to select a file</p>
-                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PPT, PPTX, or images • Max 50MB</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PPT, PPTX, or images</p>
                       </div>
                     </label>
                   )}
