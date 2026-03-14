@@ -72,24 +72,6 @@ function shortId(value: string): string {
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
 }
 
-
-function summarizeContext(context: Record<string, unknown> | null | undefined): string {
-  if (!context || Object.keys(context).length === 0) {
-    return "No extra context captured for this event.";
-  }
-
-  const preferredKeys = ["reason", "provider", "identifier", "fileName", "path", "error", "source"];
-  for (const key of preferredKeys) {
-    const value = context[key];
-    if (typeof value === "string" && value.trim()) {
-      return `${key}: ${value}`;
-    }
-  }
-
-  const [firstKey] = Object.keys(context);
-  return `${firstKey}: ${String(context[firstKey])}`;
-}
-
 export default function AdminSessionLogs() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
@@ -298,20 +280,11 @@ export default function AdminSessionLogs() {
                             <span className="text-xs text-muted-foreground">user: {shortId(event.user_id)}</span>
                             <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>
                             <span className="text-xs">{event.resource}</span>
-                            <span className="text-xs text-muted-foreground">{summarizeContext(event.context)}</span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
                           <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
-                            {JSON.stringify({
-                              timestamp: event.timestamp,
-                              user_id: event.user_id,
-                              session_id: event.session_id,
-                              action: event.action,
-                              resource: event.resource,
-                              status: event.status,
-                              context: event.context || {},
-                            }, null, 2)}
+                            {JSON.stringify(event.context || {}, null, 2)}
                           </pre>
                         </AccordionContent>
                       </AccordionItem>
