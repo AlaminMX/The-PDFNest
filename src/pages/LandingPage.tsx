@@ -18,19 +18,16 @@ export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
   const navigate = useNavigate();
 
-  // Redirect logged-in users to dashboard
-useEffect(() => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      const hasVisited = localStorage.getItem("pdfnest_has_visited");
-      if (hasVisited) {
+  // Redirect logged-in users to dashboard.
+  // Any user with an active session has already visited (Auth.tsx sets hasVisitedBefore),
+  // so we always redirect them — the landing page is for guests only.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         navigate("/dashboard", { replace: true });
-      } else {
-        localStorage.setItem("pdfnest_has_visited", "true");
       }
-    }
-  });
-}, [navigate]);
+    });
+  }, [navigate]);
 
   useEffect(() => {
     let ticking = false;
