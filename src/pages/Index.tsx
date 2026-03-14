@@ -273,7 +273,6 @@ function AppSidebar({
                   </div>
                   <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Recent Files</span>
                 </div>
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${recentSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
             </CollapsibleTrigger>
@@ -342,9 +341,6 @@ function AppSidebar({
                     <Folder className="w-4 h-4 text-sidebar-foreground/80" />
                   </div>
                   <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Files</span>
-                </div>
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
-                  <span className="font-bold text-xs uppercase tracking-wider text-sidebar-foreground">Files</span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-sidebar-foreground/60 transition-transform duration-200 ${filesSectionOpen ? 'rotate-180' : ''}`} />
               </SidebarGroupLabel>
@@ -416,7 +412,7 @@ function AppSidebar({
                             <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                               {count}
                             </span>
-                          }
+                          )}
                         </SidebarMenuButton>
                         {category.id !== "uncategorized" &&
                         <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
@@ -1111,7 +1107,7 @@ export default function Index() {
               </p>
               <div className="mt-4 flex flex-col items-center justify-center" aria-hidden="true">
                 <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">scroll</span>
-                <ChevronDownIcon className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
+                <ChevronDown className="mt-1 h-4 w-4 stroke-[1.5] text-muted-foreground/80" />
               </div>
               <div className="mt-6 flex justify-center">
                 <Button asChild>
@@ -1530,7 +1526,7 @@ export default function Index() {
                                      </DropdownMenuItem>
                             }
                                  </>
-                                )}
+                                }
                                <DropdownMenuItem onClick={async () => {
                                  if (!file.isOfflineAvailable && file.url) {
                                    const saved = await cacheForOffline(file.id, file.url, file.name);
@@ -1708,8 +1704,7 @@ export default function Index() {
                                 toast.success("Saved for offline access");
                               }
                             }
-                          }
-                        }}
+                          }}
                         className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
                         title={file.isOfflineAvailable ? "Available offline" : "Save offline"}>
                         
