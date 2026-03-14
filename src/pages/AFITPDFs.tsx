@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useFaculties } from "@/hooks/useFaculties";
-import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -111,9 +110,5 @@ function AFITPDFsContent() {
 }
 
 export default function AFITPDFs() {
-  return (
-    <AuthGate>
-      <AFITPDFsContent />
-    </AuthGate>
-  );
+  return <AFITPDFsContent />;
 }
