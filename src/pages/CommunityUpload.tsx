@@ -236,14 +236,14 @@ function CommunityUploadContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check daily limit
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Check daily limit — use UTC midnight to match the DB trigger
+      const utcMidnight = new Date();
+      utcMidnight.setUTCHours(0, 0, 0, 0);
       const { count } = await supabase
         .from("community_uploads")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .gte("created_at", today.toISOString());
+        .gte("created_at", utcMidnight.toISOString());
 
       if ((count || 0) >= DAILY_UPLOAD_LIMIT) {
         toast.error(`Daily upload limit reached (${DAILY_UPLOAD_LIMIT}). Please try again tomorrow.`);
@@ -297,17 +297,8 @@ function CommunityUploadContent() {
 
       if (insertError) throw insertError;
 
-      // Update pending count in contributor_points
-      await supabase
-        .from("contributor_points")
-        .upsert(
-          { user_id: user.id, pending_count: 1 },
-          { onConflict: "user_id" }
-        )
-        .select();
-
-      // Note: upsert for pending_count increment isn't perfect here,
-      // but the approve/reject functions handle the real accounting
+      // Increment pending_count via upsert (insert or add 1)
+      await supabase.rpc("increment_pending_count" as any, { p_user_id: user.id });
 
       setSubmitted(true);
       toast.success("Material submitted for review!");
@@ -335,6 +326,20 @@ function CommunityUploadContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Daily limit also applies on force-submit (duplicate bypass)
+      const utcMidnightForce = new Date();
+      utcMidnightForce.setUTCHours(0, 0, 0, 0);
+      const { count: forceCount } = await supabase
+        .from("community_uploads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", utcMidnightForce.toISOString());
+      if ((forceCount || 0) >= DAILY_UPLOAD_LIMIT) {
+        toast.error(`Daily upload limit reached (${DAILY_UPLOAD_LIMIT}). Please try again tomorrow.`);
+        setSubmitting(false);
+        return;
+      }
+
       const hash = await computeHash(uploadFile);
       const filePath = `community/${user.id}/${Date.now()}_${uploadFile.name}`;
       const { error: storageError } = await supabase.storage
@@ -361,6 +366,9 @@ function CommunityUploadContent() {
           status: "pending",
         });
       if (insertError) throw insertError;
+
+      // Increment pending_count (same as main submit path)
+      await supabase.rpc("increment_pending_count" as any, { p_user_id: user.id });
 
       setSubmitted(true);
       toast.success("Material submitted for review!");
@@ -427,6 +435,9 @@ function CommunityUploadContent() {
                 setMaterialType("lecture_note");
               }}>
                 Upload Another
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/profile")}>
+                View My Submissions
               </Button>
               <Button onClick={() => navigate("/dashboard")}>
                 Go to Dashboard
