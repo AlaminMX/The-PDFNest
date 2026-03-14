@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, GraduationCap, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -129,9 +128,5 @@ function SemesterSelectionContent() {
 }
 
 export default function SemesterSelection() {
-  return (
-    <AuthGate>
-      <SemesterSelectionContent />
-    </AuthGate>
-  );
+  return <SemesterSelectionContent />;
 }
