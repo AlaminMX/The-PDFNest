@@ -19,13 +19,18 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   // Redirect logged-in users to dashboard
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      const hasVisited = localStorage.getItem("pdfnest_has_visited");
+      if (hasVisited) {
         navigate("/dashboard", { replace: true });
+      } else {
+        localStorage.setItem("pdfnest_has_visited", "true");
       }
-    });
-  }, [navigate]);
+    }
+  });
+}, [navigate]);
 
   useEffect(() => {
     let ticking = false;
