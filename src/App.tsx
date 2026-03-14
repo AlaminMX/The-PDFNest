@@ -51,43 +51,41 @@ const App = () => (
         <RamadanDecoration />
         <BrowserRouter>
           <ActivityRouteTracker />
-          <AppErrorBoundary>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/dashboard" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/reps" element={<AdminReps />} />
-              <Route path="/admin/departments" element={<AdminDepartments />} />
-              <Route path="/admin/banners" element={<AdminBanners />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/logs" element={<AdminActivityLogs />} />
-              <Route path="/admin/sessions" element={<AdminSessionLogs />} />
-              <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
-              <Route path="/admin/faculties" element={<AdminFaculties />} />
-              <Route path="/admin/waitlist" element={<AdminWaitlist />} />
-              <Route path="/admin/uploads" element={<AdminUploads />} />
-              <Route path="/afit-pdfs" element={<FacultySelection />} />
-              <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
-              <Route path="/school-store" element={<SchoolStore />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
-              <Route path="/rep/upload" element={<RepUpload />} />
-              <Route path="/rep/moderation" element={<RepModeration />} />
-              <Route path="/rep/:userId" element={<RepProfile />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/ai-features" element={<AIFeatures />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/contribute" element={<CommunityUpload />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppErrorBoundary>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/reps" element={<AdminReps />} />
+            <Route path="/admin/departments" element={<AdminDepartments />} />
+            <Route path="/admin/banners" element={<AdminBanners />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
+            <Route path="/admin/logs" element={<AdminActivityLogs />} />
+            <Route path="/admin/sessions" element={<AdminSessionLogs />} />
+            <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
+            <Route path="/admin/faculties" element={<AdminFaculties />} />
+            <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+            <Route path="/admin/uploads" element={<AdminUploads />} />
+            <Route path="/afit-pdfs" element={<FacultySelection />} />
+            <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
+            <Route path="/school-store" element={<SchoolStore />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
+            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+            <Route path="/rep/upload" element={<RepUpload />} />
+            <Route path="/rep/moderation" element={<RepModeration />} />
+            <Route path="/rep/:userId" element={<RepProfile />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/ai-features" element={<AIFeatures />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/contribute" element={<CommunityUpload />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
