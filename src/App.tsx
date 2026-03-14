@@ -25,12 +25,10 @@ import FacultySelection from "./pages/FacultySelection";
 import AdminFaculties from "./pages/AdminFaculties";
 import SchoolStore from "./pages/SchoolStore";
 import AdminWaitlist from "./pages/AdminWaitlist";
-import AdminUploads from "./pages/AdminUploads";
 import SemesterSelection from "./pages/SemesterSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
-import RepModeration from "./pages/RepModeration";
 import RepProfile from "./pages/RepProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
@@ -38,7 +36,6 @@ import Notifications from "./pages/Notifications";
 import CommunityUpload from "./pages/CommunityUpload";
 import NotFound from "./pages/NotFound";
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
-import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -69,7 +66,6 @@ const App = () => (
             <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
             <Route path="/admin/faculties" element={<AdminFaculties />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
-            <Route path="/admin/uploads" element={<AdminUploads />} />
             <Route path="/afit-pdfs" element={<FacultySelection />} />
             <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
             <Route path="/school-store" element={<SchoolStore />} />
@@ -77,7 +73,6 @@ const App = () => (
             <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
             <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
             <Route path="/rep/upload" element={<RepUpload />} />
-            <Route path="/rep/moderation" element={<RepModeration />} />
             <Route path="/rep/:userId" element={<RepProfile />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/ai-features" element={<AIFeatures />} />
