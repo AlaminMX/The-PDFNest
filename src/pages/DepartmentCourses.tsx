@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { useCourses } from "@/hooks/useCourses";
-import { AuthGate } from "@/components/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -238,9 +237,5 @@ function DepartmentCoursesContent() {
 }
 
 export default function DepartmentCourses() {
-  return (
-    <AuthGate>
-      <DepartmentCoursesContent />
-    </AuthGate>
-  );
+  return <DepartmentCoursesContent />;
 }
