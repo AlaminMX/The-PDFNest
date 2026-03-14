@@ -407,7 +407,7 @@ function AppSidebar({
                           <span className="ml-auto text-[11px] font-medium bg-sidebar-accent text-sidebar-foreground px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
                               {count}
                             </span>
-                          }
+                          )}
                         </SidebarMenuButton>
                         {category.id !== "uncategorized" &&
                         <SidebarMenuAction onClick={() => onDeleteCategory(category.id)} className="opacity-0 group-hover/menu-item:opacity-100 transition-opacity">
@@ -662,6 +662,12 @@ export default function Index() {
     }
   }, [authLoading, repLoading, isRep, user?.id, navigate]);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -674,7 +680,14 @@ export default function Index() {
   }
 
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Redirecting to sign in...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1662,8 +1675,7 @@ export default function Index() {
                             if (saved) {
                               toast.success("Saved for offline access");
                             }
-                          }
-                        }}
+                          }}
                         className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
                         title={file.isOfflineAvailable ? "Available offline" : "Save offline"}>
                         
