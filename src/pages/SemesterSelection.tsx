@@ -14,9 +14,10 @@ const SEMESTERS = [
 
 function SemesterSelectionContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug } = useParams<{ facultySlug: string; deptSlug: string }>();
+  const { facultySlug, deptSlug, level } = useParams<{ facultySlug: string; deptSlug: string; level: string }>();
+  const levelNum = parseInt(level || '100', 10);
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
-  const { counts, loading: countsLoading } = useSemesterCounts(currentDept?.id);
+  const { counts, loading: countsLoading } = useSemesterCounts(currentDept?.id, levelNum);
 
   if (!deptLoading && !currentDept) {
     return (
@@ -46,7 +47,7 @@ function SemesterSelectionContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}`)}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -55,7 +56,7 @@ function SemesterSelectionContent() {
               <h1 className="text-lg font-semibold truncate max-w-[200px] md:max-w-none">
                 {currentDept?.name || "Loading…"}
               </h1>
-              <p className="text-xs text-muted-foreground">Select a semester</p>
+              <p className="text-xs text-muted-foreground">{level ? `${level} Level` : ''} · Select semester</p>
             </div>
           </div>
           <ThemeToggle />
@@ -93,7 +94,7 @@ function SemesterSelectionContent() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <button
-                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${sem.key}`)}
+                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}/semester/${sem.key}`)}
                   className="w-full text-left p-6 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-4">
