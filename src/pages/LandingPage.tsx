@@ -168,16 +168,16 @@ function FacultyCard({
 }
 
 function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
-  const { faculties, loading } = useFaculties();
+  const { faculties, loading, error } = useFaculties();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
-  const visible = faculties.filter((f) => f.is_visible);
+  // useFaculties already filters is_visible at DB level
   const filtered = search.trim()
-    ? visible.filter((f) =>
+    ? faculties.filter((f) =>
         f.name.toLowerCase().includes(search.trim().toLowerCase())
       )
-    : visible;
+    : faculties;
 
   return (
     <section ref={sectionRef} id="faculties" className="px-4 pb-16">
@@ -209,12 +209,23 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {Array.from({ length: 6 }).map((_, i) => <FacultySkeleton key={i} />)}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : error ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-sm">Could not load faculties.</p>
+            <button onClick={() => window.location.reload()} className="text-xs text-primary underline mt-2">
+              Retry
+            </button>
+          </div>
+        ) : filtered.length === 0 && search.trim() ? (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-sm">No faculties found for "{search}"</p>
             <button onClick={() => setSearch("")} className="text-xs text-primary underline mt-2">
               Clear search
             </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-sm">No faculties available yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
