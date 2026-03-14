@@ -142,7 +142,8 @@ export function useLectureNotes(courseId?: string) {
     file: File,
     title: string,
     displayName: string,
-    departmentId?: string
+    departmentId?: string,
+    materialType: string = "lecture_note"
   ) => {
     try {
       setUploading(true);
@@ -181,7 +182,14 @@ export function useLectureNotes(courseId?: string) {
 
       if (uploadError) throw uploadError;
 
-      // Insert into database
+      // Get the course level for denormalisation
+      const { data: courseData } = await supabase
+        .from("courses")
+        .select("level")
+        .eq("id", courseId)
+        .maybeSingle();
+
+      // Insert into database with material_type and level
       const { error: insertError } = await supabase
         .from("lecture_notes")
         .insert({
@@ -191,6 +199,8 @@ export function useLectureNotes(courseId?: string) {
           file_path: filePath,
           title,
           file_size: file.size,
+          material_type: materialType,
+          level: courseData?.level ?? 100,
         });
 
       if (insertError) throw insertError;
