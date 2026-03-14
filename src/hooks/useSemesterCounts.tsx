@@ -5,7 +5,7 @@ interface SemesterCounts {
   [semester: string]: { courses: number; notes: number };
 }
 
-export function useSemesterCounts(departmentId?: string) {
+export function useSemesterCounts(departmentId?: string, level?: number) {
   const [counts, setCounts] = useState<SemesterCounts>({});
   const [loading, setLoading] = useState(true);
 
@@ -15,10 +15,12 @@ export function useSemesterCounts(departmentId?: string) {
     const fetch = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("courses_with_note_counts")
           .select("semester, note_count")
           .eq("department_id", departmentId);
+        if (level) query = query.eq("level", level);
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -38,7 +40,7 @@ export function useSemesterCounts(departmentId?: string) {
     };
 
     fetch();
-  }, [departmentId]);
+  }, [departmentId, level]);
 
   return { counts, loading };
 }
