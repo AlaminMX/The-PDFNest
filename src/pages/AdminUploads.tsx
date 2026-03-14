@@ -303,7 +303,10 @@ export default function AdminUploads() {
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {upload.course_code || "—"}
+                        <div>{upload.course_code || "—"}</div>
+                        {upload.level && (
+                          <div className="text-[11px] text-muted-foreground/60">{upload.level}L · {upload.material_type?.replace("_"," ")}</div>
+                        )}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {upload.department_name}
