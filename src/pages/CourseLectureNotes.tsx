@@ -56,7 +56,8 @@ import { PDFViewer } from "@/components/PDFViewer";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug, semester, courseCode } = useParams<{ facultySlug: string; deptSlug: string; semester: string; courseCode: string }>();
+  const { facultySlug, deptSlug, level: levelParam, semester, courseCode } = useParams<{ facultySlug: string; deptSlug: string; level: string; semester: string; courseCode: string }>();
+  const levelNum = parseInt(levelParam || '100', 10);
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
 
@@ -73,12 +74,13 @@ function CourseLectureNotesContent() {
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
-  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, 100, semester);
+  const { courses, loading: coursesLoading } = useCourses(currentDept?.id, levelNum, semester);
   const currentCourse = courses.find(c => c.code === courseCode);
   const { notes, loading: notesLoading, incrementViews, getSignedUrl, deleteNote, renameNote } = useLectureNotes(currentCourse?.id);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [materialTypeFilter, setMaterialTypeFilter] = useState<string>("all");
 
   // Selection state for bulk actions
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
@@ -110,18 +112,25 @@ function CourseLectureNotesContent() {
 
   // Filter notes based on search query
   const filteredNotes = useMemo(() => {
-    if (!searchQuery.trim()) return notes;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return notes.filter(note => {
-      const titleMatch = note.title.toLowerCase().includes(query);
-      const uploaderMatch = (
-        note.uploaded_by_display.toLowerCase().includes(query) ||
-        ((note as any).uploader_display_name || "").toLowerCase().includes(query)
-      );
-      return titleMatch || uploaderMatch;
-    });
-  }, [notes, searchQuery]);
+    let result = notes;
+    // Filter by material type
+    if (materialTypeFilter !== "all") {
+      result = result.filter(note => (note as any).material_type === materialTypeFilter);
+    }
+    // Filter by search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(note => {
+        const titleMatch = note.title.toLowerCase().includes(query);
+        const uploaderMatch = (
+          note.uploaded_by_display.toLowerCase().includes(query) ||
+          ((note as any).uploader_display_name || "").toLowerCase().includes(query)
+        );
+        return titleMatch || uploaderMatch;
+      });
+    }
+    return result;
+  }, [notes, searchQuery, materialTypeFilter]);
 
   const handleView = async (noteId: string, filePath: string, title: string, fileSize?: number) => {
     try {
@@ -202,7 +211,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleShare = (noteId: string, title: string) => {
-    const url = `${window.location.origin}/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}/${courseCode}?note=${noteId}`;
+    const url = `${window.location.origin}/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}/semester/${semester}/${courseCode}?note=${noteId}`;
     
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
@@ -314,7 +323,7 @@ function CourseLectureNotesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/semester/${semester}`)}
+              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}/semester/${semester}`)}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -347,6 +356,39 @@ function CourseLectureNotesContent() {
             </span>
           </div>
           
+          {/* Material Type Filter Pills */}
+          {notes.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth:"none"}}>
+              {[
+                { value: "all", label: "All" },
+                { value: "lecture_note", label: "Lecture Notes" },
+                { value: "past_question", label: "Past Questions" },
+                { value: "handout", label: "Handouts" },
+                { value: "assignment", label: "Assignments" },
+                { value: "tutorial", label: "Tutorials" },
+                { value: "other", label: "Other" },
+              ].map((type) => {
+                const count = type.value === "all"
+                  ? notes.length
+                  : notes.filter(n => (n as any).material_type === type.value).length;
+                if (type.value !== "all" && count === 0) return null;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => setMaterialTypeFilter(type.value)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      materialTypeFilter === type.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    {type.label} {count > 0 && <span className="opacity-70">({count})</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Search Bar */}
           {notes.length > 0 && (
             <div className="relative">
