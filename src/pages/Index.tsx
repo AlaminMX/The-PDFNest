@@ -1706,8 +1706,7 @@ export default function Index() {
                                 toast.success("Saved for offline access");
                               }
                             }
-                          }
-                        }}
+                          }}
                         className={`h-7 w-7 p-0 ${file.isOfflineAvailable ? "text-green-500" : ""}`}
                         title={file.isOfflineAvailable ? "Available offline" : "Save offline"}>
                         
