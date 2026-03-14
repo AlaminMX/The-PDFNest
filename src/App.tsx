@@ -25,10 +25,12 @@ import FacultySelection from "./pages/FacultySelection";
 import AdminFaculties from "./pages/AdminFaculties";
 import SchoolStore from "./pages/SchoolStore";
 import AdminWaitlist from "./pages/AdminWaitlist";
+import AdminUploads from "./pages/AdminUploads";
 import SemesterSelection from "./pages/SemesterSelection";
 import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
+import RepModeration from "./pages/RepModeration";
 import RepProfile from "./pages/RepProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
@@ -36,6 +38,7 @@ import Notifications from "./pages/Notifications";
 import CommunityUpload from "./pages/CommunityUpload";
 import NotFound from "./pages/NotFound";
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -48,40 +51,43 @@ const App = () => (
         <RamadanDecoration />
         <BrowserRouter>
           <ActivityRouteTracker />
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/reps" element={<AdminReps />} />
-            <Route path="/admin/departments" element={<AdminDepartments />} />
-            <Route path="/admin/banners" element={<AdminBanners />} />
-            <Route path="/admin/categories" element={<AdminCategories />} />
-            <Route path="/admin/logs" element={<AdminActivityLogs />} />
-            <Route path="/admin/sessions" element={<AdminSessionLogs />} />
-            <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
-            <Route path="/admin/faculties" element={<AdminFaculties />} />
-            <Route path="/admin/waitlist" element={<AdminWaitlist />} />
-            <Route path="/afit-pdfs" element={<FacultySelection />} />
-            <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
-            <Route path="/school-store" element={<SchoolStore />} />
-            <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
-            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
-            <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
-            <Route path="/rep/upload" element={<RepUpload />} />
-            <Route path="/rep/moderation" element={<RepModeration />} />
-            <Route path="/rep/:userId" element={<RepProfile />} />
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/ai-features" element={<AIFeatures />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/contribute" element={<CommunityUpload />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppErrorBoundary>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/reps" element={<AdminReps />} />
+              <Route path="/admin/departments" element={<AdminDepartments />} />
+              <Route path="/admin/banners" element={<AdminBanners />} />
+              <Route path="/admin/categories" element={<AdminCategories />} />
+              <Route path="/admin/logs" element={<AdminActivityLogs />} />
+              <Route path="/admin/sessions" element={<AdminSessionLogs />} />
+              <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
+              <Route path="/admin/faculties" element={<AdminFaculties />} />
+              <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+              <Route path="/admin/uploads" element={<AdminUploads />} />
+              <Route path="/afit-pdfs" element={<FacultySelection />} />
+              <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
+              <Route path="/school-store" element={<SchoolStore />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<SemesterSelection />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester" element={<DepartmentCourses />} />
+              <Route path="/afit-pdfs/:facultySlug/:deptSlug/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+              <Route path="/rep/upload" element={<RepUpload />} />
+              <Route path="/rep/moderation" element={<RepModeration />} />
+              <Route path="/rep/:userId" element={<RepProfile />} />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/ai-features" element={<AIFeatures />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/contribute" element={<CommunityUpload />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
