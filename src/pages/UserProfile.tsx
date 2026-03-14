@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { ProfileSkeleton } from "@/components/ProfileSkeleton";
+import { ContributorStats } from "@/components/ContributorStats";
 import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -475,6 +476,9 @@ export default function UserProfile() {
             )}
           </CardContent>
         </Card>
+
+        {/* Contributor Stats */}
+        {userId && <ContributorStats userId={userId} />}
 
         {/* Categories */}
         <Card>
