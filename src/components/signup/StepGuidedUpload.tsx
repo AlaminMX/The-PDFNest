@@ -136,13 +136,18 @@ export function StepGuidedUpload({ onFinish, onBack, signupComplete, loading = f
         />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <Button variant="outline" onClick={onBack} size="icon" className="shrink-0 h-11 w-11" disabled={loading}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <Button variant="outline" className="flex-1 h-11" onClick={onFinish} disabled={loading}>
-          Skip & go to dashboard
-        </Button>
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={loading}
+          className="flex-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-center disabled:opacity-40"
+        >
+          Skip &amp; go to dashboard
+        </button>
       </div>
     </div>
   );
