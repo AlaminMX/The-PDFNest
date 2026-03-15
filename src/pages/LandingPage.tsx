@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -90,15 +91,16 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             Browse Materials
           </Button>
           <Button
-            asChild
             size="lg"
             variant="outline"
             className="gap-2 rounded-xl px-7 text-base font-semibold border-border/60 hover:bg-muted/60"
+            onClick={() => {
+              toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
+              setTimeout(() => navigate("/auth"), 1500);
+            }}
           >
-            <Link to="/auth">
-              <Upload className="w-4 h-4" />
-              Upload Material
-            </Link>
+            <Upload className="w-4 h-4" />
+            Upload Material
           </Button>
         </div>
         <div className="pt-2 flex justify-center">
@@ -348,13 +350,14 @@ function ContributeSection() {
               Upload lecture notes, past questions, or handouts to help students in your department.
             </p>
             <Button
-              asChild
               className="rounded-xl gap-2 px-6 shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-shadow"
+              onClick={() => {
+                toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
+                setTimeout(() => navigate("/auth"), 1500);
+              }}
             >
-              <Link to="/auth">
-                <Upload className="w-4 h-4" />
-                Upload Material
-              </Link>
+              <Upload className="w-4 h-4" />
+              Upload Material
             </Button>
           </div>
         </div>
