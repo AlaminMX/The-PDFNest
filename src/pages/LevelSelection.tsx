@@ -5,7 +5,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
-import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 
 const ALL_LEVELS = [100, 200, 300, 400, 500];
@@ -38,23 +37,28 @@ function LevelSelectionContent() {
 
   useEffect(() => {
     if (!currentDept?.id) return;
-    const fetch = async () => {
+    const run = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("courses")
-        .select("level")
-        .eq("department_id", currentDept.id);
-      if (data) {
+      try {
+        // Direct REST fetch — no auth header needed, works for all users
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses?department_id=eq.${currentDept.id}&select=level`;
+        const res = await fetch(url, {
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        });
+        const data = res.ok ? await res.json() : [];
         const counts: Record<number, number> = {};
-        data.forEach((row: any) => {
+        (data as any[]).forEach((row) => {
           counts[row.level] = (counts[row.level] || 0) + 1;
         });
         setLevelCounts(counts);
         setActiveLevels(ALL_LEVELS.filter((l) => counts[l] > 0));
+      } catch {
+        // On error show all levels — DepartmentCourses will show empty state if needed
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetch();
+    run();
   }, [currentDept?.id]);
 
   if (!deptLoading && !currentDept) {
