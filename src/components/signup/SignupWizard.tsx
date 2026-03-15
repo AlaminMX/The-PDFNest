@@ -124,7 +124,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     localStorage.setItem("pdfnest-theme", preferredTheme);
   };
 
-  const isGoogleProviderDisabled = (message?: string) => /unsupported provider|provider is not enabled|missing oauth secret/i.test(message || "");
 
   const upsertProfile = async (userId: string) => {
     const profilePayload = getResolvedProfileData();
@@ -135,36 +134,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     if (error) throw error;
   };
 
-  const handleGoogleSignup = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      // Persist any wizard-collected defaults so ensureGoogleProfile in Auth.tsx
-      // can apply them after the OAuth redirect back to /auth.
-      localStorage.setItem("pendingGoogleSignupDefaults", JSON.stringify({
-        nickname: data.nickname?.trim() || data.fullName.trim() || "",
-        preferredTheme: data.preferredTheme || "system",
-      }));
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-          queryParams: { access_type: "offline", prompt: "select_account" },
-        },
-      });
-      if (error) throw error;
-      // Browser will redirect to Google — nothing more to do here
-    } catch (error: any) {
-      localStorage.removeItem("pendingGoogleSignupDefaults");
-      if (isGoogleProviderDisabled(error?.message)) {
-        toast.error("Google sign-in is not enabled. Please use email/password.");
-      } else {
-        toast.error(error.message || "Could not start Google sign-in.");
-      }
-      setLoading(false);
-    }
-  };
 
   const handleStepComplete = (nextStep: number) => {
     if (loading) return;
@@ -292,7 +261,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
                   data={data}
                   updateData={updateData}
                   onNext={() => handleStepComplete(2)}
-                  onGoogleSignup={handleGoogleSignup}
                   onSwitchToLogin={onSwitchToLogin}
                   loading={loading}
                 />
