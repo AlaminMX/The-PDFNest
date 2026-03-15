@@ -83,6 +83,34 @@ export default defineConfig(({ mode }) => ({
               },
             },
           },
+          {
+            // Cache school_pdfs signed URLs (AFIT lecture notes)
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/sign\/school_pdfs\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "school-pdfs-cache",
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // NetworkFirst for Supabase REST API (faculties, departments, courses)
+            // Falls back to cache when offline / weak network
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(faculties|departments|courses).*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "supabase-rest-cache",
+              networkTimeoutSeconds: 4,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60, // 1 hour
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
     }),
