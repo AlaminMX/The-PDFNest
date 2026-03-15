@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Faculty {
@@ -13,33 +13,47 @@ export interface Faculty {
   department_count?: number;
 }
 
-export function useFaculties() {
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Module-level cache so repeated mounts (sidebar + landing page) share one fetch
+let _cache: Faculty[] | null = null;
+let _cacheTime = 0;
+const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
-  const fetchFaculties = async () => {
+export function useFaculties() {
+  const [faculties, setFaculties] = useState<Faculty[]>(_cache ?? []);
+  const [loading, setLoading] = useState(_cache === null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const fetchFaculties = async (force = false) => {
+    // Serve from cache if still fresh
+    if (!force && _cache && Date.now() - _cacheTime < STALE_MS) {
+      setFaculties(_cache);
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from("faculties")
-        .select("*")
-        .eq("is_visible", true)
-        .order("display_order", { ascending: true });
+      // Parallel fetch: faculties + dept counts in one round-trip
+      const [{ data, error: facErr }, { data: deptData }] = await Promise.all([
+        supabase
+          .from("faculties")
+          .select("*")
+          .eq("is_visible", true)
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("departments")
+          .select("faculty_id")
+          .eq("is_visible", true)
+          .not("faculty_id", "is", null),
+      ]);
 
-      if (error) {
-        console.error("useFaculties fetch error:", error);
-        throw error;
-      }
-
-      // Get department counts per faculty (anon-safe - departments have anon policy)
-      const { data: deptData } = await supabase
-        .from("departments")
-        .select("faculty_id")
-        .eq("is_visible", true)
-        .not("faculty_id", "is", null);
+      if (facErr) throw facErr;
 
       const countMap = new Map<string, number>();
       (deptData || []).forEach((d: any) => {
@@ -51,10 +65,15 @@ export function useFaculties() {
         department_count: countMap.get(f.id) || 0,
       }));
 
+      _cache = enriched;
+      _cacheTime = Date.now();
       setFaculties(enriched);
-    } catch (err) {
-      console.error("Error fetching faculties:", err);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.error("useFaculties:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch faculties");
+      // Serve stale cache on error so page isn't blank
+      if (_cache) setFaculties(_cache);
     } finally {
       setLoading(false);
     }
@@ -62,7 +81,8 @@ export function useFaculties() {
 
   useEffect(() => {
     fetchFaculties();
+    return () => abortRef.current?.abort();
   }, []);
 
-  return { faculties, loading, error, refresh: fetchFaculties };
+  return { faculties, loading, error, refresh: () => fetchFaculties(true) };
 }
