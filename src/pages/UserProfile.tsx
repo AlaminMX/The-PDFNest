@@ -1,15 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, HardDrive, Calendar, Clock, Folder, Edit2, Building2, Check } from "lucide-react";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { ProfileSkeleton } from "@/components/ProfileSkeleton";
@@ -18,6 +17,12 @@ import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft, FileText, HardDrive, Calendar, Clock,
+  Folder, Edit2, Building2, Check, ChevronRight,
+} from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UserProfileData {
   id: string;
@@ -35,23 +40,52 @@ interface UserProfileData {
   date_of_birth: string | null;
 }
 
-interface RecentFile {
-  id: string;
-  name: string;
-  lastAccessed: number;
-}
+interface RecentFile { id: string; name: string; lastAccessed: number; }
+interface Category { id: string; name: string; color: string; file_count?: number; }
 
-interface Category {
-  id: string;
-  name: string;
-  color: string;
-  file_count?: number;
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_LIMIT = 300 * 1024 * 1024; // 300MB
-
-// Cache key for localStorage
+const STORAGE_LIMIT = 300 * 1024 * 1024;
 const PROFILE_CACHE_KEY = "pdfnest_profile_cache";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name: string | null) {
+  if (!name) return "U";
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function fmtBytes(bytes: number | null) {
+  if (!bytes) return "0 MB";
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function storagePercent(bytes: number | null) {
+  if (!bytes) return 0;
+  return Math.min((bytes / STORAGE_LIMIT) * 100, 100);
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Stat({ value, label, icon: Icon }: { value: string | number; label: string; icon: React.ElementType }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-4 flex-1">
+      <Icon className="w-4 h-4 text-muted-foreground/60 mb-0.5" />
+      <span className="text-xl font-bold text-foreground">{value}</span>
+      <span className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1 mb-2">
+      {children}
+    </p>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function UserProfile() {
   const navigate = useNavigate();
@@ -61,7 +95,6 @@ export default function UserProfile() {
   const [savingDept, setSavingDept] = useState(false);
   const { departments } = useDepartments();
 
-  // Get cached profile from localStorage for instant render
   const cachedProfile = useMemo(() => {
     try {
       const cached = localStorage.getItem(PROFILE_CACHE_KEY);
@@ -70,25 +103,17 @@ export default function UserProfile() {
     return null;
   }, []);
 
-  // Fetch profile with React Query for caching and background revalidation
   const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ["user-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return null;
-      }
+      if (!user) { navigate("/auth"); return null; }
 
-      const { data, error } = await supabase
-        .rpc("get_user_profile_summary", { p_user_id: user.id });
-
+      const { data, error } = await supabase.rpc("get_user_profile_summary", { p_user_id: user.id });
       if (error) throw error;
 
       if (data && data.length > 0) {
         const summary = data[0];
-        
-        // Also fetch extra fields not in the RPC
         const { data: extraData } = await supabase
           .from("profiles")
           .select("nickname, phone_number, date_of_birth")
@@ -110,22 +135,20 @@ export default function UserProfile() {
           phone_number: extraData?.phone_number || null,
           date_of_birth: (extraData as any)?.date_of_birth || null,
         };
-        
+
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
         return profile;
       }
       return null;
     },
-    staleTime: 60_000, // 1 minute
-    gcTime: 5 * 60_000, // 5 minutes
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
     placeholderData: cachedProfile,
   });
 
-  // Use fetched data or cached data
   const profile = profileData || cachedProfile;
   const userId = profile?.id || null;
 
-  // Fetch recent files from localStorage (instant)
   const recentFiles = useMemo(() => {
     if (!userId) return [];
     try {
@@ -135,12 +158,10 @@ export default function UserProfile() {
     return [];
   }, [userId]);
 
-  // Fetch categories with React Query
   const { data: categories = [] } = useQuery({
     queryKey: ["user-categories", userId],
     queryFn: async () => {
       if (!userId) return [];
-      
       const { data: categoriesData } = await supabase
         .from("categories")
         .select("id, name, color")
@@ -148,8 +169,6 @@ export default function UserProfile() {
         .order("created_at", { ascending: true });
 
       if (!categoriesData) return [];
-
-      // Get file counts in parallel
       const categoriesWithCounts = await Promise.all(
         categoriesData.map(async (cat) => {
           const { count } = await supabase
@@ -166,297 +185,198 @@ export default function UserProfile() {
     staleTime: 60_000,
   });
 
-  const formatStorageSize = (bytes: number | null) => {
-    if (!bytes) return "0 MB";
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
-  };
-
-  const getStoragePercentage = (bytes: number | null) => {
-    if (!bytes) return 0;
-    return Math.min((bytes / STORAGE_LIMIT) * 100, 100);
-  };
-
-  const getInitials = (name: string | null) => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const handleSaveDepartment = async () => {
     if (!selectedDeptId || !userId) return;
-    
     setSavingDept(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ department_id: selectedDeptId })
         .eq("id", userId);
-
       if (error) throw error;
-
-      // Clear department cache to update navigation dot
       localStorage.removeItem("pdfnest_dept_status");
       localStorage.removeItem(PROFILE_CACHE_KEY);
-      
-      toast.success("Department saved successfully!");
+      toast.success("Department saved!");
       refetch();
-    } catch (error) {
-      console.error("Error saving department:", error);
+    } catch {
       toast.error("Failed to save department");
     } finally {
       setSavingDept(false);
     }
   };
 
-  // Show skeleton immediately if no cached data
-  if (isLoading && !profile) {
-    return <ProfileSkeleton />;
-  }
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-        <div className="text-muted-foreground">Profile not found</div>
-      </div>
-    );
-  }
+  if (isLoading && !profile) return <ProfileSkeleton />;
+  if (!profile) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <p className="text-muted-foreground text-sm">Profile not found.</p>
+    </div>
+  );
 
   const displayName = profile.display_name || profile.full_name || "User";
   const storageUsed = profile.total_storage_used || 0;
-  const storagePercentage = getStoragePercentage(storageUsed);
-  const departmentName = profile.department_name;
-  const pdfCount = profile.pdf_count;
+  const storagePct = storagePercent(storageUsed);
+
+  // Storage bar colour: green → amber → red
+  const storageColor = storagePct > 80 ? "bg-red-500" : storagePct > 60 ? "bg-amber-500" : "bg-primary";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24 md:pb-8">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
-        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-              className="shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-background pb-28 md:pb-10">
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border/30">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4" />
             </Button>
-            <h1 className="text-xl font-bold">My Profile</h1>
+            <span className="font-semibold text-base">Profile</span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Admin Banners for Profile */}
+      <main className="max-w-xl mx-auto px-4 py-6 space-y-5">
         <AdminBannerDisplay showOnProfile />
 
-        {/* Department Banner - only show if no department */}
-        {!profile.department_id && (
-          <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="p-3 rounded-xl bg-primary/10 shrink-0">
-                    <Building2 className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-lg">Complete Your Profile</p>
-                    <p className="text-sm text-muted-foreground">
-                      Select your department to personalize your experience
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Select value={selectedDeptId || ""} onValueChange={setSelectedDeptId}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.icon && <span className="mr-1">{dept.icon}</span>}
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    onClick={handleSaveDepartment} 
-                    disabled={!selectedDeptId || savingDept}
-                    size="icon"
-                    className="shrink-0"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* ── Hero card ── */}
+        <div className="relative rounded-2xl bg-card border border-border/40 overflow-hidden">
+          {/* Banner strip */}
+          <div className="h-24 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
 
-        {/* Profile Card */}
-        <Card className="overflow-hidden">
-          <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/10" />
-          <CardContent className="relative pt-0 pb-6">
-            {/* Mobile: centered stack */}
-            <div className="flex flex-col items-center -mt-10 gap-3 sm:hidden">
-              <Avatar className="w-20 h-20 border-4 border-background shadow-lg [&>img]:object-cover [&>img]:object-center">
-                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
-                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                  {getInitials(displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-bold">{displayName}</h2>
-                {profile.email && (
-                  <p className="text-sm text-muted-foreground">{profile.email}</p>
-                )}
-                {departmentName && (
-                  <Badge variant="secondary" className="mt-1">
-                    <Building2 className="w-3 h-3 mr-1" />
-                    {departmentName}
-                  </Badge>
-                )}
+          {/* Avatar + name */}
+          <div className="px-5 pb-5 -mt-10">
+            <div className="flex items-end justify-between gap-3">
+              <div className="relative">
+                <Avatar className="w-20 h-20 border-4 border-card shadow-md [&>img]:object-cover [&>img]:object-center">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl bg-primary text-primary-foreground font-bold">
+                    {getInitials(displayName)}
+                  </AvatarFallback>
+                </Avatar>
               </div>
               <Button
                 variant="outline"
                 size="sm"
+                className="mb-1 h-8 gap-1.5 text-xs rounded-full"
                 onClick={() => setShowEditModal(true)}
-                className="gap-2"
               >
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
               </Button>
             </div>
-            {/* Desktop: row layout */}
-            <div className="hidden sm:flex items-end gap-4 -mt-10">
-              <Avatar className="w-20 h-20 border-4 border-background shadow-lg shrink-0 [&>img]:object-cover [&>img]:object-center">
-                <AvatarImage src={profile.avatar_url || undefined} className="object-cover" />
-                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                  {getInitials(displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-1 pb-1">
-                <h2 className="text-2xl font-bold">{displayName}</h2>
-                {profile.email && (
-                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+
+            <div className="mt-3 space-y-1">
+              <h1 className="text-xl font-bold leading-tight">{displayName}</h1>
+              {profile.email && (
+                <p className="text-sm text-muted-foreground">{profile.email}</p>
+              )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {profile.department_name && (
+                  <Badge variant="secondary" className="gap-1 text-xs">
+                    <Building2 className="w-3 h-3" />
+                    {profile.department_name}
+                  </Badge>
                 )}
-                {departmentName && (
-                  <Badge variant="secondary" className="mt-1">
-                    <Building2 className="w-3 h-3 mr-1" />
-                    {departmentName}
+                {profile.created_at && (
+                  <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
+                    <Calendar className="w-3 h-3" />
+                    Joined {format(new Date(profile.created_at), "MMM yyyy")}
                   </Badge>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowEditModal(true)}
-                className="gap-2"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pdfCount}</p>
-                <p className="text-xs text-muted-foreground">Total PDFs</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Folder className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{categories.length}</p>
-                <p className="text-xs text-muted-foreground">Categories</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Calendar className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  {profile.created_at 
-                    ? format(new Date(profile.created_at), "MMM d, yyyy")
-                    : "N/A"
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground">Member since</p>
-              </div>
-            </div>
-          </Card>
+          {/* Stats row */}
+          <div className="border-t border-border/30 flex divide-x divide-border/30">
+            <Stat value={profile.pdf_count} label="PDFs" icon={FileText} />
+            <Stat value={categories.length} label="Categories" icon={Folder} />
+            <Stat value={fmtBytes(storageUsed)} label="Used" icon={HardDrive} />
+          </div>
         </div>
 
-        {/* Storage Usage */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <HardDrive className="w-4 h-4" />
-              Storage Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        {/* ── Department prompt ── */}
+        {!profile.department_id && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-sm font-medium">Select your department</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Helps us show you relevant AFIT materials and courses.
+            </p>
+            <div className="flex gap-2">
+              <Select value={selectedDeptId || ""} onValueChange={setSelectedDeptId}>
+                <SelectTrigger className="flex-1 h-9 text-sm">
+                  <SelectValue placeholder="Choose department…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.icon && <span className="mr-1">{dept.icon}</span>}
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-9 px-3 shrink-0"
+                onClick={handleSaveDepartment}
+                disabled={!selectedDeptId || savingDept}
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Storage ── */}
+        <div className="space-y-1.5">
+          <SectionTitle>Storage</SectionTitle>
+          <div className="rounded-2xl bg-card border border-border/40 p-4 space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {formatStorageSize(storageUsed)} of 300 MB used
-              </span>
-              <span className="font-medium">
-                {storagePercentage.toFixed(1)}%
+              <span className="text-muted-foreground">{fmtBytes(storageUsed)} of 300 MB</span>
+              <span className={`font-semibold tabular-nums ${storagePct > 80 ? "text-red-500" : storagePct > 60 ? "text-amber-500" : "text-foreground"}`}>
+                {storagePct.toFixed(1)}%
               </span>
             </div>
-            <Progress 
-              value={storagePercentage} 
-              className="h-2"
-            />
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${storageColor}`}
+                style={{ width: `${storagePct}%` }}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              {formatStorageSize(STORAGE_LIMIT - storageUsed)} remaining
+              {fmtBytes(STORAGE_LIMIT - storageUsed)} remaining
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Recent Files */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Recently Accessed
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* ── Contributor stats ── */}
+        {userId && (
+          <div className="space-y-1.5">
+            <SectionTitle>Contributions</SectionTitle>
+            <ContributorStats userId={userId} />
+          </div>
+        )}
+
+        {/* ── Recent files ── */}
+        <div className="space-y-1.5">
+          <SectionTitle>Recently Accessed</SectionTitle>
+          <div className="rounded-2xl bg-card border border-border/40 overflow-hidden">
             {recentFiles.length > 0 ? (
-              <div className="space-y-2">
-                {recentFiles.map((file) => (
-                  <div
+              <div className="divide-y divide-border/30">
+                {recentFiles.map(file => (
+                  <button
                     key={file.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => navigate("/dashboard")}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                   >
-                    <div className="p-2 rounded bg-primary/10">
-                      <FileText className="w-4 h-4 text-primary" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-primary/70" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{file.name}</p>
@@ -464,64 +384,56 @@ export default function UserProfile() {
                         {formatDistanceToNow(file.lastAccessed, { addSuffix: true })}
                       </p>
                     </div>
-                  </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+                  </button>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No recently accessed files</p>
-                <p className="text-xs mt-1">Your recent PDFs will appear here</p>
+              <div className="py-10 text-center space-y-1">
+                <Clock className="w-7 h-7 text-muted-foreground/30 mx-auto" />
+                <p className="text-sm text-muted-foreground">No recent files yet</p>
+                <p className="text-xs text-muted-foreground/60">Files you view will appear here</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Contributor Stats */}
-        {userId && <ContributorStats userId={userId} />}
-
-        {/* Categories */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Folder className="w-4 h-4" />
-              Your Categories
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* ── Categories ── */}
+        <div className="space-y-1.5">
+          <SectionTitle>Categories</SectionTitle>
+          <div className="rounded-2xl bg-card border border-border/40 overflow-hidden">
             {categories.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {categories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+              <div className="divide-y divide-border/30">
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
                     onClick={() => navigate("/dashboard")}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                   >
                     <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: category.color }}
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color }}
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{category.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {category.file_count} {category.file_count === 1 ? "file" : "files"}
-                      </p>
-                    </div>
-                  </div>
+                    <span className="flex-1 text-sm font-medium truncate">{cat.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {cat.file_count} {cat.file_count === 1 ? "file" : "files"}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+                  </button>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Folder className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No categories yet</p>
-                <p className="text-xs mt-1">Create categories to organize your PDFs</p>
+              <div className="py-10 text-center space-y-1">
+                <Folder className="w-7 h-7 text-muted-foreground/30 mx-auto" />
+                <p className="text-sm text-muted-foreground">No categories yet</p>
+                <p className="text-xs text-muted-foreground/60">Create categories to organise your PDFs</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </main>
 
-      {/* Edit Profile Modal */}
+      {/* ── Edit modal ── */}
       {userId && (
         <EditProfileModal
           open={showEditModal}
@@ -539,7 +451,6 @@ export default function UserProfile() {
           }}
         />
       )}
-
 
       <SmartBottomNav />
     </div>
