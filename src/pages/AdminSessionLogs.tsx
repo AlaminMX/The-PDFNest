@@ -1,166 +1,117 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Activity, AlertTriangle, Clock, Database, RefreshCw, Search, ShieldAlert } from "lucide-react";
+import { Clock, RefreshCw, Shield, AlertTriangle, Monitor, LogIn, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow, format } from "date-fns";
 
-interface ActivityEvent {
+interface Session {
   id: string;
-  timestamp: string;
   user_id: string;
-  session_id: string;
-  action: string;
-  resource: string;
-  status: string;
-  context: Record<string, unknown>;
-}
-
-interface FailedLoginEvent {
-  id: number;
-  identifier: string;
-  attempted_at: string;
-  ip_address: string | null;
+  login_at: string;
+  logout_at: string | null;
+  is_active: boolean;
+  duration_seconds: number | null;
   user_agent: string | null;
-  session_id: string | null;
-  context: Record<string, unknown>;
+  user_name?: string;
+  user_email?: string;
 }
 
-interface SessionSummary {
-  session_id: string;
+interface FailedLogin {
+  id: string;
   user_id: string;
-  started_at: string;
-  ended_at: string;
-  event_count: number;
-  error_count: number;
-  security_count: number;
+  created_at: string;
+  details: Record<string, any> | null;
+  user_agent: string | null;
 }
 
-const ACTION_FILTERS = [
-  "ALL",
-  "PAGE_VIEW",
-  "LOGIN_SUCCESS",
-  "LOGIN_FAILED",
-  "MULTI_FAILED_LOGIN",
-  "FILE_UPLOAD",
-  "FILE_DOWNLOAD",
-  "FILE_DELETE",
-  "AI_SUMMARY_GENERATE",
-  "AI_CHAT_ASK",
-] as const;
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "—";
-
-  return new Date(value).toLocaleString();
+function deviceLabel(ua: string | null): string {
+  if (!ua) return "Unknown device";
+  if (/mobile|android|iphone/i.test(ua)) return "Mobile";
+  if (/tablet|ipad/i.test(ua)) return "Tablet";
+  return "Desktop";
 }
 
-function shortId(value: string): string {
-  if (!value) return "—";
-  if (value.length <= 12) return value;
-  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+function browserLabel(ua: string | null): string {
+  if (!ua) return "";
+  if (/chrome/i.test(ua) && !/edg/i.test(ua)) return "Chrome";
+  if (/firefox/i.test(ua)) return "Firefox";
+  if (/safari/i.test(ua) && !/chrome/i.test(ua)) return "Safari";
+  if (/edg/i.test(ua)) return "Edge";
+  return "Browser";
+}
+
+function duration(seconds: number | null): string {
+  if (!seconds || seconds < 0) return "—";
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${(seconds / 3600).toFixed(1)}h`;
 }
 
 export default function AdminSessionLogs() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
 
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [failedLogins, setFailedLogins] = useState<FailedLogin[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [actionFilter, setActionFilter] = useState<string>("ALL");
-
-  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
-  const [failedLoginEvents, setFailedLoginEvents] = useState<FailedLoginEvent[]>([]);
-  const [sessionSummaries, setSessionSummaries] = useState<SessionSummary[]>([]);
+  const [tab, setTab] = useState<"sessions" | "security">("sessions");
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
-      toast.error("Access denied. Admin privileges required.");
+      toast.error("Access denied.");
       navigate("/dashboard");
     }
-  }, [adminLoading, isAdmin, navigate]);
+  }, [isAdmin, adminLoading, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
-      void fetchAllLogs();
-    }
+    if (isAdmin) fetchData();
   }, [isAdmin]);
 
-  const fetchAllLogs = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
 
-      const actionParam = actionFilter === "ALL" ? null : actionFilter;
-      const searchParam = searchQuery.trim() ? searchQuery.trim() : null;
-
-      const [eventsRes, sessionsRes] = await Promise.all([
-        supabase
-          .from("user_activity_logs")
-          .select("id, activity_type, details, created_at, user_id, ip_address, user_agent")
-          .order("created_at", { ascending: false })
-          .limit(1000),
+      const [sessRes, failRes, profilesRes] = await Promise.all([
         supabase
           .from("user_sessions")
           .select("id, user_id, login_at, logout_at, is_active, duration_seconds, user_agent")
           .order("login_at", { ascending: false })
-          .limit(300),
+          .limit(200),
+        supabase
+          .from("user_activity_logs")
+          .select("id, user_id, created_at, details, user_agent")
+          .eq("activity_type", "login_failed")
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase.from("profiles").select("id, full_name, email"),
       ]);
 
-      if (eventsRes.error) throw eventsRes.error;
-      if (sessionsRes.error) throw sessionsRes.error;
+      const pmap = new Map((profilesRes.data || []).map(p => [p.id, p]));
 
-      const rawEvents = eventsRes.data || [];
-      const mappedEvents: ActivityEvent[] = rawEvents.map((e: any) => ({
-        id: e.id,
-        timestamp: e.created_at,
-        user_id: e.user_id,
-        session_id: (e.details as any)?.session_id || "",
-        action: e.activity_type,
-        resource: (e.details as any)?.resource || "",
-        status: (e.details as any)?.status || "ok",
-        context: (e.details as Record<string, unknown>) || {},
-      }));
+      setSessions((sessRes.data || []).map((s: any) => ({
+        ...s,
+        user_name:  pmap.get(s.user_id)?.full_name ?? undefined,
+        user_email: pmap.get(s.user_id)?.email      ?? undefined,
+      })));
 
-      const mappedFailed: FailedLoginEvent[] = rawEvents
-        .filter((e: any) => e.activity_type === "login_failed")
-        .map((e: any, i: number) => ({
-          id: i,
-          identifier: (e.details as any)?.identifier || e.user_id,
-          attempted_at: e.created_at,
-          ip_address: e.ip_address,
-          user_agent: e.user_agent,
-          session_id: (e.details as any)?.session_id || null,
-          context: (e.details as Record<string, unknown>) || {},
-        }));
-
-      const mappedSessions: SessionSummary[] = (sessionsRes.data || []).map((s: any) => ({
-        session_id: s.id,
-        user_id: s.user_id,
-        started_at: s.login_at,
-        ended_at: s.logout_at || "",
-        event_count: 0,
-        error_count: 0,
-        security_count: 0,
-      }));
-
-      setActivityEvents(mappedEvents);
-      setFailedLoginEvents(mappedFailed);
-      setSessionSummaries(mappedSessions);
-    } catch (error) {
-      console.error("Failed to fetch activity logs", error);
-      toast.error("Failed to load activity logs");
+      setFailedLogins((failRes.data || []).map((f: any) => ({
+        id: f.id,
+        user_id: f.user_id,
+        created_at: f.created_at,
+        details: f.details ?? {},
+        user_agent: f.user_agent,
+      })));
+    } catch (err) {
+      toast.error("Failed to load session data");
     } finally {
       setLoading(false);
     }
@@ -168,195 +119,148 @@ export default function AdminSessionLogs() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchAllLogs();
+    await fetchData();
     setRefreshing(false);
-    toast.success("Activity logs refreshed");
+    toast.success("Refreshed");
   };
 
-  const stats = useMemo(() => {
-    const total = activityEvents.length;
-    const failed = activityEvents.filter((event) => event.action === "LOGIN_FAILED").length;
-    const securityAlerts = activityEvents.filter((event) => event.action === "MULTI_FAILED_LOGIN").length;
-    const activeSessions = sessionSummaries.filter((session) => {
-      const endedAt = new Date(session.ended_at).getTime();
-      return Date.now() - endedAt < 15 * 60 * 1000;
-    }).length;
+  const stats = useMemo(() => ({
+    active:  sessions.filter(s => s.is_active).length,
+    today:   sessions.filter(s => new Date(s.login_at).toDateString() === new Date().toDateString()).length,
+    failed:  failedLogins.length,
+  }), [sessions, failedLogins]);
 
-    return { total, failed, securityAlerts, activeSessions };
-  }, [activityEvents, sessionSummaries]);
-
-  if (adminLoading || loading) {
-    return <LoadingState message="Loading activity logs..." />;
-  }
-
+  if (adminLoading || loading) return <LoadingState message="Loading session data…" />;
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
+    <div className="min-h-screen bg-background pb-10">
       <PageHeader
-        title="Activity Logs"
-        subtitle="Complete structured audit trail: events, sessions, and security signals"
+        title="Sessions & Security"
+        subtitle="Sign-in history and failed login attempts"
         showBack
-        icon={<Database className="h-6 w-6 text-primary" />}
+        icon={<Shield className="h-5 w-5 text-primary" />}
       />
 
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <main className="container mx-auto px-4 py-6 max-w-4xl space-y-5">
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Total Events</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground mb-1">Active now</p>
+            <p className="text-2xl font-bold text-green-500">{stats.active}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Failed Logins</p>
-            <p className="text-2xl font-bold text-amber-500">{stats.failed}</p>
+            <p className="text-xs text-muted-foreground mb-1">Sessions today</p>
+            <p className="text-2xl font-bold">{stats.today}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Security Alerts</p>
-            <p className="text-2xl font-bold text-red-500">{stats.securityAlerts}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">Recent Sessions</p>
-            <p className="text-2xl font-bold">{stats.activeSessions}</p>
+            <p className="text-xs text-muted-foreground mb-1">Failed logins</p>
+            <p className={`text-2xl font-bold ${stats.failed > 0 ? "text-amber-500" : ""}`}>{stats.failed}</p>
           </Card>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search user, action, status, resource, context, or session..."
-              className="pl-10"
-            />
+        {/* Tabs + refresh */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1.5">
+            {([
+              { key: "sessions",  label: "Sessions",       icon: Clock },
+              { key: "security",  label: "Failed Logins",  icon: AlertTriangle },
+            ] as const).map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  tab === t.key
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <t.icon className="w-3.5 h-3.5" />
+                {t.label}
+                {t.key === "security" && stats.failed > 0 && (
+                  <span className="ml-1 min-w-4 h-4 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] px-1">
+                    {stats.failed}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-full lg:w-[220px]">
-              <SelectValue placeholder="Filter action" />
-            </SelectTrigger>
-            <SelectContent>
-              {ACTION_FILTERS.map((action) => (
-                <SelectItem key={action} value={action}>
-                  {action}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={() => void fetchAllLogs()}>
-            <Search className="h-4 w-4 mr-2" />
-            Apply
-          </Button>
-          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-1.5">
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
 
-        <Tabs defaultValue="events" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="events"><Activity className="h-4 w-4 mr-2" />Events</TabsTrigger>
-            <TabsTrigger value="sessions"><Clock className="h-4 w-4 mr-2" />Sessions</TabsTrigger>
-            <TabsTrigger value="security"><ShieldAlert className="h-4 w-4 mr-2" />Security</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="events">
-            <Card className="p-4">
-              {activityEvents.length === 0 ? (
-                <EmptyState
-                  icon={<Activity className="h-8 w-8 text-muted-foreground" />}
-                  title="No activity events"
-                  description="No events match your current filters"
-                />
-              ) : (
-                <ScrollArea className="h-[70vh] pr-2">
-                  <Accordion type="multiple" className="w-full">
-                    {activityEvents.map((event) => (
-                      <AccordionItem key={event.id} value={event.id}>
-                        <AccordionTrigger>
-                          <div className="flex flex-wrap items-center gap-2 text-left">
-                            <Badge variant="outline">{event.action}</Badge>
-                            <Badge variant={event.status === "SUCCESS" ? "default" : "destructive"}>{event.status}</Badge>
-                            <span className="text-xs text-muted-foreground">{formatDateTime(event.timestamp)}</span>
-                            <span className="text-xs text-muted-foreground">user: {shortId(event.user_id)}</span>
-                            <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>
-                            <span className="text-xs">{event.resource}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
-                            {JSON.stringify(event.context || {}, null, 2)}
-                          </pre>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </ScrollArea>
-              )}
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sessions">
-            <Card className="p-4">
-              {sessionSummaries.length === 0 ? (
-                <EmptyState
-                  icon={<Clock className="h-8 w-8 text-muted-foreground" />}
-                  title="No session summaries"
-                  description="Session summaries will appear once events are captured"
-                />
-              ) : (
-                <div className="space-y-3">
-                  {sessionSummaries.map((session) => (
-                    <Card key={session.session_id} className="p-4">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <Badge variant="outline">{shortId(session.session_id)}</Badge>
-                        <span className="text-sm">user: {shortId(session.user_id)}</span>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-2 text-sm">
-                        <p><span className="text-muted-foreground">Started:</span> {formatDateTime(session.started_at)}</p>
-                        <p><span className="text-muted-foreground">Ended:</span> {formatDateTime(session.ended_at)}</p>
-                        <p><span className="text-muted-foreground">Events:</span> {session.event_count}</p>
-                        <p><span className="text-muted-foreground">Errors/Alerts:</span> {session.error_count}</p>
-                        <p><span className="text-muted-foreground">Security Signals:</span> {session.security_count}</p>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security">
-            <Card className="p-4">
-              {failedLoginEvents.length === 0 ? (
-                <EmptyState
-                  icon={<AlertTriangle className="h-8 w-8 text-muted-foreground" />}
-                  title="No failed login records"
-                  description="Failed login attempts will be listed here"
-                />
-              ) : (
-                <ScrollArea className="h-[70vh] pr-2">
-                  <div className="space-y-3">
-                    {failedLoginEvents.map((event) => (
-                      <Card key={event.id} className="p-3">
-                        <div className="flex flex-wrap gap-2 items-center mb-2">
-                          <Badge variant="destructive">LOGIN_FAILED</Badge>
-                          <span className="text-xs text-muted-foreground">{formatDateTime(event.attempted_at)}</span>
-                          <span className="text-xs">identifier: {event.identifier}</span>
-                          {event.session_id && <span className="text-xs text-muted-foreground">session: {shortId(event.session_id)}</span>}
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p><span className="text-muted-foreground">IP:</span> {event.ip_address || "—"}</p>
-                          <p><span className="text-muted-foreground">User Agent:</span> {event.user_agent || "—"}</p>
-                          <pre className="bg-muted p-2 rounded-md overflow-x-auto">{JSON.stringify(event.context || {}, null, 2)}</pre>
-                        </div>
-                      </Card>
-                    ))}
+        {/* Sessions tab */}
+        {tab === "sessions" && (
+          <Card className="overflow-hidden divide-y divide-border/20">
+            {sessions.length === 0 ? (
+              <EmptyState icon={<Clock className="h-8 w-8 text-muted-foreground" />} title="No sessions found" description="Sign-in activity will appear here." />
+            ) : (
+              sessions.map(s => (
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${s.is_active ? "bg-green-500/10 text-green-600" : "bg-muted/50 text-muted-foreground"}`}>
+                    {s.is_active ? <LogIn className="w-4 h-4" /> : <LogOut className="w-4 h-4" />}
                   </div>
-                </ScrollArea>
-              )}
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium text-sm">
+                        {s.user_name || s.user_email?.split("@")[0] || "Unknown user"}
+                      </span>
+                      {s.is_active && (
+                        <Badge variant="secondary" className="text-[10px] py-0 h-4 text-green-600 bg-green-500/10 border-green-500/20">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground/70 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                      <span title={format(new Date(s.login_at), "PPpp")}>
+                        Signed in {formatDistanceToNow(new Date(s.login_at), { addSuffix: true })}
+                      </span>
+                      {s.duration_seconds != null && (
+                        <span>Duration: {duration(s.duration_seconds)}</span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Monitor className="w-3 h-3" />
+                        {deviceLabel(s.user_agent)} · {browserLabel(s.user_agent)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </Card>
+        )}
+
+        {/* Security tab */}
+        {tab === "security" && (
+          <Card className="overflow-hidden divide-y divide-border/20">
+            {failedLogins.length === 0 ? (
+              <EmptyState icon={<Shield className="h-8 w-8 text-muted-foreground" />} title="No failed logins" description="Failed sign-in attempts will appear here." />
+            ) : (
+              failedLogins.map(f => (
+                <div key={f.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">
+                      Failed sign-in attempt
+                      {f.details?.identifier ? ` for ${f.details.identifier}` : ""}
+                    </p>
+                    <div className="text-xs text-muted-foreground/70 flex flex-wrap gap-x-3 mt-0.5">
+                      <span title={format(new Date(f.created_at), "PPpp")}>
+                        {formatDistanceToNow(new Date(f.created_at), { addSuffix: true })}
+                      </span>
+                      <span>{deviceLabel(f.user_agent)} · {browserLabel(f.user_agent)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </Card>
+        )}
       </main>
     </div>
   );
