@@ -355,7 +355,6 @@ export default function RepUpload() {
                     <SelectItem value="200">200 Level</SelectItem>
                     <SelectItem value="300">300 Level</SelectItem>
                     <SelectItem value="400">400 Level</SelectItem>
-                    <SelectItem value="500">500 Level</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
