@@ -617,7 +617,7 @@ function CommunityUploadContent() {
                       </div>
                     )}
 
-                    {courses.length === 0 && !creatingNewCourse && (
+                    {courses.length === 0 && !creatingNewCourse && !newCourseId && (
                       <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription className="text-sm">
@@ -626,8 +626,21 @@ function CommunityUploadContent() {
                       </Alert>
                     )}
 
+                    {/* Newly created pending course — show as selected card */}
+                    {newCourseId && !creatingNewCourse && (
+                      <button
+                        type="button"
+                        onClick={() => { /* already selected */ }}
+                        className="w-full text-left p-3 rounded-lg border border-primary bg-primary/5 text-foreground cursor-default"
+                      >
+                        <span className="font-semibold text-sm">{newCourseCode}</span>
+                        <span className="text-muted-foreground text-sm ml-2">{newCourseName}</span>
+                        <span className="ml-2 text-[11px] text-yellow-600 dark:text-yellow-400 font-medium">(pending review)</span>
+                      </button>
+                    )}
+
                     {/* Divider */}
-                    {courses.length > 0 && (
+                    {(courses.length > 0 || newCourseId) && !creatingNewCourse && (
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                         <div className="relative flex justify-center text-xs uppercase">
@@ -743,7 +756,8 @@ function CommunityUploadContent() {
                               if (error) { toast.error("Failed to create course"); return; }
                               setNewCourseId(inserted.id);
                               setNewCourseLabel(`${code} — ${name} (pending)`);
-                              toast.success("Course created as pending — proceed to upload.");
+                              setCreatingNewCourse(false);  // collapse form, show card
+                              toast.success("Course saved — now select it above and continue.");
                             }}
                           >
                             {newCourseId ? <CheckCircle className="w-3.5 h-3.5" /> : <PlusCircle className="w-3.5 h-3.5" />}
