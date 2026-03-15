@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { useSession } from "@/hooks/useSession";
@@ -53,6 +54,7 @@ import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
 import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { PDFViewer } from "@/components/PDFViewer";
+import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
@@ -61,11 +63,15 @@ function CourseLectureNotesContent() {
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
 
-  // Prompt unauthenticated users to log in before protected actions
-  const requireAuth = (action: () => void) => {
+  // Guest auth prompt state
+  const [guestPromptOpen, setGuestPromptOpen] = useState(false);
+  const [guestPromptReason, setGuestPromptReason] = useState<string | undefined>();
+
+  // Show polite popup instead of hard redirect for unauthenticated users
+  const requireAuth = (action: () => void, reason?: string) => {
     if (!user) {
-      sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
-      navigate("/auth");
+      setGuestPromptReason(reason);
+      setGuestPromptOpen(true);
       return;
     }
     action();
@@ -81,6 +87,7 @@ function CourseLectureNotesContent() {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [materialTypeFilter, setMaterialTypeFilter] = useState<string>("all");
+  const [guestPrompt, setGuestPrompt] = useState<{ open: boolean; action: string }>({ open: false, action: "" });
 
   // Selection state for bulk actions
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
@@ -335,7 +342,7 @@ function CourseLectureNotesContent() {
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <NotificationBell /><ThemeToggle />
         </div>
       </header>
 
@@ -745,6 +752,12 @@ function CourseLectureNotesContent() {
       )}
 
       {/* PDF Viewer */}
+      <GuestAuthPrompt
+        open={guestPromptOpen}
+        action={guestPromptReason}
+        onClose={() => setGuestPromptOpen(false)}
+      />
+
       <PDFViewer
         isOpen={pdfViewerOpen}
         onClose={() => setPdfViewerOpen(false)}
