@@ -82,7 +82,7 @@ function CourseLectureNotesContent() {
   const currentDept = departments.find(d => d.slug === deptSlug);
   const { courses, loading: coursesLoading } = useCourses(currentDept?.id, levelNum, semester);
   const currentCourse = courses.find(c => c.code === courseCode);
-  const { notes, loading: notesLoading, incrementViews, getSignedUrl, deleteNote, renameNote } = useLectureNotes(currentCourse?.id);
+  const { notes, loading: notesLoading, error: notesError, incrementViews, getSignedUrl, deleteNote, renameNote, refresh: refreshNotes } = useLectureNotes(currentCourse?.id);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -297,8 +297,32 @@ function CourseLectureNotesContent() {
   };
 
   if (loading) {
-    // Avoid an intermediate full-screen loader which can flash between routes.
-    return null;
+    return (
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-muted/50 animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-32 bg-muted/50 rounded animate-pulse" />
+              <div className="h-3 w-20 bg-muted/30 rounded animate-pulse" />
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-5 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl bg-muted/20 border border-border/20 animate-pulse">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-muted/50 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted/50 rounded w-3/4" />
+                  <div className="h-3 bg-muted/30 rounded w-1/3" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </main>
+      </div>
+    );
   }
 
   if (!currentDept || !currentCourse) {
@@ -476,6 +500,19 @@ function CourseLectureNotesContent() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Network error banner */}
+        {notesError && !notesLoading && (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-destructive/5 border border-destructive/20 text-sm">
+            <span className="text-destructive/80">Failed to load materials. Check your connection.</span>
+            <button
+              onClick={refreshNotes}
+              className="text-xs text-primary font-medium hover:underline shrink-0"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Notes List */}
         <div className="space-y-2">
