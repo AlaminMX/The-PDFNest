@@ -66,10 +66,30 @@ interface ReviewDialogProps {
   loading: boolean;
 }
 
+const APPROVAL_MESSAGES = [
+  (name: string) => `Great work, ${name}! Your upload has been approved and is now live.`,
+  (name: string) => `Thanks for contributing, ${name}! Your material is now available to students.`,
+  (name: string) => `Approved! Well done, ${name} — this will really help your department.`,
+  (name: string) => `${name}, your upload has been reviewed and approved. Keep it up!`,
+  (name: string) => `Excellent contribution, ${name}! Your file is now published.`,
+];
+
+function getAutoApprovalMessage(uploaderName: string): string {
+  const fn = APPROVAL_MESSAGES[Math.floor(Math.random() * APPROVAL_MESSAGES.length)];
+  return fn(uploaderName || "contributor");
+}
+
 function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDialogProps) {
   const [note, setNote] = useState("");
 
-  useEffect(() => { if (!upload) setNote(""); }, [upload]);
+  useEffect(() => {
+    if (!upload) { setNote(""); return; }
+    if (action === "approve") {
+      setNote(getAutoApprovalMessage(upload.uploader_name || "contributor"));
+    } else {
+      setNote("");
+    }
+  }, [upload, action]);
 
   if (!upload || !action) return null;
 
