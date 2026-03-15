@@ -5,42 +5,42 @@ import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { Component, ErrorInfo, ReactNode } from "react";
+import { Component, ErrorInfo, ReactNode, lazy, Suspense } from "react";
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import ResetPassword from "./pages/ResetPassword";
-import PasswordResetSuccess from "./pages/PasswordResetSuccess";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminReps from "./pages/AdminReps";
-import AdminDepartments from "./pages/AdminDepartments";
-import AdminBanners from "./pages/AdminBanners";
-import AdminCategories from "./pages/AdminCategories";
-import AdminUserDetail from "./pages/AdminUserDetail";
-import AdminSessionLogs from "./pages/AdminSessionLogs";
-import AdminActivityLogs from "./pages/AdminActivityLogs";
-import AFITPDFs from "./pages/AFITPDFs";
-import FacultySelection from "./pages/FacultySelection";
-import AdminFaculties from "./pages/AdminFaculties";
-import SchoolStore from "./pages/SchoolStore";
-import AdminWaitlist from "./pages/AdminWaitlist";
-import SemesterSelection from "./pages/SemesterSelection";
-import LevelSelection from "./pages/LevelSelection";
-import DepartmentCourses from "./pages/DepartmentCourses";
-import CourseLectureNotes from "./pages/CourseLectureNotes";
-import RepUpload from "./pages/RepUpload";
-import RepProfile from "./pages/RepProfile";
-import AdminDepartmentLevels from "./pages/AdminDepartmentLevels";
-import PublicProfile from "./pages/PublicProfile";
-import UserProfile from "./pages/UserProfile";
-import AIFeatures from "./pages/AIFeatures";
-import Notifications from "./pages/Notifications";
-import CommunityUpload from "./pages/CommunityUpload";
-import AdminUploads from "./pages/AdminUploads";
-import Leaderboard from "./pages/Leaderboard";
-import NotFound from "./pages/NotFound";
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const PasswordResetSuccess = lazy(() => import("./pages/PasswordResetSuccess"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminReps = lazy(() => import("./pages/AdminReps"));
+const AdminDepartments = lazy(() => import("./pages/AdminDepartments"));
+const AdminBanners = lazy(() => import("./pages/AdminBanners"));
+const AdminCategories = lazy(() => import("./pages/AdminCategories"));
+const AdminUserDetail = lazy(() => import("./pages/AdminUserDetail"));
+const AdminSessionLogs = lazy(() => import("./pages/AdminSessionLogs"));
+const AdminActivityLogs = lazy(() => import("./pages/AdminActivityLogs"));
+const AFITPDFs = lazy(() => import("./pages/AFITPDFs"));
+const FacultySelection = lazy(() => import("./pages/FacultySelection"));
+const AdminFaculties = lazy(() => import("./pages/AdminFaculties"));
+const SchoolStore = lazy(() => import("./pages/SchoolStore"));
+const AdminWaitlist = lazy(() => import("./pages/AdminWaitlist"));
+const SemesterSelection = lazy(() => import("./pages/SemesterSelection"));
+const LevelSelection = lazy(() => import("./pages/LevelSelection"));
+const DepartmentCourses = lazy(() => import("./pages/DepartmentCourses"));
+const CourseLectureNotes = lazy(() => import("./pages/CourseLectureNotes"));
+const RepUpload = lazy(() => import("./pages/RepUpload"));
+const RepProfile = lazy(() => import("./pages/RepProfile"));
+const AdminDepartmentLevels = lazy(() => import("./pages/AdminDepartmentLevels"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const AIFeatures = lazy(() => import("./pages/AIFeatures"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const CommunityUpload = lazy(() => import("./pages/CommunityUpload"));
+const AdminUploads = lazy(() => import("./pages/AdminUploads"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 
 // ── QueryClient: suppress thrown errors so a single query failure
@@ -48,8 +48,11 @@ import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      // Don't throw to ErrorBoundary - handle errors locally per query
+      retry: 2,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      staleTime: 5 * 60 * 1000,        // 5 min — data stays fresh, fewer re-fetches
+      gcTime: 15 * 60 * 1000,          // 15 min — keep in memory between navigations
+      refetchOnWindowFocus: false,      // don't re-fetch every tab switch on poor networks
       throwOnError: false,
     },
     mutations: {
@@ -104,7 +107,12 @@ const App = () => (
           <RamadanDecoration />
           <BrowserRouter>
             <ActivityRouteTracker />
-            <Routes>
+            <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+          }>
+          <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/dashboard" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -142,6 +150,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+          </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
