@@ -25,12 +25,13 @@ export function useLectureNotes(courseId?: string) {
       setLoading(true);
       setError(null);
 
-      // First fetch lecture notes
-      const { data: notesData, error: fetchError } = await supabase
-        .from("lecture_notes")
-        .select("*")
-        .eq("course_id", courseId)
-        .order("created_at", { ascending: false });
+      // Direct REST fetch — works for all users including guests
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/lecture_notes?course_id=eq.${courseId}&order=created_at.desc`;
+      const res = await fetch(url, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      });
+      const notesData = res.ok ? await res.json() : [];
+      const fetchError = res.ok ? null : new Error("Failed to fetch notes");
 
       if (fetchError) throw fetchError;
 
