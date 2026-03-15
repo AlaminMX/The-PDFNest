@@ -51,6 +51,8 @@ export default function AdminDepartmentLevels() {
   const [openLevels, setOpenLevels] = useState<Set<number>>(new Set([100]));
   // Which levels have the "add course" form open
   const [addingToLevel, setAddingToLevel] = useState<number | null>(null);
+  // Levels explicitly deleted for this department (hidden from UI)
+  const [deletedLevels, setDeletedLevels] = useState<Set<number>>(new Set());
 
   // Per-level add form state
   const [newCode, setNewCode] = useState("");
@@ -183,7 +185,7 @@ export default function AdminDepartmentLevels() {
     fetchData();
   };
 
-  /** Remove an entire level by deleting ALL courses in that level for this dept */
+  /** Remove an entire level — deletes all its courses and hides the level from this department */
   const handleRemoveLevel = async () => {
     if (!removeLevelTarget) return;
     setRemovingLevel(true);
@@ -194,7 +196,9 @@ export default function AdminDepartmentLevels() {
         .eq("department_id", deptId)
         .eq("level", removeLevelTarget);
       if (error) throw error;
-      toast.success(`${removeLevelTarget} Level removed`);
+      // Hide the level card immediately from the UI
+      setDeletedLevels(prev => new Set([...prev, removeLevelTarget]));
+      toast.success(`${removeLevelTarget} Level removed from ${deptName}`);
       setRemoveLevelTarget(null);
       fetchData();
     } catch (err: any) {
@@ -221,7 +225,13 @@ export default function AdminDepartmentLevels() {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          groups.map(({ level, courses, exists }) => {
+          groups
+            .filter(({ level, courses }) =>
+              // Hide levels that were explicitly deleted OR never had any courses
+              // AND are not currently being used for adding
+              !deletedLevels.has(level) && (courses.length > 0 || addingToLevel === level)
+            )
+            .map(({ level, courses, exists }) => {
             const isOpen = openLevels.has(level);
             const isAddingHere = addingToLevel === level;
 
@@ -417,6 +427,31 @@ export default function AdminDepartmentLevels() {
             );
           })
         )}
+
+        {/* Add a level back */}
+        <div className="pt-2">
+          <p className="text-xs text-muted-foreground text-center mb-2">
+            {deletedLevels.size > 0 || groups.every(g => g.courses.length === 0 || deletedLevels.has(g.level))
+              ? "Add courses to a level to activate it:"
+              : "To activate a level, add a course to it:"}
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {ALL_LEVELS.filter(l => deletedLevels.has(l) || groups.find(g => g.level === l)?.courses.length === 0).map(l => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => {
+                  setDeletedLevels(prev => { const n = new Set(prev); n.delete(l); return n; });
+                  setAddingToLevel(l);
+                  setOpenLevels(prev => new Set([...prev, l]));
+                }}
+                className="px-3 py-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+              >
+                + {LEVEL_LABELS[l]}
+              </button>
+            ))}
+          </div>
+        </div>
       </main>
 
       {/* Merge course dialog */}
