@@ -230,11 +230,6 @@ export default function Auth() {
           ) : (
             /* ── Sign-in form ── */
             <form onSubmit={handleAuth} className="space-y-4">
-              <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or use email</span>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
