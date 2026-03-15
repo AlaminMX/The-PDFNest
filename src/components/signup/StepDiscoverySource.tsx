@@ -64,9 +64,6 @@ export function StepDiscoverySource({ data, updateData, onNext, onBack }: Props)
         </Button>
       </div>
 
-      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
-        Skip
-      </button>
     </div>
   );
 }
