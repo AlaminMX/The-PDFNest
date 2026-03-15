@@ -72,7 +72,7 @@ const sidebarItems = [
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
-  { id: "sessions", label: "Session Logs", icon: Clock, path: "/admin/sessions" },
+  { id: "sessions", label: "Sessions & Security", icon: Clock, path: "/admin/sessions" },
   { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
   { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
 ];
