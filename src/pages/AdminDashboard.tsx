@@ -69,7 +69,6 @@ const sidebarItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
   { id: "faculties", label: "Faculties", icon: Building2, path: "/admin/faculties" },
   { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
-  { id: "categories", label: "Categories", icon: FolderTree, path: "/admin/categories" },
   { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
@@ -113,6 +112,7 @@ export default function AdminDashboard() {
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingUploadsCount, setPendingUploadsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [totalPDFs, setTotalPDFs] = useState(0);
   const [totalStorage, setTotalStorage] = useState(0);
@@ -136,8 +136,21 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAdmin) {
       fetchAllUsers();
+      fetchPendingCount();
     }
   }, [isAdmin]);
+
+  const fetchPendingCount = async () => {
+    try {
+      const { count } = await supabase
+        .from("community_uploads")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      setPendingUploadsCount(count || 0);
+    } catch {
+      // non-critical
+    }
+  };
 
   const fetchAllUsers = async () => {
     try {
@@ -333,7 +346,12 @@ export default function AdminDashboard() {
             }}
           >
             <item.icon className="h-4 w-4" />
-            {item.label}
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.id === "uploads" && pendingUploadsCount > 0 && (
+              <span className="ml-auto min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                {pendingUploadsCount > 99 ? "99+" : pendingUploadsCount}
+              </span>
+            )}
           </Button>
         ))}
       </nav>
