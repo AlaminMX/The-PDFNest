@@ -11,24 +11,16 @@ import { SignupWizard } from "@/components/signup/SignupWizard";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { useTheme } from "next-themes";
-import { startSession, logActivity } from "@/lib/sessionLogger";
+import { logActivity } from "@/lib/sessionLogger";
 import { Loader2 } from "lucide-react";
-
-
-// ─── Validation ───────────────────────────────────────────────────────────────
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
   password: z.string().min(6, "Password must be at least 6 characters").max(100),
 });
 
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function Auth() {
   const navigate = useNavigate();
-  const { setTheme } = useTheme();
 
   const isFirstTimeVisitor = !localStorage.getItem("hasVisitedBefore");
   const [isLogin, setIsLogin] = useState(!isFirstTimeVisitor);
@@ -38,7 +30,6 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Guards to prevent duplicate navigation
   const isOnboarding = useRef(false);
 
   useEffect(() => {
@@ -47,28 +38,34 @@ export default function Auth() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !isOnboarding.current) {
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
-        if (redirectTo) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirectTo, { replace: true }); }
-        else navigate("/dashboard", { replace: true });
+        if (redirectTo) {
+          sessionStorage.removeItem("redirectAfterLogin");
+          navigate(redirectTo, { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session && !isOnboarding.current) {
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
-        if (redirectTo) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirectTo, { replace: true }); }
-        else navigate("/dashboard", { replace: true });
+        if (redirectTo) {
+          sessionStorage.removeItem("redirectAfterLogin");
+          navigate(redirectTo, { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // ── Signup wizard callbacks ──────────────────────────────────────────────────
   const handleStartOnboarding = () => { isOnboarding.current = true; };
   const handleFinishOnboarding = () => { isOnboarding.current = false; navigate("/dashboard"); };
   const handleAbortOnboarding = () => { isOnboarding.current = false; };
 
-  // ── Email / password sign-in ─────────────────────────────────────────────────
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -105,7 +102,6 @@ export default function Auth() {
     }
   };
 
-  // ── Forgot password ──────────────────────────────────────────────────────────
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -130,7 +126,6 @@ export default function Auth() {
     }
   };
 
-  // ── Signup wizard ────────────────────────────────────────────────────────────
   if (!isLogin && !isForgotPassword) {
     return (
       <SignupWizard
@@ -142,7 +137,6 @@ export default function Auth() {
     );
   }
 
-  // ── Login / forgot-password form ─────────────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <div className="absolute inset-0 bg-gradient-to-tl from-primary/10 via-transparent to-accent/10 pointer-events-none" />
@@ -170,7 +164,6 @@ export default function Auth() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        {/* Logo + title */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -191,30 +184,33 @@ export default function Auth() {
           </div>
         </motion.div>
 
-        {/* Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
           className="bg-card/80 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-border/50 space-y-6"
         >
-          {/* ── Forgot password form ── */}
           {isForgotPassword ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="reset-email">Email</Label>
                 <Input
-                  id="email"
+                  id="reset-email"
                   type="email"
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : "Send Reset Link"}
+              <Button type="submit" className="w-full h-11" disabled={loading}>
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
+                ) : (
+                  "Send Reset Link"
+                )}
               </Button>
               <div className="text-center">
                 <button
@@ -228,7 +224,6 @@ export default function Auth() {
               </div>
             </form>
           ) : (
-            /* ── Sign-in form ── */
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -279,7 +274,11 @@ export default function Auth() {
               </div>
 
               <Button type="submit" className="w-full h-11" disabled={loading}>
-                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</> : "Sign In"}
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </form>
           )}
