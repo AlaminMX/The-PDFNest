@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +18,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Upload, CheckCircle, AlertCircle,
   FileText, Loader2, X, GraduationCap, Building2, Layers,
-  Calendar, BookOpen, File, Info
+  Calendar, BookOpen, File, Info, PlusCircle, ChevronDown
 } from "lucide-react";
 
 const LEVELS = [
@@ -85,6 +84,13 @@ function CommunityUploadContent() {
   const [selectedLevel, setSelectedLevel] = useState<number>(0);
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  // New course creation state
+  const [creatingNewCourse, setCreatingNewCourse] = useState(false);
+  const [newCourseCode, setNewCourseCode] = useState("");
+  const [newCourseName, setNewCourseName] = useState("");
+  const [newCourseCredits, setNewCourseCredits] = useState("3");
+  const [newCourseId, setNewCourseId] = useState(""); // id of a just-created pending course
+  const [newCourseLabel, setNewCourseLabel] = useState(""); // display label for review step
 
   // File state
   const [file, setFile] = useState<File | null>(null);
@@ -227,7 +233,8 @@ function CommunityUploadContent() {
 
   const handleSubmit = async () => {
     const uploadFile = convertedFile || file;
-    if (!uploadFile || !selectedCourseId || !title.trim()) {
+    const effectiveCourseId = selectedCourseId || newCourseId;
+    if (!uploadFile || !effectiveCourseId || !title.trim()) {
       toast.error("Please complete all required fields.");
       return;
     }
@@ -258,7 +265,7 @@ function CommunityUploadContent() {
         p_file_hash: hash,
         p_file_name: file!.name,
         p_file_size: file!.size,
-        p_course_id: selectedCourseId,
+        p_course_id: effectiveCourseId,
       });
 
       if (dupes && dupes.length > 0 && !showDuplicateDialog) {
@@ -283,7 +290,7 @@ function CommunityUploadContent() {
           user_id: user.id,
           faculty_id: selectedFacultyId,
           department_id: selectedDepartmentId,
-          course_id: selectedCourseId,
+          course_id: effectiveCourseId,
           level: selectedLevel,
           semester: selectedSemester,
           title: title.trim(),
@@ -354,7 +361,7 @@ function CommunityUploadContent() {
           user_id: user.id,
           faculty_id: selectedFacultyId,
           department_id: selectedDepartmentId,
-          course_id: selectedCourseId,
+          course_id: effectiveCourseId,
           level: selectedLevel,
           semester: selectedSemester,
           title: title.trim(),
@@ -393,7 +400,7 @@ function CommunityUploadContent() {
       case "department": return !!selectedDepartmentId;
       case "level": return selectedLevel > 0;
       case "semester": return !!selectedSemester;
-      case "course": return !!selectedCourseId;
+      case "course": return !!selectedCourseId || !!newCourseId;
       case "file": return !!file;
       case "metadata": return !!title.trim();
       case "review": return true;
@@ -589,28 +596,167 @@ function CommunityUploadContent() {
                 {loading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
                 ) : (
-                  <div className="space-y-2">
-                    {courses.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedCourseId(c.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                          selectedCourseId === c.id
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border hover:border-primary/50 text-foreground"
-                        }`}
-                      >
-                        <span className="font-semibold text-sm">{c.code}</span>
-                        <span className="text-muted-foreground text-sm ml-2">{c.name}</span>
-                      </button>
-                    ))}
-                    {courses.length === 0 && (
+                  <div className="space-y-3">
+                    {/* Existing courses */}
+                    {courses.length > 0 && (
+                      <div className="space-y-2">
+                        {courses.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => { setSelectedCourseId(c.id); setNewCourseId(""); setCreatingNewCourse(false); }}
+                            className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                              selectedCourseId === c.id
+                                ? "border-primary bg-primary/5 text-foreground"
+                                : "border-border hover:border-primary/50 text-foreground"
+                            }`}
+                          >
+                            <span className="font-semibold text-sm">{c.code}</span>
+                            <span className="text-muted-foreground text-sm ml-2">{c.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {courses.length === 0 && !creatingNewCourse && (
                       <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription className="text-sm">
-                          No courses found for this combination. The admin may need to add courses for this department/level/semester.
+                          No courses found for this level and semester yet. Create your course below to continue uploading.
                         </AlertDescription>
                       </Alert>
+                    )}
+
+                    {/* Divider */}
+                    {courses.length > 0 && (
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">or</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Create new course toggle */}
+                    {!creatingNewCourse ? (
+                      <button
+                        type="button"
+                        onClick={() => { setCreatingNewCourse(true); setSelectedCourseId(""); setNewCourseId(""); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-border hover:border-primary/50 text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        {courses.length > 0 ? "My course isn't listed — create it" : "Create new course"}
+                      </button>
+                    ) : (
+                      <div className="rounded-xl border border-primary/20 bg-primary/[0.02] p-4 space-y-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">Create new course</p>
+                          <p className="text-xs text-muted-foreground">
+                            Format: <span className="font-mono bg-muted px-1 rounded">MEE401 Thermodynamics II</span>
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Course Code *</Label>
+                            <Input
+                              value={newCourseCode}
+                              onChange={(e) => setNewCourseCode(e.target.value.toUpperCase())}
+                              placeholder="e.g. MEE401"
+                              className="h-9 text-sm font-mono"
+                              maxLength={10}
+                            />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-xs">Course Name *</Label>
+                            <Input
+                              value={newCourseName}
+                              onChange={(e) => setNewCourseName(e.target.value)}
+                              placeholder="e.g. Thermodynamics II"
+                              className="h-9 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="w-32 space-y-1">
+                          <Label className="text-xs">Credit Units</Label>
+                          <Input
+                            type="number" min={1} max={10}
+                            value={newCourseCredits}
+                            onChange={(e) => setNewCourseCredits(e.target.value)}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+
+                        {newCourseId && (
+                          <Alert className="border-green-500/30 bg-green-500/5">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-sm text-green-700 dark:text-green-400">
+                              Course saved as pending — you can now proceed. Admins will review it.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 h-9 gap-1.5"
+                            disabled={!newCourseCode.trim() || !newCourseName.trim() || !!newCourseId}
+                            onClick={async () => {
+                              const code = newCourseCode.trim().toUpperCase();
+                              const name = newCourseName.trim();
+                              if (!code || !name) { toast.error("Code and name are required"); return; }
+
+                              // Check for exact duplicate in this dept/level/semester
+                              const { data: existing } = await supabase
+                                .from("courses")
+                                .select("id, code, name")
+                                .eq("department_id", selectedDepartmentId)
+                                .eq("level", selectedLevel)
+                                .eq("semester", selectedSemester)
+                                .ilike("code", code);
+
+                              if (existing && existing.length > 0) {
+                                // Use the existing course instead
+                                setSelectedCourseId(existing[0].id);
+                                setNewCourseId("");
+                                setCreatingNewCourse(false);
+                                toast.info(`Course ${existing[0].code} already exists — selected for you.`);
+                                return;
+                              }
+
+                              const { data: { user } } = await supabase.auth.getUser();
+                              const { data: inserted, error } = await supabase
+                                .from("courses")
+                                .insert({
+                                  department_id: selectedDepartmentId,
+                                  code,
+                                  name,
+                                  level: selectedLevel,
+                                  semester: selectedSemester,
+                                  credit_units: parseInt(newCourseCredits) || 3,
+                                  status: "pending",
+                                  suggested_by: user?.id,
+                                } as any)
+                                .select("id")
+                                .single();
+
+                              if (error) { toast.error("Failed to create course"); return; }
+                              setNewCourseId(inserted.id);
+                              setNewCourseLabel(`${code} — ${name} (pending)`);
+                              toast.success("Course created as pending — proceed to upload.");
+                            }}
+                          >
+                            {newCourseId ? <CheckCircle className="w-3.5 h-3.5" /> : <PlusCircle className="w-3.5 h-3.5" />}
+                            {newCourseId ? "Saved" : "Save Course"}
+                          </Button>
+                          <Button
+                            size="sm" variant="ghost" className="h-9"
+                            onClick={() => { setCreatingNewCourse(false); setNewCourseCode(""); setNewCourseName(""); setNewCourseId(""); setNewCourseLabel(""); }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -708,7 +854,7 @@ function CommunityUploadContent() {
                   <ReviewRow label="Department" value={selectedDepartmentName} />
                   <ReviewRow label="Level" value={selectedLevelLabel} />
                   <ReviewRow label="Semester" value={selectedSemesterLabel} />
-                  <ReviewRow label="Course" value={selectedCourseName ? `${selectedCourseName.code} - ${selectedCourseName.name}` : ""} />
+                  <ReviewRow label="Course" value={selectedCourseName ? `${selectedCourseName.code} - ${selectedCourseName.name}` : newCourseLabel || ""} />
                   <ReviewRow label="File" value={file?.name || ""} />
                   <ReviewRow label="Title" value={title} />
                   {description && <ReviewRow label="Description" value={description} />}
