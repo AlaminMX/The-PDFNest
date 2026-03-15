@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, Upload, ArrowRight, ChevronDown,
-  GraduationCap, Users,
+  GraduationCap, Users, Search,
 } from "lucide-react";
 
-// ─── Nav ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Faculty {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  display_order: number | null;
+  is_visible: boolean;
+  department_count?: number;
+}
+
+// ─── Nav ──────────────────────────────────────────────────────────────────────
 
 function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -45,7 +59,7 @@ function Nav() {
   );
 }
 
-// ─── Hero ────────────────────────────────────────────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 
 function Hero({ onBrowse }: { onBrowse: () => void }) {
   return (
@@ -87,13 +101,12 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             </Link>
           </Button>
         </div>
-        <div className="pt-4 flex justify-center">
+        <div className="pt-2 flex justify-center">
           <button
             onClick={onBrowse}
-            className="flex flex-col items-center gap-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            aria-label="Scroll to departments"
+            className="flex flex-col items-center gap-1 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
           >
-            <span className="text-xs">Choose your department</span>
+            <span className="text-xs">Choose your faculty</span>
             <ChevronDown className="w-4 h-4 animate-bounce" />
           </button>
         </div>
@@ -102,30 +115,219 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-// ─── Browse Section ──────────────────────────────────────────────────────────
+// ─── Faculty Card skeleton ────────────────────────────────────────────────────
 
-function BrowseSection({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
+function FacultySkeleton() {
   return (
-    <section ref={sectionRef} id="browse" className="px-4 pb-16">
-      <div className="max-w-xl mx-auto text-center space-y-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-          Choose Your Department
-        </h2>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-          Browse lecture notes, past questions, and study materials organized by department and course.
+    <div className="rounded-xl border border-border/40 bg-muted/20 p-5 animate-pulse">
+      <div className="w-10 h-10 rounded-xl bg-muted/50 mb-4" />
+      <div className="h-4 bg-muted/50 rounded w-3/4 mb-2" />
+      <div className="h-3 bg-muted/30 rounded w-1/2 mb-4" />
+      <div className="h-3 bg-muted/20 rounded w-1/3" />
+    </div>
+  );
+}
+
+// ─── Faculty Card ─────────────────────────────────────────────────────────────
+
+function FacultyCard({
+  faculty,
+  index,
+  onClick,
+}: {
+  faculty: Faculty;
+  index: number;
+  onClick: () => void;
+}) {
+  const styles = getDepartmentStyles(faculty.color, index);
+  const icon = getDepartmentIcon(faculty.icon, faculty.name);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="group relative text-left rounded-xl border transition-all duration-200 p-5 w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
+      style={{
+        backgroundColor: hovered ? styles.bgHover : styles.bgLight,
+        borderColor: hovered
+          ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.35)`
+          : `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.18)`,
+        boxShadow: hovered ? `0 4px 20px -4px ${styles.glowColor}` : "none",
+      }}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4 transition-transform duration-200 group-hover:scale-105"
+        style={{ backgroundColor: styles.accentBg }}
+      >
+        {icon}
+      </div>
+      <p
+        className="text-sm font-semibold leading-snug mb-1 line-clamp-2"
+        style={{ color: styles.accentText }}
+      >
+        {faculty.name}
+      </p>
+      {typeof faculty.department_count === "number" && (
+        <p className="text-[11px] text-muted-foreground/60">
+          {faculty.department_count}{" "}
+          {faculty.department_count === 1 ? "dept" : "depts"}
         </p>
-        <Button asChild size="lg" className="rounded-xl gap-2 px-8 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
-          <a href="https://pdfnest.vercel.app/afit-pdfs">
-            <BookOpen className="w-4 h-4" />
-            Browse Materials
-          </a>
-        </Button>
+      )}
+      <div className="flex items-center gap-1 mt-3">
+        <span className="text-[11px] text-muted-foreground/50">Browse</span>
+        <ArrowRight className="w-3 h-3 text-muted-foreground/40 group-hover:translate-x-0.5 transition-transform duration-150" />
+      </div>
+    </button>
+  );
+}
+
+// ─── Faculty Grid ─────────────────────────────────────────────────────────────
+
+function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
+  const navigate = useNavigate();
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        // Fetch visible faculties — works for anon once RLS policy is set
+        const { data: facData } = await supabase
+          .from("faculties")
+          .select("id, name, slug, icon, color, display_order, is_visible")
+          .eq("is_visible", true)
+          .order("display_order", { ascending: true });
+
+        if (cancelled) return;
+        const rows = (facData || []) as Faculty[];
+
+        // Best-effort: enrich with department counts
+        try {
+          const { data: deptData } = await supabase
+            .from("departments")
+            .select("faculty_id")
+            .eq("is_visible", true)
+            .not("faculty_id", "is", null);
+
+          if (!cancelled && deptData) {
+            const map = new Map<string, number>();
+            deptData.forEach((d: any) => {
+              map.set(d.faculty_id, (map.get(d.faculty_id) || 0) + 1);
+            });
+            setFaculties(rows.map((f) => ({ ...f, department_count: map.get(f.id) ?? 0 })));
+          } else if (!cancelled) {
+            setFaculties(rows);
+          }
+        } catch {
+          if (!cancelled) setFaculties(rows);
+        }
+      } catch {
+        if (!cancelled) setFaculties([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = search.trim()
+    ? faculties.filter((f) =>
+        f.name.toLowerCase().includes(search.trim().toLowerCase())
+      )
+    : faculties;
+
+  return (
+    <section ref={sectionRef} id="faculties" className="px-4 pb-16">
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+            Choose Your Faculty
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Select your faculty to browse departments and access materials instantly
+          </p>
+        </div>
+
+        {/* Search — only after load */}
+        {!loading && faculties.length > 0 && (
+          <div className="relative max-w-sm mx-auto mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search faculties..."
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border/50 bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50 transition-all"
+            />
+          </div>
+        )}
+
+        {/* Skeleton */}
+        {loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <FacultySkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Grid */}
+        {!loading && filtered.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filtered.map((faculty, i) => (
+              <FacultyCard
+                key={faculty.id}
+                faculty={faculty}
+                index={i}
+                onClick={() => navigate(`/afit-pdfs/${faculty.slug}`)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* No search results */}
+        {!loading && faculties.length > 0 && filtered.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-sm">No faculty matches "{search}"</p>
+            <button
+              onClick={() => setSearch("")}
+              className="text-xs text-primary underline mt-2"
+            >
+              Clear search
+            </button>
+          </div>
+        )}
+
+        {/* Browse by Department link */}
+        <div className="mt-8 text-center">
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-xl gap-2 border-border/50 text-sm"
+          >
+            <Link to="/afit-pdfs">
+              Browse by Department
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
+        </div>
+
       </div>
     </section>
   );
 }
 
-// ─── Contribute Section ──────────────────────────────────────────────────────
+// ─── Contribute Section ───────────────────────────────────────────────────────
 
 function ContributeSection() {
   return (
@@ -161,7 +363,7 @@ function ContributeSection() {
   );
 }
 
-// ─── About ───────────────────────────────────────────────────────────────────
+// ─── About ────────────────────────────────────────────────────────────────────
 
 function AboutSection() {
   return (
@@ -177,7 +379,7 @@ function AboutSection() {
   );
 }
 
-// ─── Footer ──────────────────────────────────────────────────────────────────
+// ─── Footer ───────────────────────────────────────────────────────────────────
 
 function Footer() {
   return (
@@ -190,7 +392,7 @@ function Footer() {
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
             <Link to="/afit-pdfs" className="hover:text-foreground transition-colors">Materials</Link>
-            <Link to="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
+            <Link to="/auth" className="hover:text-foreground transition-colors">Contribute</Link>
             <Link to="/auth" className="hover:text-foreground transition-colors">Sign Up</Link>
             <Link to="/auth" className="hover:text-foreground transition-colors">Log In</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
@@ -207,12 +409,13 @@ function Footer() {
   );
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const deptSectionRef = useRef<HTMLElement>(null!);
+  const facultySectionRef = useRef<HTMLElement>(null!);
 
+  // Redirect logged-in users straight to dashboard
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate("/dashboard", { replace: true });
@@ -223,8 +426,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Nav />
       <main>
-        <Hero onBrowse={() => deptSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-        <BrowseSection sectionRef={deptSectionRef} />
+        <Hero
+          onBrowse={() =>
+            facultySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        />
+        <FacultyGrid sectionRef={facultySectionRef} />
         <ContributeSection />
         <AboutSection />
       </main>
