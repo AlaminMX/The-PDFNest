@@ -234,10 +234,9 @@ function CommunityUploadContent() {
   const handleSubmit = async () => {
     const uploadFile = convertedFile || file;
     const effectiveCourseId = selectedCourseId || newCourseId;
-    if (!uploadFile || !effectiveCourseId || !title.trim()) {
-      toast.error("Please complete all required fields.");
-      return;
-    }
+    if (!uploadFile) { toast.error("Please select a file."); return; }
+    if (!effectiveCourseId) { toast.error("Please select or create a course first."); return; }
+    if (!title.trim()) { toast.error("Please enter a title for your material."); return; }
 
     setSubmitting(true);
     try {
@@ -400,7 +399,7 @@ function CommunityUploadContent() {
       case "department": return !!selectedDepartmentId;
       case "level": return selectedLevel > 0;
       case "semester": return !!selectedSemester;
-      case "course": return !!selectedCourseId || !!newCourseId;
+      case "course": return !!(selectedCourseId || newCourseId);
       case "file": return !!file;
       case "metadata": return !!title.trim();
       case "review": return true;
@@ -753,7 +752,14 @@ function CommunityUploadContent() {
                                 .select("id")
                                 .single();
 
-                              if (error) { toast.error("Failed to create course"); return; }
+                              if (error) {
+                                if (error.message?.includes("row-level security") || error.message?.includes("policy")) {
+                                  toast.error("Unable to create course — please run the latest database migration in your Supabase dashboard.");
+                                } else {
+                                  toast.error(error.message || "Failed to create course");
+                                }
+                                return;
+                              }
                               setNewCourseId(inserted.id);
                               setNewCourseLabel(`${code} — ${name} (pending)`);
                               setCreatingNewCourse(false);  // collapse form, show card
