@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useFaculties } from "@/hooks/useFaculties";
-import { useDepartments } from "@/hooks/useDepartments";
-import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, Upload, ArrowRight, ChevronDown,
-  GraduationCap, Users, Search, Building2,
+  GraduationCap, Users,
 } from "lucide-react";
 
 // ─── Nav ────────────────────────────────────────────────────────────────────
@@ -105,169 +102,24 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-// ─── Department Grid ─────────────────────────────────────────────────────────
+// ─── Browse Section ──────────────────────────────────────────────────────────
 
-interface DeptWithFaculty {
-  id: string;
-  name: string;
-  slug: string;
-  icon: string | null;
-  color: string | null;
-  is_visible: boolean;
-  faculty_id: string | null;
-  facultySlug?: string;
-}
-
-function DeptSkeleton() {
+function BrowseSection({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
   return (
-    <div className="rounded-xl border border-border/40 bg-muted/20 p-4 animate-pulse">
-      <div className="w-9 h-9 rounded-lg bg-muted/60 mb-3" />
-      <div className="h-3.5 bg-muted/60 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-muted/40 rounded w-1/2" />
-    </div>
-  );
-}
-
-function DeptCard({
-  dept,
-  index,
-  onClick,
-}: {
-  dept: DeptWithFaculty;
-  index: number;
-  onClick: () => void;
-}) {
-  const styles = getDepartmentStyles(dept.color, index);
-  const icon = getDepartmentIcon(dept.icon, dept.name);
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="group relative text-left rounded-xl border transition-all duration-200 p-4 w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
-      style={{
-        backgroundColor: hovered ? styles.bgHover : styles.bgLight,
-        borderColor: hovered
-          ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.35)`
-          : `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.18)`,
-        boxShadow: hovered ? `0 4px 20px -4px ${styles.glowColor}` : "none",
-      }}
-    >
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center text-lg mb-3 transition-transform duration-200 group-hover:scale-105"
-        style={{ backgroundColor: styles.accentBg }}
-      >
-        {icon}
-      </div>
-      <p
-        className="text-sm font-semibold leading-snug line-clamp-2 mb-1"
-        style={{ color: styles.accentText }}
-      >
-        {dept.name}
-      </p>
-      <div className="flex items-center gap-1 mt-auto">
-        <span className="text-[11px] text-muted-foreground/60">View courses</span>
-        <ArrowRight className="w-3 h-3 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5" />
-      </div>
-    </button>
-  );
-}
-
-function DepartmentGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
-  const { faculties } = useFaculties();
-  const { departments, loading } = useDepartments({ visibleOnly: true });
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-
-  const enriched: DeptWithFaculty[] = departments.map((d) => {
-    const fac = faculties.find((f) => f.id === d.faculty_id);
-    return { ...d, facultySlug: fac?.slug };
-  });
-
-  const filtered = search.trim()
-    ? enriched.filter((d) =>
-        d.name.toLowerCase().includes(search.trim().toLowerCase())
-      )
-    : enriched;
-
-  const handleDeptClick = (dept: DeptWithFaculty) => {
-    if (dept.facultySlug) {
-      navigate(`/afit-pdfs/${dept.facultySlug}/${dept.slug}`);
-    } else {
-      navigate("/afit-pdfs");
-    }
-  };
-
-  return (
-    <section ref={sectionRef} id="departments" className="px-4 pb-16">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Choose Your Department
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Tap your department to access lecture notes and past questions instantly
-          </p>
-        </div>
-
-        {/* Search bar */}
-        <div className="relative max-w-sm mx-auto mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search departments..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-border/50 bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50 transition-all"
-          />
-        </div>
-
-        {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <DeptSkeleton key={i} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-sm">No departments found for "{search}"</p>
-            <button
-              onClick={() => setSearch("")}
-              className="text-xs text-primary underline mt-2"
-            >
-              Clear search
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filtered.map((dept, i) => (
-              <DeptCard
-                key={dept.id}
-                dept={dept}
-                index={i}
-                onClick={() => handleDeptClick(dept)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Browse by Faculty */}
-        <div className="mt-8 text-center">
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-xl gap-2 border-border/50 text-sm"
-          >
-            <Link to="/afit-pdfs">
-              <Building2 className="w-3.5 h-3.5" />
-              Browse by Faculty
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </Button>
-        </div>
+    <section ref={sectionRef} id="browse" className="px-4 pb-16">
+      <div className="max-w-xl mx-auto text-center space-y-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          Choose Your Department
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+          Browse lecture notes, past questions, and study materials organized by department and course.
+        </p>
+        <Button asChild size="lg" className="rounded-xl gap-2 px-8 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
+          <a href="https://pdfnest.vercel.app/afit-pdfs">
+            <BookOpen className="w-4 h-4" />
+            Browse Materials
+          </a>
+        </Button>
       </div>
     </section>
   );
@@ -372,7 +224,7 @@ export default function LandingPage() {
       <Nav />
       <main>
         <Hero onBrowse={() => deptSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-        <DepartmentGrid sectionRef={deptSectionRef} />
+        <BrowseSection sectionRef={deptSectionRef} />
         <ContributeSection />
         <AboutSection />
       </main>
