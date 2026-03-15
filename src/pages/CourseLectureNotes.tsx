@@ -498,7 +498,7 @@ function CourseLectureNotesContent() {
                   <h3 className="font-medium text-[15px] mb-1.5 line-clamp-2 leading-snug">{note.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <button
-                      onClick={() => navigate(`/rep/${note.uploaded_by}`)}
+                      onClick={() => navigate(`/user/${note.uploaded_by}`)}
                       className="flex items-center gap-1.5 hover:text-primary transition-colors"
                     >
                       <Avatar className="w-4 h-4">
