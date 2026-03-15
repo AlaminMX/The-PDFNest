@@ -26,18 +26,15 @@ export function useCourses(departmentId?: string, level: number = 100, semester?
       setLoading(true);
       setError(null);
 
-      let query = supabase
-        .from("courses_with_note_counts")
-        .select("*")
-        .eq("department_id", departmentId)
-        .eq("level", level)
-        .order("code");
+      // Direct REST fetch — works for all users including guests
+      let url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses_with_note_counts?department_id=eq.${departmentId}&level=eq.${level}&order=code`;
+      if (semester) url += `&semester=eq.${semester}`;
 
-      if (semester) {
-        query = query.eq("semester", semester);
-      }
-
-      const { data: coursesData, error: fetchError } = await query;
+      const res = await fetch(url, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      });
+      const coursesData = res.ok ? await res.json() : [];
+      const fetchError = res.ok ? null : new Error("Failed to fetch courses");
 
       if (fetchError) throw fetchError;
       setCourses((coursesData as CourseWithNoteCount[]) || []);
