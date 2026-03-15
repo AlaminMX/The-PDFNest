@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, GraduationCap, ChevronRight, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
@@ -75,7 +76,7 @@ function LevelSelectionContent() {
     );
   }
 
-  const displayLevels = activeLevels.length > 0 ? activeLevels : loading ? [] : ALL_LEVELS;
+  // Always show all 5 levels — empty ones show a 'coming soon' state
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -96,7 +97,7 @@ function LevelSelectionContent() {
               <p className="text-xs text-muted-foreground">Select your level</p>
             </div>
           </div>
-          <ThemeToggle />
+          <NotificationBell /><ThemeToggle />
         </div>
       </header>
 
@@ -120,32 +121,47 @@ function LevelSelectionContent() {
           </div>
         ) : (
           <div className="space-y-3">
-            {displayLevels.map((level, i) => {
+            {ALL_LEVELS.map((level, i) => {
               const count = levelCounts[level] || 0;
               return (
-                <motion.button
+                <motion.div
                   key={level}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
-                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}`)}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/20 hover:bg-muted/40 border border-border/30 hover:border-primary/30 transition-all duration-200 group text-left"
+                  className={count > 0 ? "cursor-pointer" : "cursor-default"}
+                  onClick={() => count > 0 && navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}`)}
                 >
-                  <div className="w-11 h-11 rounded-xl bg-primary/8 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
-                    {LEVEL_ICONS[level]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">{LEVEL_LABELS[level]}</p>
-                    {count > 0 ? (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {count} {count === 1 ? "course" : "courses"} available
+                  <div className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left ${
+                    count > 0
+                      ? "bg-muted/20 hover:bg-muted/40 border-border/30 hover:border-primary/30 group"
+                      : "bg-muted/10 border-border/20 opacity-60"
+                  }`}>
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform ${
+                      count > 0 ? "bg-primary/8 group-hover:scale-105" : "bg-muted/30"
+                    }`}>
+                      {LEVEL_ICONS[level]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-sm ${count === 0 ? "text-muted-foreground" : ""}`}>
+                        {LEVEL_LABELS[level]}
                       </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground/50 mt-0.5">No courses yet</p>
-                    )}
+                      {count > 0 ? (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {count} {count === 1 ? "course" : "courses"} available
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground/40 mt-0.5 italic">
+                          Materials coming soon
+                        </p>
+                      )}
+                    </div>
+                    {count > 0
+                      ? <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      : <span className="text-[10px] text-muted-foreground/40 shrink-0 font-medium tracking-wide uppercase">Soon</span>
+                    }
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
-                </motion.button>
+                </motion.div>
               );
             })}
           </div>
