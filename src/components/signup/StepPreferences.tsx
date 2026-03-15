@@ -139,10 +139,6 @@ export function StepPreferences({ data, updateData, onNext, onBack }: Props) {
           Continue
         </Button>
       </div>
-
-      <button type="button" onClick={onNext} className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
-        Skip this step
-      </button>
     </div>
   );
 }
