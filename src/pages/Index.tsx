@@ -206,31 +206,30 @@ function AppSidebar({
       </SidebarHeader>
       
       <SidebarContent className="px-2 gap-1 overflow-y-auto">
-        {/* AI Features Section */}
-        {/* Separator */}
-        <div className="mx-4 h-px bg-sidebar-border" />
-
-        {/* AFIT Resources */}
+        {/* ── AFIT PDFs — primary feature, top of nav ── */}
         <SidebarGroup className="py-2">
-          <SidebarGroupLabel className="px-3 py-2.5 flex items-center gap-3">
-            <div className="size-7 rounded-lg bg-sidebar-accent flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-sidebar-foreground" />
-            </div>
-            <span className="font-semibold text-[11px] uppercase tracking-widest text-sidebar-foreground/80">Resources</span>
-          </SidebarGroupLabel>
           <SidebarGroupContent className="pl-1">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="py-2.5 px-3 rounded-lg transition-all duration-150 hover:translate-x-0.5">
+                <SidebarMenuButton
+                  asChild
+                  className="py-3 px-3 rounded-xl transition-all duration-150 bg-primary/8 hover:bg-primary/15 border border-primary/20 hover:border-primary/35 group"
+                >
                   <Link to="/afit-pdfs">
-                    <Folder className="w-[18px] h-[18px] text-sidebar-foreground shrink-0" />
-                    {open && <span className="text-[13px] ml-0.5">AFIT PDFs</span>}
+                    <GraduationCap className="w-[18px] h-[18px] text-primary shrink-0" />
+                    {open && (
+                      <span className="text-[13px] ml-0.5 font-semibold text-primary">
+                        AFIT PDFs
+                      </span>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <div className="mx-4 h-px bg-sidebar-border" />
 
         {isAdmin &&
         <>
@@ -1097,6 +1096,27 @@ export default function Index() {
               <p className="text-muted-foreground text-lg">
                 Upload, categorize, and manage your documents effortlessly   
               </p>
+            </div>
+
+            {/* ── AFIT PDFs quick access card ── */}
+            <div className="max-w-2xl mx-auto mb-8">
+              <Link
+                to="/afit-pdfs"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-primary/8 border border-primary/20 hover:bg-primary/12 hover:border-primary/35 transition-all duration-200 group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <GraduationCap className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">AFIT Lecture Notes & Past Questions</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Browse academic materials organized by faculty, department and course</p>
+                </div>
+                <div className="shrink-0 text-primary/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </Link>
             </div>
 
             {/* Getting Started Checklist for new users */}
