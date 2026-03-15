@@ -15,12 +15,14 @@ export function useSemesterCounts(departmentId?: string, level?: number) {
     const fetch = async () => {
       setLoading(true);
       try {
-        let query = supabase
-          .from("courses_with_note_counts")
-          .select("semester, note_count")
-          .eq("department_id", departmentId);
-        if (level) query = query.eq("level", level);
-        const { data, error } = await query;
+        // Direct REST fetch — works for all users including guests
+        let url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses_with_note_counts?department_id=eq.${departmentId}&select=semester,note_count`;
+        if (level) url += `&level=eq.${level}`;
+        const res = await fetch(url, {
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        });
+        const data = res.ok ? await res.json() : [];
+        const error = null;
 
         if (error) throw error;
 
