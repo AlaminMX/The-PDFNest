@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag } from "lucide-react";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
@@ -50,6 +50,7 @@ interface DepartmentItemProps {
 }
 
 function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, categoryName }: DepartmentItemProps) {
+  const navigate = useNavigate();
   const dragControls = useDragControls();
   const styles = getDepartmentStyles(dept.color, index);
   const icon = getDepartmentIcon(dept.icon, dept.name);
@@ -149,6 +150,15 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
               >
                 <Edit className="h-3.5 w-3.5" />
                 Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/admin/departments/${dept.id}/levels`)}
+                className="gap-1.5"
+              >
+                <GraduationCap className="h-3.5 w-3.5" />
+                Levels
               </Button>
               <Button
                 variant="outline"
