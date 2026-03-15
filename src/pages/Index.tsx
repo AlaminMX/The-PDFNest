@@ -17,7 +17,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, WifiOff, CloudDownload, CheckCircle, Tag, ChevronDown } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, WifiOff, CloudDownload, CheckCircle, Tag, ChevronDown, Bell } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -526,6 +526,12 @@ function AppSidebar({
               {open && <span className="text-[13px] ml-0.5">Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <div className="py-2 px-3 flex items-center gap-2">
+              <ThemeToggle />
+              {open && <span className="text-[13px] text-sidebar-foreground/70">Theme</span>}
+            </div>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>);
@@ -535,6 +541,7 @@ function AppSidebar({
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const [notifUnread, setNotifUnread] = useState(0);
   const { isAdmin } = useAdminStatus();
   const { isRep, loading: repLoading } = useRepStatus();
   const { files, loading: filesLoading, uploadFile, deleteFile, updateFileCategory, renameFile, toggleFavorite, uploadProgress, cancelUpload, retryUpload, refreshFiles, hasMore, loadMore, cacheForOffline } = usePDFFiles(user?.id);
@@ -1063,9 +1070,16 @@ export default function Index() {
                   }
                 </div>
                 <InstallPWA />
-                <div id="theme-toggle">
-                  <ThemeToggle />
-                </div>
+                <Link
+                  to="/notifications"
+                  id="notification-bell"
+                  className="relative inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent h-9 w-9 transition-colors"
+                >
+                  <Bell className="w-4 h-4" />
+                  {notifUnread > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+                  )}
+                </Link>
               </div>
             </div>
           </header>
