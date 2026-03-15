@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthGate } from "@/components/AuthGate";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -843,9 +844,35 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function CommunityUpload() {
+  const navigate = useNavigate();
+  const [guestOpen, setGuestOpen] = useState(false);
+  const [checkedAuth, setCheckedAuth] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  // Use supabase directly to check auth without importing useAuth hook again
+  useEffect(() => {
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setIsAuthed(true);
+        } else {
+          setGuestOpen(true);
+        }
+        setCheckedAuth(true);
+      });
+    });
+  }, []);
+
+  if (!checkedAuth) return null;
+
   return (
-    <AuthGate>
-      <CommunityUploadContent />
-    </AuthGate>
+    <>
+      <GuestAuthPrompt
+        open={guestOpen}
+        action="upload materials"
+        onClose={() => { setGuestOpen(false); navigate(-1); }}
+      />
+      {isAuthed && <CommunityUploadContent />}
+    </>
   );
 }
