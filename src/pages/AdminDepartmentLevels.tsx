@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, GraduationCap, BookOpen, Loader2, ChevronDown, ChevronRight, PlusCircle } from "lucide-react";
+import { Plus, Trash2, GraduationCap, BookOpen, Loader2, ChevronDown, ChevronRight, PlusCircle, Check, X, GitMerge, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +28,7 @@ interface CourseEntry {
   level: number;
   semester: string;
   credit_units: number;
+  status: string;
 }
 
 interface LevelGroup {
@@ -62,6 +63,9 @@ export default function AdminDepartmentLevels() {
   // Remove-level dialog
   const [removeLevelTarget, setRemoveLevelTarget] = useState<number | null>(null);
   const [removingLevel, setRemovingLevel] = useState(false);
+  // Merge dialog
+  const [mergeSource, setMergeSource] = useState<CourseEntry | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -77,7 +81,7 @@ export default function AdminDepartmentLevels() {
 
       const { data: coursesData } = await supabase
         .from("courses")
-        .select("id, code, name, level, semester, credit_units")
+        .select("id, code, name, level, semester, credit_units, status")
         .eq("department_id", deptId)
         .order("level").order("code");
 
@@ -132,6 +136,42 @@ export default function AdminDepartmentLevels() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleApproveCourse = async (courseId: string) => {
+    const { error } = await supabase
+      .from("courses")
+      .update({ status: "approved" } as any)
+      .eq("id", courseId);
+    if (error) { toast.error("Failed to approve course"); return; }
+    toast.success("Course approved");
+    fetchData();
+  };
+
+  const handleRejectCourse = async (courseId: string) => {
+    const { error } = await supabase
+      .from("courses")
+      .delete()
+      .eq("id", courseId);
+    if (error) { toast.error("Failed to reject course"); return; }
+    toast.success("Pending course removed");
+    fetchData();
+  };
+
+  const handleMergeCourse = async () => {
+    if (!mergeSource || !mergeTargetId) return;
+    // Move all community_uploads from the pending course to the target course
+    await supabase
+      .from("community_uploads")
+      .update({ course_id: mergeTargetId })
+      .eq("course_id", mergeSource.id);
+    // Delete the pending course
+    const { error } = await supabase.from("courses").delete().eq("id", mergeSource.id);
+    if (error) { toast.error("Failed to merge"); return; }
+    toast.success("Course merged");
+    setMergeSource(null);
+    setMergeTargetId("");
+    fetchData();
   };
 
   const handleDeleteCourse = async () => {
@@ -245,19 +285,45 @@ export default function AdminDepartmentLevels() {
                                 <p className="text-xs text-muted-foreground truncate">{course.name}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                              {(course as any).status === "pending" && (
+                                <Badge variant="secondary" className="text-[10px] gap-1 border-yellow-500/40 text-yellow-700 dark:text-yellow-400 bg-yellow-500/10">
+                                  <Clock className="w-2.5 h-2.5" /> pending
+                                </Badge>
+                              )}
                               <Badge variant="outline" className="text-[10px]">
                                 {course.semester === "first" ? "1st" : "2nd"} sem
                               </Badge>
                               <Badge variant="outline" className="text-[10px]">
                                 {course.credit_units} CU
                               </Badge>
+                              {(course as any).status === "pending" && (
+                                <>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                                    title="Approve course"
+                                    onClick={() => handleApproveCourse(course.id)}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    title="Merge into existing course"
+                                    onClick={() => { setMergeSource(course); setMergeTargetId(""); }}
+                                  >
+                                    <GitMerge className="w-3.5 h-3.5" />
+                                  </Button>
+                                </>
+                              )}
                               <Button
                                 variant="ghost" size="icon"
                                 className="h-7 w-7 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => setDeleteTarget(course)}
+                                title={(course as any).status === "pending" ? "Reject & delete" : "Delete course"}
+                                onClick={() => (course as any).status === "pending" ? handleRejectCourse(course.id) : setDeleteTarget(course)}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                {(course as any).status === "pending" ? <X className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
                               </Button>
                             </div>
                           </div>
@@ -352,6 +418,41 @@ export default function AdminDepartmentLevels() {
           })
         )}
       </main>
+
+      {/* Merge course dialog */}
+      {mergeSource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-background rounded-xl border shadow-xl p-6 w-full max-w-md space-y-4">
+            <h3 className="font-semibold">Merge Pending Course</h3>
+            <p className="text-sm text-muted-foreground">
+              Merge <strong>{mergeSource.code}</strong> into an existing approved course. All uploads will be moved to the target course.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Target course</Label>
+              <select
+                value={mergeTargetId}
+                onChange={(e) => setMergeTargetId(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+              >
+                <option value="">Select course...</option>
+                {groups
+                  .find(g => g.level === mergeSource.level)
+                  ?.courses
+                  .filter(c => c.id !== mergeSource.id && (c as any).status === "approved")
+                  .map(c => (
+                    <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setMergeSource(null)}>Cancel</Button>
+              <Button size="sm" disabled={!mergeTargetId} onClick={handleMergeCourse} className="gap-1.5">
+                <GitMerge className="w-3.5 h-3.5" /> Merge
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete course dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
