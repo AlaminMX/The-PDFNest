@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { SignupData } from "./SignupWizard";
 import { toast } from "sonner";
 
-
 const schema = z.object({
   fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Invalid email address").max(255),
@@ -57,12 +56,6 @@ export function StepAccountBasics({ data, updateData, onNext, onSwitchToLogin, l
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
-        <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or use email</span>
-          </div>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
           <Input
