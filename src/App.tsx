@@ -32,6 +32,8 @@ import DepartmentCourses from "./pages/DepartmentCourses";
 import CourseLectureNotes from "./pages/CourseLectureNotes";
 import RepUpload from "./pages/RepUpload";
 import RepProfile from "./pages/RepProfile";
+import AdminDepartmentLevels from "./pages/AdminDepartmentLevels";
+import PublicProfile from "./pages/PublicProfile";
 import UserProfile from "./pages/UserProfile";
 import AIFeatures from "./pages/AIFeatures";
 import Notifications from "./pages/Notifications";
@@ -113,6 +115,7 @@ const App = () => (
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/reps" element={<AdminReps />} />
               <Route path="/admin/departments" element={<AdminDepartments />} />
+              <Route path="/admin/departments/:deptId/levels" element={<AdminDepartmentLevels />} />
               <Route path="/admin/banners" element={<AdminBanners />} />
               <Route path="/admin/categories" element={<AdminCategories />} />
               <Route path="/admin/logs" element={<AdminActivityLogs />} />
@@ -130,6 +133,7 @@ const App = () => (
               <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
               <Route path="/rep/upload" element={<RepUpload />} />
               <Route path="/rep/:userId" element={<RepProfile />} />
+              <Route path="/user/:userId" element={<PublicProfile />} />
               <Route path="/profile" element={<UserProfile />} />
               <Route path="/ai-features" element={<AIFeatures />} />
               <Route path="/notifications" element={<Notifications />} />
