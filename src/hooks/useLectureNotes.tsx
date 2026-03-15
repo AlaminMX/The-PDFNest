@@ -190,6 +190,21 @@ export function useLectureNotes(courseId?: string) {
         .eq("id", courseId)
         .maybeSingle();
 
+      // Check for same-title in this course — append {2}, {3}, etc.
+      let finalTitle = title;
+      const { data: existingNotes } = await supabase
+        .from("lecture_notes")
+        .select("title")
+        .eq("course_id", courseId);
+      if (existingNotes && existingNotes.length > 0) {
+        const existingTitles = new Set(existingNotes.map((n: any) => n.title.toLowerCase()));
+        if (existingTitles.has(finalTitle.toLowerCase())) {
+          let counter = 2;
+          while (existingTitles.has(`${finalTitle} {${counter}}`.toLowerCase())) counter++;
+          finalTitle = `${finalTitle} {${counter}}`;
+        }
+      }
+
       // Insert into database with material_type and level
       const { error: insertError } = await supabase
         .from("lecture_notes")
@@ -198,7 +213,7 @@ export function useLectureNotes(courseId?: string) {
           uploaded_by: user.id,
           uploaded_by_display: displayName,
           file_path: filePath,
-          title,
+          title: finalTitle,
           file_size: file.size,
           material_type: materialType,
           level: courseData?.level ?? 100,
