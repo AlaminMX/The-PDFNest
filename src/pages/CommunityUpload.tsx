@@ -26,7 +26,6 @@ const LEVELS = [
   { value: 200, label: "200 Level" },
   { value: 300, label: "300 Level" },
   { value: 400, label: "400 Level" },
-  { value: 500, label: "500 Level" },
 ];
 
 const SEMESTERS = [
@@ -280,7 +279,16 @@ function CommunityUploadContent() {
         .from("school_pdfs")
         .upload(filePath, uploadFile);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        const isNetworkError = storageError.message?.includes("network") ||
+          storageError.message?.includes("fetch") ||
+          storageError.message?.includes("timeout") ||
+          storageError.message?.includes("Failed to fetch");
+        throw new Error(isNetworkError
+          ? "Upload failed — check your internet connection and try again."
+          : storageError.message
+        );
+      }
 
       // Insert community_uploads record
       const { error: insertError } = await supabase
@@ -352,7 +360,16 @@ function CommunityUploadContent() {
       const { error: storageError } = await supabase.storage
         .from("school_pdfs")
         .upload(filePath, uploadFile);
-      if (storageError) throw storageError;
+      if (storageError) {
+        const isNetworkError = storageError.message?.includes("network") ||
+          storageError.message?.includes("fetch") ||
+          storageError.message?.includes("timeout") ||
+          storageError.message?.includes("Failed to fetch");
+        throw new Error(isNetworkError
+          ? "Upload failed — check your internet connection and try again."
+          : storageError.message
+        );
+      }
 
       const { error: insertError } = await supabase
         .from("community_uploads")
