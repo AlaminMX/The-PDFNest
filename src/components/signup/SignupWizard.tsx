@@ -137,25 +137,30 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
 
   const handleGoogleSignup = async () => {
     if (loading) return;
-
     setLoading(true);
     try {
+      // Persist any wizard-collected defaults so ensureGoogleProfile in Auth.tsx
+      // can apply them after the OAuth redirect back to /auth.
       localStorage.setItem("pendingGoogleSignupDefaults", JSON.stringify({
         nickname: data.nickname?.trim() || data.fullName.trim() || "",
         preferredTheme: data.preferredTheme || "system",
       }));
 
-      const { lovable } = await import("@/integrations/lovable/index");
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+          queryParams: { access_type: "offline", prompt: "select_account" },
+        },
       });
-      if (result?.error) throw result.error;
-      toast.success("Redirecting to Google...");
+      if (error) throw error;
+      // Browser will redirect to Google — nothing more to do here
     } catch (error: any) {
+      localStorage.removeItem("pendingGoogleSignupDefaults");
       if (isGoogleProviderDisabled(error?.message)) {
-        toast.error("Google sign-in is misconfigured in Supabase (provider disabled or missing OAuth secret). Update Google provider settings.");
+        toast.error("Google sign-in is not enabled. Please use email/password.");
       } else {
-        toast.error(error.message || "Unable to continue with Google");
+        toast.error(error.message || "Could not start Google sign-in.");
       }
       setLoading(false);
     }
