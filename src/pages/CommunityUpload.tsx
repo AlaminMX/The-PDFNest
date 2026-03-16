@@ -788,7 +788,17 @@ function CommunityUploadContent() {
                           </Button>
                           <Button
                             size="sm" variant="ghost" className="h-9"
-                            onClick={() => { setCreatingNewCourse(false); setNewCourseCode(""); setNewCourseName(""); setNewCourseId(""); setNewCourseLabel(""); }}
+                            onClick={async () => {
+                              // If a pending course was created but user cancels, remove it
+                              if (newCourseId) {
+                                await supabase.from("courses").delete().eq("id", newCourseId).eq("status", "pending" as any);
+                              }
+                              setCreatingNewCourse(false);
+                              setNewCourseCode("");
+                              setNewCourseName("");
+                              setNewCourseId("");
+                              setNewCourseLabel("");
+                            }}
                           >
                             Cancel
                           </Button>
