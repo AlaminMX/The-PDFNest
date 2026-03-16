@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -16,7 +15,7 @@ import { ContributorStats } from "@/components/ContributorStats";
 import { useDepartments } from "@/hooks/useDepartments";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, FileText, HardDrive, Calendar, Clock,
   Folder, Edit2, Building2, Check, ChevronRight,
@@ -89,7 +88,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function UserProfile() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [savingDept, setSavingDept] = useState(false);
