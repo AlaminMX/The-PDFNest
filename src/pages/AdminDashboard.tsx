@@ -152,6 +152,20 @@ export default function AdminDashboard() {
     }
   };
 
+  // Realtime: update badge whenever community_uploads changes
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin_pending_uploads")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "community_uploads",
+      }, () => { fetchPendingCount(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
+
   const fetchAllUsers = async () => {
     try {
       // Fetch ALL profiles with department
