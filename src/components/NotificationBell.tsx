@@ -1,46 +1,57 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function NotificationBell() {
   const [unread, setUnread] = useState(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    let userId: string | null = null;
+    let mounted = true;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      userId = user.id;
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !mounted) return;
 
-      // Initial fetch
-      supabase
+      // Initial count
+      const { count } = await supabase
         .from("user_notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("is_read", false)
-        .then(({ count }) => setUnread(count || 0));
+        .eq("is_read", false);
+      if (mounted) setUnread(count || 0);
 
-      // Realtime subscription
-      const channel = supabase
+      // Realtime
+      const refreshCount = async () => {
+        const { count: c } = await supabase
+          .from("user_notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("is_read", false);
+        if (mounted) setUnread(c || 0);
+      };
+
+      channelRef.current = supabase
         .channel(`bell:${user.id}`)
         .on("postgres_changes", {
           event: "*",
           schema: "public",
           table: "user_notifications",
           filter: `user_id=eq.${user.id}`,
-        }, () => {
-          supabase
-            .from("user_notifications")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .eq("is_read", false)
-            .then(({ count }) => setUnread(count || 0));
-        })
+        }, refreshCount)
         .subscribe();
+    };
 
-      return () => { supabase.removeChannel(channel); };
-    });
+    init();
+
+    return () => {
+      mounted = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, []);
 
   return (
