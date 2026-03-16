@@ -56,8 +56,8 @@ const defaultFormData: BannerFormData = {
   banner_type: "inline",
   link_url: "",
   link_text: "",
-  gradient_from: "blue-600",
-  gradient_to: "indigo-600",
+  gradient_from: "#2563eb",
+  gradient_to: "#4f46e5",
   is_active: true,
   show_profile_dot: false,
   show_on_profile: false,
@@ -405,23 +405,50 @@ export default function AdminBanners() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gradient_from">Gradient From</Label>
-                <Input
-                  id="gradient_from"
-                  value={formData.gradient_from}
-                  onChange={(e) => setFormData({ ...formData, gradient_from: e.target.value })}
-                  placeholder="blue-600"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={formData.gradient_from.startsWith("#") ? formData.gradient_from : "#3b82f6"}
+                    onChange={(e) => setFormData({ ...formData, gradient_from: e.target.value })}
+                    className="h-10 w-12 rounded border border-input cursor-pointer p-0.5"
+                  />
+                  <Input
+                    id="gradient_from"
+                    value={formData.gradient_from}
+                    onChange={(e) => setFormData({ ...formData, gradient_from: e.target.value })}
+                    placeholder="#3b82f6 or blue-600"
+                    className="flex-1"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="gradient_to">Gradient To</Label>
-                <Input
-                  id="gradient_to"
-                  value={formData.gradient_to}
-                  onChange={(e) => setFormData({ ...formData, gradient_to: e.target.value })}
-                  placeholder="indigo-600"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={formData.gradient_to.startsWith("#") ? formData.gradient_to : "#6366f1"}
+                    onChange={(e) => setFormData({ ...formData, gradient_to: e.target.value })}
+                    className="h-10 w-12 rounded border border-input cursor-pointer p-0.5"
+                  />
+                  <Input
+                    id="gradient_to"
+                    value={formData.gradient_to}
+                    onChange={(e) => setFormData({ ...formData, gradient_to: e.target.value })}
+                    placeholder="#6366f1 or indigo-600"
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
+            {/* Live preview */}
+            {(formData.gradient_from || formData.gradient_to) && (
+              <div
+                className="h-10 rounded-lg border"
+                style={{
+                  background: `linear-gradient(to right, ${formData.gradient_from || "#3b82f6"}, ${formData.gradient_to || "#6366f1"})`,
+                }}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
