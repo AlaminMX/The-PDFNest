@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activityLogger";
 
 export interface CommunityUpload {
   id: string;
@@ -126,6 +127,8 @@ export function useCommunityUploads({
       p_note: note || null,
     });
     if (error) throw error;
+    const approved = uploads.find(u => u.id === uploadId);
+    logActivity("upload_approved", { title: approved?.title || uploadId });
     await fetchUploads();
   };
 
@@ -140,6 +143,8 @@ export function useCommunityUploads({
       p_note: note || null,
     });
     if (error) throw error;
+    const rejected = uploads.find(u => u.id === uploadId);
+    logActivity("upload_rejected", { title: rejected?.title || uploadId });
     await fetchUploads();
   };
 
