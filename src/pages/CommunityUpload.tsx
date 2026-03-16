@@ -334,7 +334,8 @@ function CommunityUploadContent() {
 
   const handleSubmitForce = async () => {
     const uploadFile = convertedFile || file;
-    if (!uploadFile || !selectedCourseId || !title.trim()) return;
+    const effectiveCourseId = selectedCourseId || newCourseId;
+    if (!uploadFile || !effectiveCourseId || !title.trim()) return;
 
     setSubmitting(true);
     try {
