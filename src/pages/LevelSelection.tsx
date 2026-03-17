@@ -8,13 +8,14 @@ import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { useState, useEffect } from "react";
 
-const ALL_LEVELS = [100, 200, 300, 400];
+const ALL_LEVELS = [100, 200, 300, 400, 500];
 
 const LEVEL_LABELS: Record<number, string> = {
   100: "100 Level",
   200: "200 Level",
   300: "300 Level",
   400: "400 Level",
+  500: "500 Level",
 };
 
 const LEVEL_ICONS: Record<number, string> = {
@@ -22,6 +23,7 @@ const LEVEL_ICONS: Record<number, string> = {
   200: "📗",
   300: "📘",
   400: "📙",
+  500: "🏆",
 };
 
 function LevelSelectionContent() {
