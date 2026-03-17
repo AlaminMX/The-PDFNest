@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, BookOpen, Volume2, Languages, MessageSquare, Sparkles, Lock, ArrowLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useSession } from "@/hooks/useSession";
 import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { FilePicker } from "@/components/FilePicker";
@@ -70,6 +71,7 @@ export default function AIFeatures() {
 
   const handleFeatureClick = (featureId: AIModalType) => {
     if (!user) {
+      sessionStorage.setItem("redirectAfterLogin", "/ai-features");
       navigate("/auth");
       return;
     }
@@ -108,7 +110,7 @@ export default function AIFeatures() {
           <div className="flex-1">
             <h1 className="text-lg font-semibold">AI Features</h1>
           </div>
-          <ThemeToggle />
+          <NotificationBell /><ThemeToggle />
         </div>
       </header>
 
