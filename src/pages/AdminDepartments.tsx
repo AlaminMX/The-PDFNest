@@ -392,7 +392,6 @@ export default function AdminDepartments() {
         title="Department Management"
         subtitle="Create, edit, delete, and reorder departments"
         showBack
-        backTo="/admin"
         icon={<Building2 className="h-6 w-6 text-primary" />}
       />
 
