@@ -1,816 +1,675 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useDepartments } from "@/hooks/useDepartments";
-import { useDepartmentCategories } from "@/hooks/useDepartmentCategories";
-import { useFaculties } from "@/hooks/useFaculties";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { 
+  Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
+  Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
+  Menu, X, FolderTree, ListOrdered, Inbox, Moon, ShoppingBag
+} from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
-import { LoadingState } from "@/components/LoadingState";
-import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
-import { Reorder, useDragControls } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useDepartments } from "@/hooks/useDepartments";
+import { cn } from "@/lib/utils";
 
-interface EditingDepartment {
+interface UserData {
   id: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  is_visible: boolean;
-  category_id: string | null;
-  faculty_id: string | null;
+  email: string;
+  fullName: string | null;
+  displayName: string;
+  pdfCount: number;
+  totalStorage: number;
+  createdAt: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  nickname: string | null;
+  preferredTheme: string | null;
+  usageReason: string | null;
+  dateOfBirth: string | null;
+  phoneNumber: string | null;
 }
 
-interface NewDepartment {
-  name: string;
-  color: string;
-  icon: string;
-  category_id: string;
-  faculty_id: string;
+type SortField = "name" | "storage" | "pdfCount" | "createdAt" | "department";
+type SortOrder = "asc" | "desc";
+type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload";
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-interface DepartmentItemProps {
-  dept: any;
-  index: number;
-  onEdit: (dept: any) => void;
-  onDelete: (dept: any) => void;
-  onToggleVisibility: (dept: any) => void;
-  categoryName?: string;
+function getDisplayName(email: string, fullName: string | null): string {
+  if (fullName && fullName.trim()) {
+    return fullName;
+  }
+  return email.split('@')[0];
 }
 
-function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, categoryName }: DepartmentItemProps) {
-  const navigate = useNavigate();
-  const dragControls = useDragControls();
-  const styles = getDepartmentStyles(dept.color, index);
-  const icon = getDepartmentIcon(dept.icon, dept.name);
-  const iconGlow = getIconGlowStyles(styles.hsl);
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+const sidebarItems = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+  { id: "faculties", label: "Faculties", icon: Building2, path: "/admin/faculties" },
+  { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
+  { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
+  { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
+  { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
+  { id: "sessions", label: "Sessions & Security", icon: Clock, path: "/admin/sessions" },
+  { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
+  { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
+];
+
+function RamadanToggleControl() {
+  const { settings, updateSetting } = useAppSettings();
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggle = async (checked: boolean) => {
+    setToggling(true);
+    const success = await updateSetting("ramadan_theme_enabled", checked ? "true" : "false");
+    if (success) {
+      toast.success(checked ? "Ramadan theme enabled" : "Ramadan theme disabled");
+    } else {
+      toast.error("Failed to update setting");
+    }
+    setToggling(false);
+  };
 
   return (
-    <Reorder.Item
-      value={dept}
-      id={dept.id}
-      dragListener={false}
-      dragControls={dragControls}
-      className="list-none"
-    >
-      <Card 
-        className={`overflow-hidden transition-all hover:shadow-lg ${!dept.is_visible ? 'opacity-60' : ''}`}
-        style={{ borderColor: `${styles.cssHsl}20` }}
-      >
-        <div 
-          className="p-4"
-          style={{ background: styles.bgLight }}
-        >
-          <div className="flex items-center gap-4">
-            {/* Drag Handle */}
-            <div
-              className="cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-white/10 transition-colors"
-              onPointerDown={(e) => dragControls.start(e)}
-            >
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            </div>
-
-            {/* Icon Preview */}
-            <div
-              className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: styles.accentBg,
-                boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
-              }}
-            >
-              <span
-                className="text-3xl"
-                style={{
-                  filter: iconGlow.filter,
-                  textShadow: iconGlow.textShadow,
-                }}
-              >
-                {icon}
-              </span>
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-lg text-white">
-                  {dept.name}
-                </h3>
-                {!dept.is_visible && (
-                  <span className="text-xs bg-muted/30 text-muted-foreground px-2 py-0.5 rounded">
-                    Hidden
-                  </span>
-                )}
-                {categoryName && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <Tag className="w-3 h-3" />
-                    {categoryName}
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Palette className="w-3 h-3" />
-                  {dept.color || "Auto"}
-                </span>
-                <span>•</span>
-                <span>Icon: {dept.icon || "Auto"}</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onToggleVisibility(dept)}
-                title={dept.is_visible ? "Hide from users" : "Show to users"}
-              >
-                {dept.is_visible ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(dept)}
-                className="gap-1.5"
-              >
-                <Edit className="h-3.5 w-3.5" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/admin/departments/${dept.id}/levels`)}
-                className="gap-1.5"
-              >
-                <GraduationCap className="h-3.5 w-3.5" />
-                Levels
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onDelete(dept)}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
-    </Reorder.Item>
+    <div className="flex items-center justify-between gap-2 px-1 py-2">
+      <div className="flex items-center gap-2">
+        <Moon className="h-4 w-4 text-muted-foreground" />
+        <Label className="text-xs">Ramadan Theme</Label>
+      </div>
+      <Switch
+        checked={settings.ramadan_theme_enabled}
+        onCheckedChange={handleToggle}
+        disabled={toggling}
+      />
+    </div>
   );
 }
 
-export default function AdminDepartments() {
+export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
-  const { departments, loading: deptLoading, refresh: refreshDepartments } = useDepartments();
-  const { categories } = useDepartmentCategories();
-  const { faculties, refresh: refreshFaculties } = useFaculties();
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pendingUploadsCount, setPendingUploadsCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [totalPDFs, setTotalPDFs] = useState(0);
+  const [totalStorage, setTotalStorage] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
-  const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
-  const [creating, setCreating] = useState(false);
-  const [deletingDept, setDeletingDept] = useState<any | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [orderedDepts, setOrderedDepts] = useState<any[]>([]);
+  // Filter and sort states
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const { departments } = useDepartments();
 
   useEffect(() => {
-    if (!authLoading && !adminLoading && !isAdmin) {
+    if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
       navigate("/dashboard");
     }
-  }, [isAdmin, authLoading, adminLoading, navigate]);
+  }, [isAdmin, adminLoading, navigate]);
 
-  // Sync ordered departments with fetched departments
   useEffect(() => {
-    setOrderedDepts(departments);
-  }, [departments]);
+    if (isAdmin) {
+      fetchAllUsers();
+      fetchPendingCount();
+    }
+  }, [isAdmin]);
 
-  const handleEdit = (dept: any) => {
-    setEditingDept({
-      id: dept.id,
-      name: dept.name,
-      color: dept.color || "",
-      icon: dept.icon || "",
-      is_visible: dept.is_visible !== false,
-      category_id: dept.category_id || null,
-      faculty_id: dept.faculty_id || null,
-    });
-  };
-
-  const handleToggleVisibility = async (dept: any) => {
+  const fetchPendingCount = async () => {
     try {
-      const { error } = await supabase
-        .from("departments")
-        .update({ is_visible: !dept.is_visible })
-        .eq("id", dept.id);
-
-      if (error) throw error;
-      toast.success(dept.is_visible ? "Department hidden from users" : "Department visible to users");
-      refreshDepartments();
-    } catch (error: any) {
-      console.error("Error toggling visibility:", error);
-      toast.error(error.message || "Failed to update visibility");
+      const { count } = await supabase
+        .from("community_uploads")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      setPendingUploadsCount(count || 0);
+    } catch {
+      // non-critical
     }
   };
 
-  const handleSave = async () => {
-    if (!editingDept) return;
-    
-    if (!editingDept.name.trim()) {
-      toast.error("Department name is required");
-      return;
-    }
+  // Realtime: update badge whenever community_uploads changes
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin_pending_uploads")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "community_uploads",
+      }, () => { fetchPendingCount(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
 
-    setSaving(true);
+  const fetchAllUsers = async () => {
     try {
-      const { error } = await supabase
-        .from("departments")
-        .update({
-          name: editingDept.name.trim(),
-          color: editingDept.color?.trim() || null,
-          icon: editingDept.icon?.trim() || null,
-          is_visible: editingDept.is_visible,
-          category_id: editingDept.category_id || null,
-          faculty_id: editingDept.faculty_id || null,
-        })
-        .eq("id", editingDept.id);
+      // Fetch ALL profiles with department
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select(`
+          id, 
+          email, 
+          full_name, 
+          nickname,
+          preferred_theme,
+          usage_reason,
+          date_of_birth,
+          phone_number,
+          created_at,
+          department_id,
+          departments (
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      toast.success("Department updated successfully");
-      setEditingDept(null);
-      refreshDepartments();
-    } catch (error: any) {
-      console.error("Error updating department:", error);
-      toast.error(error.message || "Failed to update department");
+      // Fetch ALL PDF files
+      const { data: pdfData, error: pdfError } = await supabase
+        .from("pdf_files")
+        .select("id, user_id, file_size");
+
+      if (pdfError) throw pdfError;
+
+      // Map PDFs by user_id
+      const pdfsByUser = new Map<string, { count: number; storage: number }>();
+      let totalPdfCount = 0;
+      let totalStorageBytes = 0;
+
+      pdfData?.forEach(pdf => {
+        totalPdfCount++;
+        totalStorageBytes += pdf.file_size || 0;
+        
+        if (!pdfsByUser.has(pdf.user_id)) {
+          pdfsByUser.set(pdf.user_id, { count: 0, storage: 0 });
+        }
+        const userData = pdfsByUser.get(pdf.user_id)!;
+        userData.count++;
+        userData.storage += pdf.file_size || 0;
+      });
+
+      setTotalPDFs(totalPdfCount);
+      setTotalStorage(totalStorageBytes);
+
+      // Build user list
+      const userList: UserData[] = (profilesData || []).map(profile => {
+        const pdfStats = pdfsByUser.get(profile.id) || { count: 0, storage: 0 };
+        return {
+          id: profile.id,
+          email: profile.email || "Unknown",
+          fullName: profile.full_name,
+          displayName: getDisplayName(profile.email || "Unknown", profile.full_name),
+          pdfCount: pdfStats.count,
+          totalStorage: pdfStats.storage,
+          createdAt: profile.created_at,
+          departmentId: profile.department_id,
+          departmentName: (profile as any).departments?.name || null,
+          nickname: profile.nickname || null,
+          preferredTheme: profile.preferred_theme || null,
+          usageReason: profile.usage_reason || null,
+          dateOfBirth: (profile as any).date_of_birth || null,
+          phoneNumber: profile.phone_number || null,
+        };
+      });
+
+      setUsers(userList);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
-  const handleCreate = async () => {
-    if (!newDept.name.trim()) {
-      toast.error("Department name is required");
-      return;
-    }
+  // Filtered and sorted users - FIXED: proper department filtering
+  const filteredAndSortedUsers = useMemo(() => {
+    // First apply search filter
+    let filtered = users.filter(user =>
+      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    setCreating(true);
-    try {
-      const slug = generateSlug(newDept.name);
-      
-      // Get the next display order
-      const maxOrder = orderedDepts.reduce((max, d) => Math.max(max, d.display_order || 0), 0);
-      
-      const { error } = await supabase
-        .from("departments")
-        .insert({
-          name: newDept.name.trim(),
-          slug: slug,
-          color: newDept.color?.trim() || null,
-          icon: newDept.icon?.trim() || null,
-          display_order: maxOrder + 1,
-          is_visible: true,
-          category_id: newDept.category_id?.trim() || null,
-          faculty_id: newDept.faculty_id?.trim() || null,
-        });
-
-      if (error) throw error;
-
-      toast.success("Department created successfully");
-      setShowCreateDialog(false);
-      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
-      refreshDepartments();
-    } catch (error: any) {
-      console.error("Error creating department:", error);
-      toast.error(error.message || "Failed to create department");
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deletingDept) return;
-
-    setDeleting(true);
-    try {
-      const { error } = await supabase
-        .from("departments")
-        .delete()
-        .eq("id", deletingDept.id);
-
-      if (error) throw error;
-
-      toast.success("Department deleted successfully");
-      setDeletingDept(null);
-      refreshDepartments();
-    } catch (error: any) {
-      console.error("Error deleting department:", error);
-      toast.error(error.message || "Failed to delete department");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleReorder = async (newOrder: any[]) => {
-    setOrderedDepts(newOrder);
-    
-    // Update display_order in database for all reordered items
-    try {
-      const updates = newOrder.map((dept, index) => ({
-        id: dept.id,
-        display_order: index + 1,
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from("departments")
-          .update({ display_order: update.display_order })
-          .eq("id", update.id);
+    // Apply department filter - FIXED: proper logic
+    if (departmentFilter !== "all") {
+      if (departmentFilter === "none") {
+        filtered = filtered.filter(user => !user.departmentId);
+      } else {
+        filtered = filtered.filter(user => user.departmentId === departmentFilter);
       }
-      
-      toast.success("Department order saved");
-    } catch (error: any) {
-      console.error("Error updating order:", error);
-      toast.error("Failed to save order");
-      // Revert on error
-      refreshDepartments();
     }
+
+    // Apply additional filters
+    switch (filterType) {
+      case "withPdfs":
+        filtered = filtered.filter(user => user.pdfCount > 0);
+        break;
+      case "noPdfs":
+        filtered = filtered.filter(user => user.pdfCount === 0);
+        break;
+      case "over100MB":
+        filtered = filtered.filter(user => user.totalStorage > 100 * 1024 * 1024);
+        break;
+      case "over1GB":
+        filtered = filtered.filter(user => user.totalStorage > 1024 * 1024 * 1024);
+        break;
+      case "recentUpload":
+        // Users who joined in the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        filtered = filtered.filter(user => new Date(user.createdAt) >= sevenDaysAgo);
+        break;
+    }
+
+    // Sort
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "name":
+          comparison = a.displayName.localeCompare(b.displayName);
+          break;
+        case "storage":
+          comparison = a.totalStorage - b.totalStorage;
+          break;
+        case "pdfCount":
+          comparison = a.pdfCount - b.pdfCount;
+          break;
+        case "createdAt":
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "department":
+          comparison = (a.departmentName || "zzz").localeCompare(b.departmentName || "zzz");
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [users, searchQuery, sortField, sortOrder, filterType, departmentFilter]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === "asc" ? "desc" : "asc");
   };
 
-  if (authLoading || adminLoading || !isAdmin) {
-    return <LoadingState message="Verifying access..." />;
+  if (adminLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
   }
 
-  // Preview styles for editing
-  const previewStyles = editingDept 
-    ? getDepartmentStyles(editingDept.color, 0)
-    : null;
-  const previewIcon = editingDept 
-    ? getDepartmentIcon(editingDept.icon, editingDept.name)
-    : null;
-  const previewGlow = previewStyles 
-    ? getIconGlowStyles(previewStyles.hsl)
-    : null;
+  if (!isAdmin) {
+    return null;
+  }
 
-  // Preview styles for creating
-  const createPreviewStyles = getDepartmentStyles(newDept.color || null, orderedDepts.length);
-  const createPreviewIcon = getDepartmentIcon(newDept.icon || null, newDept.name || "New Department");
-  const createPreviewGlow = getIconGlowStyles(createPreviewStyles.hsl);
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Back button */}
+      <div className="p-4 border-b">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2" 
+          onClick={() => navigate("/dashboard")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to App
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1">
+        {sidebarItems.map((item) => (
+          <Button
+            key={item.id}
+            variant={item.path === "/admin" ? "secondary" : "ghost"}
+            className="w-full justify-start gap-2"
+            onClick={() => {
+              navigate(item.path);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <item.icon className="h-4 w-4" />
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.id === "uploads" && pendingUploadsCount > 0 && (
+              <span className="ml-auto min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                {pendingUploadsCount > 99 ? "99+" : pendingUploadsCount}
+              </span>
+            )}
+          </Button>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t space-y-2">
+        <RamadanToggleControl />
+        <ThemeToggle />
+        <Button 
+          variant="outline" 
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive" 
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title="Department Management"
-        subtitle="Create, edit, delete, and reorder departments"
-        showBack
-        backTo="/admin"
-        icon={<Building2 className="h-6 w-6 text-primary" />}
-      />
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <aside className={cn(
+        "hidden md:flex flex-col border-r bg-card transition-all duration-300",
+        sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+      )}>
+        <SidebarContent />
+      </aside>
 
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-        {/* Create Button */}
-        <div className="flex justify-center">
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Department
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 md:hidden",
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="font-semibold">Admin Menu</span>
+          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
+            <X className="h-4 w-4" />
           </Button>
         </div>
+        <SidebarContent />
+      </aside>
 
-        {deptLoading ? (
-          <div className="text-center py-12">
-            <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-sm text-muted-foreground">Loading departments...</p>
-          </div>
-        ) : orderedDepts.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No departments found</p>
-              <Button onClick={() => setShowCreateDialog(true)} className="mt-4 gap-2">
-                <Plus className="h-4 w-4" />
-                Create First Department
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="max-w-2xl mx-auto">
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Drag and drop to reorder departments. Use the eye icon to show/hide from users.
-            </p>
-            <Reorder.Group 
-              axis="y" 
-              values={orderedDepts} 
-              onReorder={handleReorder}
-              className="space-y-4"
-            >
-              {orderedDepts.map((dept, index) => {
-                const category = categories.find(c => c.id === dept.category_id);
-                return (
-                  <DepartmentItem
-                    key={dept.id}
-                    dept={dept}
-                    index={index}
-                    onEdit={handleEdit}
-                    onDelete={setDeletingDept}
-                    categoryName={category?.name}
-                    onToggleVisibility={handleToggleVisibility}
-                  />
-                );
-              })}
-            </Reorder.Group>
-          </div>
-        )}
-      </main>
-
-      {/* Create Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Create Department
-            </DialogTitle>
-            <DialogDescription>
-              Add a new department. It will appear in the AFIT PDFs section.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 py-4">
-            {/* Live Preview */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                Live Preview
-              </Label>
-              <div
-                className="p-4 rounded-xl"
-                style={{ background: createPreviewStyles.bgLight }}
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="px-4 md:px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden"
+                onClick={() => setMobileSidebarOpen(true)}
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: createPreviewStyles.accentBg,
-                      boxShadow: `0 4px 20px ${createPreviewStyles.glowColor}, 0 0 40px ${createPreviewStyles.glowIntense}`,
-                    }}
-                  >
-                    <span
-                      className="text-2xl"
-                      style={{
-                        filter: createPreviewGlow.filter,
-                        textShadow: createPreviewGlow.textShadow,
-                      }}
-                    >
-                      {createPreviewIcon}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-white">
-                      {newDept.name || "Department Name"}
-                    </h4>
-                    <p className="text-xs text-muted-foreground">View Courses</p>
-                  </div>
-                </div>
+                <Menu className="h-5 w-5" />
+              </Button>
+              <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="h-10 w-10 rounded-lg object-contain" />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
               </div>
             </div>
-
-            {/* Form Fields */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="newDeptName">Department Name *</Label>
-                <Input
-                  id="newDeptName"
-                  value={newDept.name}
-                  onChange={(e) => setNewDept({ ...newDept, name: e.target.value })}
-                  placeholder="e.g., Computer Science"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newDeptColor">
-                  Color
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (name or code, e.g., "emerald", "#10B981")
-                  </span>
-                </Label>
-                <Input
-                  id="newDeptColor"
-                  value={newDept.color}
-                  onChange={(e) => setNewDept({ ...newDept, color: e.target.value })}
-                  placeholder="Leave empty for auto-generated"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newDeptIcon">
-                  Icon
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (emoji, e.g., 💻, 🔒)
-                  </span>
-                </Label>
-                <Input
-                  id="newDeptIcon"
-                  value={newDept.icon}
-                  onChange={(e) => setNewDept({ ...newDept, icon: e.target.value })}
-                  placeholder="Leave empty for auto-assigned"
-                />
-              </div>
-
-              {/* Category Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="newDeptCategory">
-                  Category
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (for signup page grouping)
-                  </span>
-                </Label>
-                <Select
-                  value={newDept.category_id}
-                  onValueChange={(value) => setNewDept({ ...newDept, category_id: value === "none" ? "" : value })}
-                >
-                  <SelectTrigger id="newDeptCategory">
-                    <SelectValue placeholder="No category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No category</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Faculty Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="newDeptFaculty">
-                  Faculty
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (which faculty this department belongs to)
-                  </span>
-                </Label>
-                <Select
-                  value={newDept.faculty_id}
-                  onValueChange={(value) => setNewDept({ ...newDept, faculty_id: value === "none" ? "" : value })}
-                >
-                  <SelectTrigger id="newDeptFaculty">
-                    <SelectValue placeholder="No faculty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No faculty</SelectItem>
-                    {faculties.map((fac) => (
-                      <SelectItem key={fac.id} value={fac.id}>
-                        {fac.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="hidden md:flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+        </header>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating ? "Creating..." : "Create Department"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={!!editingDept} onOpenChange={() => setEditingDept(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Edit Department
-            </DialogTitle>
-            <DialogDescription>
-              Update department name, color, icon, and visibility.
-            </DialogDescription>
-          </DialogHeader>
-
-          {editingDept && previewStyles && (
-            <div className="space-y-5 py-4">
-              {/* Live Preview */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Live Preview
-                </Label>
-                <div
-                  className="p-4 rounded-xl"
-                  style={{ background: previewStyles.bgLight }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: previewStyles.accentBg,
-                        boxShadow: `0 4px 20px ${previewStyles.glowColor}, 0 0 40px ${previewStyles.glowIntense}`,
-                      }}
-                    >
-                      <span
-                        className="text-2xl"
-                        style={{
-                          filter: previewGlow?.filter,
-                          textShadow: previewGlow?.textShadow,
-                        }}
-                      >
-                        {previewIcon}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-white">
-                        {editingDept.name || "Department Name"}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">View Courses</p>
-                    </div>
-                  </div>
+        <div className="p-4 md:p-6 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Users</p>
+                  <p className="text-2xl font-bold">{users.length}</p>
                 </div>
               </div>
-
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deptName">Department Name</Label>
-                  <Input
-                    id="deptName"
-                    value={editingDept.name}
-                    onChange={(e) => setEditingDept({ ...editingDept, name: e.target.value })}
-                    placeholder="e.g., Computer Science"
-                  />
+            </Card>
+            
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <FileText className="h-6 w-6 text-primary" />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="deptColor">
-                    Color
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (name or code, e.g., "emerald", "#10B981")
-                    </span>
-                  </Label>
-                  <Input
-                    id="deptColor"
-                    value={editingDept.color || ""}
-                    onChange={(e) => setEditingDept({ ...editingDept, color: e.target.value })}
-                    placeholder="Leave empty for auto-generated"
-                  />
+                <div>
+                  <p className="text-sm text-muted-foreground">Total PDFs</p>
+                  <p className="text-2xl font-bold">{totalPDFs}</p>
                 </div>
+              </div>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="deptIcon">
-                    Icon
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (emoji, e.g., 💻, 🔒)
-                    </span>
-                  </Label>
-                  <Input
-                    id="deptIcon"
-                    value={editingDept.icon || ""}
-                    onChange={(e) => setEditingDept({ ...editingDept, icon: e.target.value })}
-                    placeholder="Leave empty for auto-assigned"
-                  />
+            <Card className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <HardDrive className="h-6 w-6 text-primary" />
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Storage</p>
+                  <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
 
-                <div className="flex items-center justify-between pt-2">
-                  <Label htmlFor="deptVisible">Visible to users in signup/selection dropdowns</Label>
-                  <Switch
-                    id="deptVisible"
-                    checked={editingDept.is_visible}
-                    onCheckedChange={(checked) => setEditingDept({ ...editingDept, is_visible: checked })}
-                  />
-                </div>
+          {/* Search and Filters */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="storage">Storage Size</SelectItem>
+                    <SelectItem value="pdfCount">PDF Count</SelectItem>
+                    <SelectItem value="createdAt">Join Date</SelectItem>
+                    <SelectItem value="department">Department</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                {/* Category Selector */}
-                <div className="space-y-2 pt-2">
-                  <Label htmlFor="editDeptCategory">
-                    Category
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (for signup page grouping)
-                    </span>
-                  </Label>
-                  <Select
-                    value={editingDept.category_id || "none"}
-                    onValueChange={(value) => setEditingDept({ ...editingDept, category_id: value === "none" ? null : value })}
-                  >
-                    <SelectTrigger id="editDeptCategory">
-                      <SelectValue placeholder="No category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No category</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button variant="outline" size="icon" onClick={toggleSortOrder} title={sortOrder === "asc" ? "Ascending" : "Descending"}>
+                  <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
+                </Button>
 
-                {/* Faculty Selector */}
-                <div className="space-y-2 pt-2">
-                  <Label htmlFor="editDeptFaculty">
-                    Faculty
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (which faculty this department belongs to)
-                    </span>
-                  </Label>
-                  <Select
-                    value={editingDept.faculty_id || "none"}
-                    onValueChange={(value) => setEditingDept({ ...editingDept, faculty_id: value === "none" ? null : value })}
-                  >
-                    <SelectTrigger id="editDeptFaculty">
-                      <SelectValue placeholder="No faculty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No faculty</SelectItem>
-                      {faculties.map((fac) => (
-                        <SelectItem key={fac.id} value={fac.id}>
-                          {fac.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <Building2 className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="none">No Department</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.icon && <span className="mr-1">{dept.icon}</span>}
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
+                  <SelectTrigger className="w-[150px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="withPdfs">With PDFs</SelectItem>
+                    <SelectItem value="noPdfs">No PDFs</SelectItem>
+                    <SelectItem value="over100MB">Over 100MB</SelectItem>
+                    <SelectItem value="over1GB">Over 1GB</SelectItem>
+                    <SelectItem value="recentUpload">Recently Joined (7 days)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingDept(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* Active filters indicator */}
+            {(filterType !== "all" || searchQuery || departmentFilter !== "all") && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Active filters:</span>
+                {searchQuery && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
+                    Search: "{searchQuery}" ×
+                  </Badge>
+                )}
+                {departmentFilter !== "all" && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setDepartmentFilter("all")}>
+                    Dept: {departmentFilter === "none" ? "None" : departments.find(d => d.id === departmentFilter)?.name} ×
+                  </Badge>
+                )}
+                {filterType !== "all" && (
+                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setFilterType("all")}>
+                    {filterType === "withPdfs" && "With PDFs"}
+                    {filterType === "noPdfs" && "No PDFs"}
+                    {filterType === "over100MB" && "Over 100MB"}
+                    {filterType === "over1GB" && "Over 1GB"}
+                    {filterType === "recentUpload" && "Recently Joined"}
+                    {" ×"}
+                  </Badge>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  ({filteredAndSortedUsers.length} of {users.length} users)
+                </span>
+              </div>
+            )}
+          </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deletingDept} onOpenChange={() => setDeletingDept(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Department</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingDept?.name}"? This action cannot be undone.
-              <br /><br />
-              <span className="text-destructive font-medium">
-                Warning: This may affect courses and lecture notes associated with this department.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? "Deleting..." : "Delete Department"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <footer className="mt-auto py-6 border-t border-border/40">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            Made with love ❤️ by Nexel
-          </p>
+          {/* User List Table */}
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Department</TableHead>
+                  <TableHead className="hidden xl:table-cell">DOB</TableHead>
+                  <TableHead className="hidden xl:table-cell">Phone</TableHead>
+                  <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
+                  <TableHead className="hidden xl:table-cell">Joined</TableHead>
+                  <TableHead className="text-center">PDFs</TableHead>
+                  <TableHead className="text-right">Total Size</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAndSortedUsers.map((user, index) => (
+                    <TableRow 
+                      key={user.id} 
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/admin/user/${user.id}`)}
+                    >
+                      <TableCell className="font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {user.displayName}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {user.email}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {user.departmentName ? (
+                          <Badge variant="outline" className="font-normal">
+                            {user.departmentName}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not set</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.phoneNumber || "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">
+                        {formatDate(user.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={user.pdfCount > 0 ? "default" : "secondary"}>
+                          {user.pdfCount}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatBytes(user.totalStorage)}
+                      </TableCell>
+                      <TableCell>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
         </div>
-      </footer>
+
+        <footer className="py-6 border-t border-border/40">
+          <div className="px-4 md:px-6 text-center">
+            <p className="text-xs text-muted-foreground/60">
+              Made with love ❤️ by Nexel
+            </p>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
