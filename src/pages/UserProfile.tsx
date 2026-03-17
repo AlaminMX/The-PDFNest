@@ -105,7 +105,7 @@ export default function UserProfile() {
     queryKey: ["user-profile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate("/auth"); return null; }
+      if (!user) { sessionStorage.setItem("redirectAfterLogin", "/profile"); navigate("/auth"); return null; }
 
       const { data, error } = await supabase.rpc("get_user_profile_summary", { p_user_id: user.id });
       if (error) throw error;
