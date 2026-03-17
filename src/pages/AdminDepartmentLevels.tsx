@@ -15,11 +15,11 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 
-const ALL_LEVELS = [100, 200, 300, 400];
+const ALL_LEVELS = [100, 200, 300, 400, 500];
 
 const LEVEL_LABELS: Record<number, string> = {
   100: "100 Level", 200: "200 Level", 300: "300 Level",
-  400: "400 Level",
+  400: "400 Level", 500: "500 Level",
 };
 
 interface CourseEntry {
