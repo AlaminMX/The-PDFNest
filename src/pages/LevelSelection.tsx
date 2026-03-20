@@ -6,77 +6,79 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
-import { useState, useEffect } from "react";
-
-const ALL_LEVELS = [100, 200, 300, 400, 500];
-
-const LEVEL_LABELS: Record<number, string> = {
-  100: "100 Level",
-  200: "200 Level",
-  300: "300 Level",
-  400: "400 Level",
-  500: "500 Level",
-};
+import { useState, useEffect, useMemo } from "react";
+import { getDepartmentLevels, getLevelLabel } from "@/lib/departmentLevels";
 
 const LEVEL_ICONS: Record<number, string> = {
   100: "🌱",
   200: "📗",
   300: "📘",
   400: "📙",
-  500: "🏆",
+  500: "🎓",
 };
 
 function LevelSelectionContent() {
   const navigate = useNavigate();
   const { facultySlug, deptSlug } = useParams<{ facultySlug: string; deptSlug: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
+  const departmentLevels = useMemo(
+    () => getDepartmentLevels(currentDept?.name || deptSlug),
+    [currentDept?.name, deptSlug]
+  );
 
-  // Fetch which levels actually have courses for this department
   const [activeLevels, setActiveLevels] = useState<number[]>([]);
   const [levelCounts, setLevelCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentDept?.id) return;
+
     const run = async () => {
       setLoading(true);
       try {
-        // Direct REST fetch — no auth header needed, works for all users
         const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses?department_id=eq.${currentDept.id}&select=level`;
         const res = await fetch(url, {
           headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
         });
+
         const data = res.ok ? await res.json() : [];
         const counts: Record<number, number> = {};
+
         (data as any[]).forEach((row) => {
           counts[row.level] = (counts[row.level] || 0) + 1;
         });
+
         setLevelCounts(counts);
-        setActiveLevels(ALL_LEVELS.filter((l) => counts[l] > 0));
+        setActiveLevels(departmentLevels.filter((l) => counts[l] > 0));
       } catch {
-        // On error show all levels — DepartmentCourses will show empty state if needed
+        // DepartmentCourses will handle empty states
       } finally {
         setLoading(false);
       }
     };
+
     run();
-  }, [currentDept?.id]);
+  }, [currentDept?.id, departmentLevels]);
 
   if (!deptLoading && !currentDept) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center px-4"
+        >
           <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
             <BookOpen className="w-5 h-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground mb-4">Department not found</p>
-          <Button onClick={() => navigate("/afit-pdfs")} variant="outline" size="sm">Back to Browse</Button>
+          <Button onClick={() => navigate("/afit-pdfs")} variant="outline" size="sm">
+            Back to Browse
+          </Button>
         </motion.div>
       </div>
     );
   }
-
-  // Always show all 5 levels — empty ones show a 'coming soon' state
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -84,7 +86,8 @@ function LevelSelectionContent() {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost" size="icon"
+              variant="ghost"
+              size="icon"
               onClick={() => navigate(`/afit-pdfs/${facultySlug}`)}
               className="rounded-full h-9 w-9"
             >
@@ -97,12 +100,17 @@ function LevelSelectionContent() {
               <p className="text-xs text-muted-foreground">Select your level</p>
             </div>
           </div>
-          <NotificationBell /><ThemeToggle />
+          <NotificationBell />
+          <ThemeToggle />
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-lg">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 text-primary text-xs font-medium mb-3">
             <GraduationCap className="w-3.5 h-3.5" />
             Choose Level
@@ -115,14 +123,15 @@ function LevelSelectionContent() {
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-16 rounded-xl bg-muted/30 animate-pulse" />
+            {departmentLevels.map((level) => (
+              <div key={level} className="h-16 rounded-xl bg-muted/30 animate-pulse" />
             ))}
           </div>
         ) : (
           <div className="space-y-3">
-            {ALL_LEVELS.map((level, i) => {
+            {departmentLevels.map((level, i) => {
               const count = levelCounts[level] || 0;
+
               return (
                 <motion.div
                   key={level}
@@ -130,22 +139,31 @@ function LevelSelectionContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
                   className={count > 0 ? "cursor-pointer" : "cursor-default"}
-                  onClick={() => count > 0 && navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}`)}
+                  onClick={() =>
+                    count > 0 &&
+                    navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}`)
+                  }
                 >
-                  <div className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left ${
-                    count > 0
-                      ? "bg-muted/20 hover:bg-muted/40 border-border/30 hover:border-primary/30 group"
-                      : "bg-muted/10 border-border/20 opacity-60"
-                  }`}>
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform ${
-                      count > 0 ? "bg-primary/8 group-hover:scale-105" : "bg-muted/30"
-                    }`}>
+                  <div
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left ${
+                      count > 0
+                        ? "bg-muted/20 hover:bg-muted/40 border-border/30 hover:border-primary/30 group"
+                        : "bg-muted/10 border-border/20 opacity-60"
+                    }`}
+                  >
+                    <div
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform ${
+                        count > 0 ? "bg-primary/8 group-hover:scale-105" : "bg-muted/30"
+                      }`}
+                    >
                       {LEVEL_ICONS[level]}
                     </div>
+
                     <div className="flex-1 min-w-0">
                       <p className={`font-semibold text-sm ${count === 0 ? "text-muted-foreground" : ""}`}>
-                        {LEVEL_LABELS[level]}
+                        {getLevelLabel(level)}
                       </p>
+
                       {count > 0 ? (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {count} {count === 1 ? "course" : "courses"} available
@@ -156,10 +174,14 @@ function LevelSelectionContent() {
                         </p>
                       )}
                     </div>
-                    {count > 0
-                      ? <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
-                      : <span className="text-[10px] text-muted-foreground/40 shrink-0 font-medium tracking-wide uppercase">Soon</span>
-                    }
+
+                    {count > 0 ? (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40 shrink-0 font-medium tracking-wide uppercase">
+                        Soon
+                      </span>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -167,7 +189,6 @@ function LevelSelectionContent() {
           </div>
         )}
 
-        {/* Contribution nudge */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -177,10 +198,7 @@ function LevelSelectionContent() {
           <p className="text-xs text-muted-foreground">
             Missing materials for your level?{" "}
             <button
-              onClick={() => {
-              sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
-              navigate("/auth");
-            }}
+              onClick={() => navigate("/auth")}
               className="text-primary underline underline-offset-2"
             >
               Upload to help your department.
