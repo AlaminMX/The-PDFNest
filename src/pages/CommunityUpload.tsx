@@ -445,49 +445,110 @@ function CommunityUploadContent() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-24">
         <PageHeader title="Material Submitted" showBack backTo="/dashboard" />
-        <div className="max-w-lg mx-auto px-4 pt-8">
+
+        <div className="mx-auto w-full max-w-lg px-4 pt-6">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center space-y-6"
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.28 }}
+            className="space-y-4"
           >
-            <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-foreground">Submitted for Review</h2>
-              <p className="text-muted-foreground text-sm">
-                Your material has been submitted for review. It will appear once approved by the course rep or admin.
-              </p>
-            </div>
-            <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={() => {
-                setSubmitted(false);
-                setCurrentStep("faculty");
-                setSelectedFacultyId("");
-                setSelectedDepartmentId("");
-                setSelectedLevel(0);
-                setSelectedSemester("");
-                setSelectedCourseId("");
-                setFile(null);
-                setConvertedFile(null);
-                setTitle("");
-                setDescription("");
-                setMaterialType("lecture_note");
-              }}>
-                Upload Another
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/profile")}>
-                View My Submissions
-              </Button>
-              <Button onClick={() => navigate("/dashboard")}>
-                Go to Dashboard
-              </Button>
+            <div className="overflow-hidden rounded-3xl border border-border/50 bg-card shadow-sm">
+              <div className="bg-primary/[0.06] px-5 pt-8 pb-6 sm:px-6">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/12 ring-8 ring-primary/5">
+                  <CheckCircle className="h-8 w-8 text-primary" />
+                </div>
+
+                <div className="mt-5 text-center">
+                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary/80">
+                    Submission Complete
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold leading-tight text-foreground sm:text-[1.75rem]">
+                    Submitted for review
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                    Your material has been submitted successfully. It will show up on the platform once it is reviewed and approved by the course rep or admin.
+                  </p>
+                </div>
+              </div>
+
+              <CardContent className="space-y-4 px-5 py-5 sm:px-6">
+                <div className="grid gap-3">
+                  <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-muted/20 p-4">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">What happens next?</p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        Your submission will be checked before it becomes visible to other students.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-muted/20 p-4">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">Need to send another file?</p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        You can submit another material right away without leaving this flow.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Tip: keep titles clear and specific so approval is faster and students can find your material easily.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                  <Button
+                    className="h-11 w-full rounded-xl"
+                    onClick={() => {
+                      setSubmitted(false);
+                      setCurrentStep("faculty");
+                      setSelectedFacultyId("");
+                      setSelectedDepartmentId("");
+                      setSelectedLevel(0);
+                      setSelectedSemester("");
+                      setSelectedCourseId("");
+                      setFile(null);
+                      setConvertedFile(null);
+                      setTitle("");
+                      setDescription("");
+                      setMaterialType("lecture_note");
+                    }}
+                  >
+                    Upload Another
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full rounded-xl"
+                    onClick={() => navigate("/profile")}
+                  >
+                    View My Submissions
+                  </Button>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  className="h-11 w-full rounded-xl"
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Go to Dashboard
+                </Button>
+              </CardContent>
             </div>
           </motion.div>
         </div>
+
         <SmartBottomNav />
       </div>
     );
