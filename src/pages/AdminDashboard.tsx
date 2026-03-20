@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { 
-  Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter, 
+import {
+  Search, LogOut, Users, FileText, HardDrive, ChevronRight, ArrowUpDown, Filter,
   Activity, Building2, Megaphone, ArrowLeft, LayoutDashboard, UserCog, Clock,
-  Menu, X, FolderTree, ListOrdered, Inbox, Moon, ShoppingBag
+  Menu, X, Inbox, Moon, ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -44,18 +44,18 @@ type SortOrder = "asc" | "desc";
 type FilterType = "all" | "withPdfs" | "noPdfs" | "over100MB" | "over1GB" | "recentUpload";
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
 function getDisplayName(email: string, fullName: string | null): string {
   if (fullName && fullName.trim()) {
     return fullName;
   }
-  return email.split('@')[0];
+  return email.split("@")[0];
 }
 
 function formatDate(dateString: string): string {
@@ -119,8 +119,7 @@ export default function AdminDashboard() {
   const [totalStorage, setTotalStorage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  
-  // Filter and sort states
+
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterType, setFilterType] = useState<FilterType>("all");
@@ -153,64 +152,70 @@ export default function AdminDashboard() {
     }
   };
 
-  // Realtime: update badge whenever community_uploads changes
   useEffect(() => {
     if (!isAdmin) return;
     const channel = supabase
       .channel("admin_pending_uploads")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "community_uploads",
-      }, () => { fetchPendingCount(); })
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "community_uploads",
+        },
+        () => {
+          fetchPendingCount();
+        }
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isAdmin]);
 
   const fetchAllUsers = async () => {
     try {
-      // Fetch ALL profiles with department
-const { data: profilesData, error: profilesError } = await supabase
-  .from("profiles")
-  .select(`
-    id, 
-    email, 
-    full_name, 
-    nickname,
-    preferred_theme,
-    usage_reason,
-    date_of_birth,
-    phone_number,
-    created_at,
-    department_id,
-    level,
-    departments (
-      name
-    )
-  `)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          email,
+          full_name,
+          nickname,
+          preferred_theme,
+          usage_reason,
+          date_of_birth,
+          phone_number,
+          created_at,
+          department_id,
+          level,
+          departments (
+            name
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Fetch ALL PDF files
       const { data: pdfData, error: pdfError } = await supabase
         .from("pdf_files")
         .select("id, user_id, file_size");
 
       if (pdfError) throw pdfError;
 
-      // Map PDFs by user_id
       const pdfsByUser = new Map<string, { count: number; storage: number }>();
       let totalPdfCount = 0;
       let totalStorageBytes = 0;
 
-      pdfData?.forEach(pdf => {
+      pdfData?.forEach((pdf) => {
         totalPdfCount++;
         totalStorageBytes += pdf.file_size || 0;
-        
+
         if (!pdfsByUser.has(pdf.user_id)) {
           pdfsByUser.set(pdf.user_id, { count: 0, storage: 0 });
         }
+
         const userData = pdfsByUser.get(pdf.user_id)!;
         userData.count++;
         userData.storage += pdf.file_size || 0;
@@ -219,9 +224,9 @@ const { data: profilesData, error: profilesError } = await supabase
       setTotalPDFs(totalPdfCount);
       setTotalStorage(totalStorageBytes);
 
-      // Build user list
-      const userList: UserData[] = (profilesData || []).map(profile => {
+      const userList: UserData[] = (profilesData || []).map((profile) => {
         const pdfStats = pdfsByUser.get(profile.id) || { count: 0, storage: 0 };
+
         return {
           id: profile.id,
           email: profile.email || "Unknown",
@@ -232,6 +237,7 @@ const { data: profilesData, error: profilesError } = await supabase
           createdAt: profile.created_at,
           departmentId: profile.department_id,
           departmentName: (profile as any).departments?.name || null,
+          level: profile.level ?? null,
           nickname: profile.nickname || null,
           preferredTheme: profile.preferred_theme || null,
           usageReason: profile.usage_reason || null,
@@ -254,49 +260,45 @@ const { data: profilesData, error: profilesError } = await supabase
     navigate("/auth");
   };
 
-  // Filtered and sorted users - FIXED: proper department filtering
   const filteredAndSortedUsers = useMemo(() => {
-    // First apply search filter
-    let filtered = users.filter(user =>
-      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    let filtered = users.filter(
+      (user) =>
+        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Apply department filter - FIXED: proper logic
     if (departmentFilter !== "all") {
       if (departmentFilter === "none") {
-        filtered = filtered.filter(user => !user.departmentId);
+        filtered = filtered.filter((user) => !user.departmentId);
       } else {
-        filtered = filtered.filter(user => user.departmentId === departmentFilter);
+        filtered = filtered.filter((user) => user.departmentId === departmentFilter);
       }
     }
 
-    // Apply additional filters
     switch (filterType) {
       case "withPdfs":
-        filtered = filtered.filter(user => user.pdfCount > 0);
+        filtered = filtered.filter((user) => user.pdfCount > 0);
         break;
       case "noPdfs":
-        filtered = filtered.filter(user => user.pdfCount === 0);
+        filtered = filtered.filter((user) => user.pdfCount === 0);
         break;
       case "over100MB":
-        filtered = filtered.filter(user => user.totalStorage > 100 * 1024 * 1024);
+        filtered = filtered.filter((user) => user.totalStorage > 100 * 1024 * 1024);
         break;
       case "over1GB":
-        filtered = filtered.filter(user => user.totalStorage > 1024 * 1024 * 1024);
+        filtered = filtered.filter((user) => user.totalStorage > 1024 * 1024 * 1024);
         break;
-      case "recentUpload":
-        // Users who joined in the last 7 days
+      case "recentUpload": {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        filtered = filtered.filter(user => new Date(user.createdAt) >= sevenDaysAgo);
+        filtered = filtered.filter((user) => new Date(user.createdAt) >= sevenDaysAgo);
         break;
+      }
     }
 
-    // Sort
     return [...filtered].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortField) {
         case "name":
           comparison = a.displayName.localeCompare(b.displayName);
@@ -320,7 +322,7 @@ const { data: profilesData, error: profilesError } = await supabase
   }, [users, searchQuery, sortField, sortOrder, filterType, departmentFilter]);
 
   const toggleSortOrder = () => {
-    setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
   if (adminLoading || loading) {
@@ -337,11 +339,10 @@ const { data: profilesData, error: profilesError } = await supabase
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Back button */}
       <div className="p-4 border-b">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start gap-2" 
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2"
           onClick={() => navigate("/dashboard")}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -349,7 +350,6 @@ const { data: profilesData, error: profilesError } = await supabase
         </Button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
         {sidebarItems.map((item) => (
           <Button
@@ -372,13 +372,12 @@ const { data: profilesData, error: profilesError } = await supabase
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t space-y-2">
         <RamadanToggleControl />
         <ThemeToggle />
-        <Button 
-          variant="outline" 
-          className="w-full justify-start gap-2 text-destructive hover:text-destructive" 
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive"
           onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4" />
@@ -390,27 +389,28 @@ const { data: profilesData, error: profilesError } = await supabase
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <aside className={cn(
-        "hidden md:flex flex-col border-r bg-card transition-all duration-300",
-        sidebarOpen ? "w-64" : "w-0 overflow-hidden"
-      )}>
+      <aside
+        className={cn(
+          "hidden md:flex flex-col border-r bg-card transition-all duration-300",
+          sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+        )}
+      >
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Mobile Sidebar */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 md:hidden",
-        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 md:hidden",
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="flex items-center justify-between p-4 border-b">
           <span className="font-semibold">Admin Menu</span>
           <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
@@ -420,29 +420,31 @@ const { data: profilesData, error: profilesError } = await supabase
         <SidebarContent />
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Header */}
         <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="px-4 md:px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="md:hidden"
                 onClick={() => setMobileSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <img src="/pdfnest-logo.png" alt="PDFNest Logo" className="h-10 w-10 rounded-lg object-contain" />
+              <img
+                src="/pdfnest-logo.png"
+                alt="PDFNest Logo"
+                className="h-10 w-10 rounded-lg object-contain"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
                 <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
               </div>
             </div>
             <div className="hidden md:flex items-center gap-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
@@ -454,7 +456,6 @@ const { data: profilesData, error: profilesError } = await supabase
         </header>
 
         <div className="p-4 md:p-6 space-y-6">
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-6">
               <div className="flex items-center gap-4">
@@ -467,7 +468,7 @@ const { data: profilesData, error: profilesError } = await supabase
                 </div>
               </div>
             </Card>
-            
+
             <Card className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-primary/10">
@@ -493,7 +494,6 @@ const { data: profilesData, error: profilesError } = await supabase
             </Card>
           </div>
 
-          {/* Search and Filters */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 max-w-md">
@@ -505,7 +505,7 @@ const { data: profilesData, error: profilesError } = await supabase
                   className="pl-10"
                 />
               </div>
-              
+
               <div className="flex gap-2 flex-wrap">
                 <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
                   <SelectTrigger className="w-[140px]">
@@ -520,8 +520,15 @@ const { data: profilesData, error: profilesError } = await supabase
                   </SelectContent>
                 </Select>
 
-                <Button variant="outline" size="icon" onClick={toggleSortOrder} title={sortOrder === "asc" ? "Ascending" : "Descending"}>
-                  <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleSortOrder}
+                  title={sortOrder === "asc" ? "Ascending" : "Descending"}
+                >
+                  <ArrowUpDown
+                    className={`h-4 w-4 transition-transform ${sortOrder === "desc" ? "rotate-180" : ""}`}
+                  />
                 </Button>
 
                 <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
@@ -558,20 +565,26 @@ const { data: profilesData, error: profilesError } = await supabase
               </div>
             </div>
 
-            {/* Active filters indicator */}
             {(filterType !== "all" || searchQuery || departmentFilter !== "all") && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-muted-foreground">Active filters:</span>
+
                 {searchQuery && (
                   <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
                     Search: "{searchQuery}" ×
                   </Badge>
                 )}
+
                 {departmentFilter !== "all" && (
-                  <Badge variant="secondary" className="cursor-pointer" onClick={() => setDepartmentFilter("all")}>
-                    Dept: {departmentFilter === "none" ? "None" : departments.find(d => d.id === departmentFilter)?.name} ×
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => setDepartmentFilter("all")}
+                  >
+                    Dept: {departmentFilter === "none" ? "None" : departments.find((d) => d.id === departmentFilter)?.name} ×
                   </Badge>
                 )}
+
                 {filterType !== "all" && (
                   <Badge variant="secondary" className="cursor-pointer" onClick={() => setFilterType("all")}>
                     {filterType === "withPdfs" && "With PDFs"}
@@ -582,6 +595,7 @@ const { data: profilesData, error: profilesError } = await supabase
                     {" ×"}
                   </Badge>
                 )}
+
                 <span className="text-sm text-muted-foreground">
                   ({filteredAndSortedUsers.length} of {users.length} users)
                 </span>
@@ -589,7 +603,6 @@ const { data: profilesData, error: profilesError } = await supabase
             )}
           </div>
 
-          {/* User List Table */}
           <Card className="overflow-hidden">
             <Table>
               <TableHeader>
@@ -598,6 +611,7 @@ const { data: profilesData, error: profilesError } = await supabase
                   <TableHead>Username</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
+                  <TableHead className="hidden md:table-cell">Level</TableHead>
                   <TableHead className="hidden xl:table-cell">DOB</TableHead>
                   <TableHead className="hidden xl:table-cell">Phone</TableHead>
                   <TableHead className="hidden xl:table-cell">Why PDFNest</TableHead>
@@ -607,6 +621,7 @@ const { data: profilesData, error: profilesError } = await supabase
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {filteredAndSortedUsers.length === 0 ? (
                   <TableRow>
@@ -616,20 +631,23 @@ const { data: profilesData, error: profilesError } = await supabase
                   </TableRow>
                 ) : (
                   filteredAndSortedUsers.map((user, index) => (
-                    <TableRow 
-                      key={user.id} 
+                    <TableRow
+                      key={user.id}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => navigate(`/admin/user/${user.id}`)}
                     >
                       <TableCell className="font-medium text-muted-foreground">
                         {index + 1}
                       </TableCell>
+
                       <TableCell className="font-medium">
                         {user.displayName}
                       </TableCell>
+
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {user.email}
                       </TableCell>
+
                       <TableCell className="hidden md:table-cell">
                         {user.departmentName ? (
                           <Badge variant="outline" className="font-normal">
@@ -639,20 +657,37 @@ const { data: profilesData, error: profilesError } = await supabase
                           <span className="text-muted-foreground text-sm">Not set</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground">{user.phoneNumber || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">{user.usageReason || "—"}</TableCell>
+
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {user.level ? `${user.level} Level` : "—"}
+                      </TableCell>
+
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">
+                        {user.dateOfBirth ? formatDate(user.dateOfBirth) : "—"}
+                      </TableCell>
+
+                      <TableCell className="hidden xl:table-cell text-muted-foreground">
+                        {user.phoneNumber || "—"}
+                      </TableCell>
+
+                      <TableCell className="hidden xl:table-cell text-muted-foreground max-w-[150px] truncate">
+                        {user.usageReason || "—"}
+                      </TableCell>
+
                       <TableCell className="hidden xl:table-cell text-muted-foreground">
                         {formatDate(user.createdAt)}
                       </TableCell>
+
                       <TableCell className="text-center">
                         <Badge variant={user.pdfCount > 0 ? "default" : "secondary"}>
                           {user.pdfCount}
                         </Badge>
                       </TableCell>
+
                       <TableCell className="text-right">
                         {formatBytes(user.totalStorage)}
                       </TableCell>
+
                       <TableCell>
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </TableCell>
