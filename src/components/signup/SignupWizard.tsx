@@ -23,6 +23,7 @@ export interface SignupData {
   school: string;
   schoolOther: string;
   departmentId: string;
+  level: number | null;
   preferredTheme: string;
   usageReason: string;
   usageReasonOther: string;
@@ -42,6 +43,7 @@ const initialData: SignupData = {
   school: "",
   schoolOther: "",
   departmentId: "",
+  level: null,
   preferredTheme: "system",
   usageReason: "",
   usageReasonOther: "",
@@ -56,7 +58,12 @@ interface SignupWizardProps {
   onAbortOnboarding: () => void;
 }
 
-export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboarding, onAbortOnboarding }: SignupWizardProps) {
+export function SignupWizard({
+  onSwitchToLogin,
+  onStartOnboarding,
+  onFinishOnboarding,
+  onAbortOnboarding,
+}: SignupWizardProps) {
   const { setTheme } = useTheme();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<SignupData>(initialData);
@@ -79,19 +86,23 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
   };
 
   const getResolvedProfileData = () => {
-    const discoverySource = data.discoverySource === "other"
-      ? data.discoverySourceOther
-      : data.discoverySource;
+    const discoverySource =
+      data.discoverySource === "other"
+        ? data.discoverySourceOther
+        : data.discoverySource;
 
-    const usageReason = data.usageReason === "other"
-      ? data.usageReasonOther
-      : data.usageReason;
+    const usageReason =
+      data.usageReason === "other"
+        ? data.usageReasonOther
+        : data.usageReason;
 
-    const school = data.school === "others"
-      ? data.schoolOther
-      : data.school;
+    const school =
+      data.school === "others"
+        ? data.schoolOther
+        : data.school;
 
-    const nickname = data.nickname?.trim() || data.fullName.trim() || data.email.split("@")[0];
+    const nickname =
+      data.nickname?.trim() || data.fullName.trim() || data.email.split("@")[0];
 
     const profilePayload: Record<string, unknown> = {
       email: data.email.trim(),
@@ -105,6 +116,7 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       usage_reason: usageReason || null,
       terms_accepted: data.termsAccepted,
       terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null,
+      level: data.level ?? null,
     };
 
     if (data.dateOfBirth) {
@@ -124,7 +136,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
     localStorage.setItem("pdfnest-theme", preferredTheme);
   };
 
-
   const upsertProfile = async (userId: string) => {
     const profilePayload = getResolvedProfileData();
     const { error } = await supabase
@@ -133,7 +144,6 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
 
     if (error) throw error;
   };
-
 
   const handleStepComplete = (nextStep: number) => {
     if (loading) return;
@@ -146,6 +156,7 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
 
     submittingRef.current = true;
     setLoading(true);
+
     try {
       onStartOnboarding();
 
@@ -162,20 +173,24 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
       });
 
       let user = signUpData.user;
-      const alreadyRegistered = signUpError?.message?.toLowerCase().includes("already") || false;
+      const alreadyRegistered =
+        signUpError?.message?.toLowerCase().includes("already") || false;
 
       if (signUpError && !alreadyRegistered) {
         throw signUpError;
       }
 
       if (!user && alreadyRegistered) {
-        const { data: signedInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: data.email.trim(),
-          password: data.password,
-        });
+        const { data: signedInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: data.email.trim(),
+            password: data.password,
+          });
 
         if (signInError) {
-          throw new Error("This email already exists. Sign in to continue your existing account.");
+          throw new Error(
+            "This email already exists. Sign in to continue your existing account."
+          );
         }
 
         user = signedInData.user;
@@ -238,69 +253,72 @@ export function SignupWizard({ onSwitchToLogin, onStartOnboarding, onFinishOnboa
               />
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
+
+          <p className="mt-3 text-sm text-muted-foreground text-center">
             Step {step} of {totalSteps}
           </p>
+
+          <div className="mt-8 min-h-[420px]">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.28, ease: "easeOut" }}
+              >
+                {step === 1 && (
+                  <StepAccountBasics
+                    data={data}
+                    updateData={updateData}
+                    onNext={() => handleStepComplete(2)}
+                    onSwitchToLogin={onSwitchToLogin}
+                    loading={loading}
+                  />
+                )}
+
+                {step === 2 && (
+                  <StepDiscoverySource
+                    data={data}
+                    updateData={updateData}
+                    onNext={() => handleStepComplete(3)}
+                    onBack={goBack}
+                  />
+                )}
+
+                {step === 3 && (
+                  <StepUserType
+                    data={data}
+                    updateData={updateData}
+                    onNext={() => handleStepComplete(4)}
+                    onBack={goBack}
+                  />
+                )}
+
+                {step === 4 && (
+                  <StepPreferences
+                    data={data}
+                    updateData={updateData}
+                    onNext={() => handleStepComplete(5)}
+                    onBack={goBack}
+                  />
+                )}
+
+                {step === 5 && (
+                  <StepGuidedUpload
+                    onBack={goBack}
+                    onFinish={handleFinish}
+                    loading={loading}
+                    signupComplete={signupComplete}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       )}
-
-      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-lg">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={step}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-            >
-              {step === 1 && (
-                <StepAccountBasics
-                  data={data}
-                  updateData={updateData}
-                  onNext={() => handleStepComplete(2)}
-                  onSwitchToLogin={onSwitchToLogin}
-                  loading={loading}
-                />
-              )}
-              {step === 2 && (
-                <StepDiscoverySource
-                  data={data}
-                  updateData={updateData}
-                  onNext={() => handleStepComplete(3)}
-                  onBack={goBack}
-                />
-              )}
-              {step === 3 && (
-                <StepUserType
-                  data={data}
-                  updateData={updateData}
-                  onNext={() => handleStepComplete(4)}
-                  onBack={goBack}
-                />
-              )}
-              {step === 4 && (
-                <StepPreferences
-                  data={data}
-                  updateData={updateData}
-                  onNext={() => handleStepComplete(5)}
-                  onBack={goBack}
-                />
-              )}
-              {step === 5 && (
-                <StepGuidedUpload
-                  onFinish={handleFinish}
-                  onBack={goBack}
-                  signupComplete={signupComplete}
-                  loading={loading}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
     </div>
   );
 }
