@@ -1,47 +1,93 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
-interface SemesterCounts {
-  [semester: string]: { courses: number; notes: number };
+interface SemesterCountItem {
+  courses: number;
+  notes: number;
 }
 
+interface SemesterCounts {
+  [semester: string]: SemesterCountItem;
+}
+
+const EMPTY_COUNTS: SemesterCounts = {
+  first: { courses: 0, notes: 0 },
+  second: { courses: 0, notes: 0 },
+};
+
 export function useSemesterCounts(departmentId?: string, level?: number) {
-  const [counts, setCounts] = useState<SemesterCounts>({});
-  const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<SemesterCounts>(EMPTY_COUNTS);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!departmentId) return;
+    if (!departmentId) {
+      setCounts(EMPTY_COUNTS);
+      setLoading(false);
+      return;
+    }
 
-    const fetch = async () => {
+    const controller = new AbortController();
+
+    const fetchSemesterCounts = async () => {
       setLoading(true);
+
       try {
-        // Direct REST fetch — works for all users including guests
-        let url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses_with_note_counts?department_id=eq.${departmentId}&select=semester,note_count`;
-        if (level) url += `&level=eq.${level}`;
-        const res = await fetch(url, {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        const params = new URLSearchParams({
+          department_id: `eq.${departmentId}`,
+          select: "semester,note_count",
         });
-        const data = res.ok ? await res.json() : [];
-        const error = null;
 
-        if (error) throw error;
+        if (typeof level === "number" && !Number.isNaN(level)) {
+          params.set("level", `eq.${level}`);
+        }
 
-        const result: SemesterCounts = { first: { courses: 0, notes: 0 }, second: { courses: 0, notes: 0 } };
-        (data || []).forEach((row: any) => {
-          const sem = row.semester || "first";
-          if (!result[sem]) result[sem] = { courses: 0, notes: 0 };
-          result[sem].courses += 1;
-          result[sem].notes += (row.note_count || 0);
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/courses_with_note_counts?${params.toString()}`;
+
+        const res = await window.fetch(url, {
+          method: "GET",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Accept: "application/json",
+          },
+          signal: controller.signal,
         });
-        setCounts(result);
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch semester counts (${res.status})`);
+        }
+
+        const data: Array<{ semester?: string | null; note_count?: number | null }> =
+          await res.json();
+
+        const nextCounts: SemesterCounts = {
+          first: { courses: 0, notes: 0 },
+          second: { courses: 0, notes: 0 },
+        };
+
+        for (const row of data ?? []) {
+          const semesterKey = row.semester === "second" ? "second" : "first";
+          const noteCount = Number(row.note_count ?? 0);
+
+          nextCounts[semesterKey].courses += 1;
+          nextCounts[semesterKey].notes += Number.isFinite(noteCount) ? noteCount : 0;
+        }
+
+        setCounts(nextCounts);
       } catch (err) {
+        if (controller.signal.aborted) return;
+
         console.error("Error fetching semester counts:", err);
+        setCounts(EMPTY_COUNTS);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetch();
+    fetchSemesterCounts();
+
+    return () => controller.abort();
   }, [departmentId, level]);
 
   return { counts, loading };
