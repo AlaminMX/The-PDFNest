@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -20,15 +19,7 @@ import {
   FileText, Loader2, X, GraduationCap, Building2, Layers,
   Calendar, BookOpen, File, Info, PlusCircle, ChevronDown
 } from "lucide-react";
-
-// Levels are fetched per-department from the DB — see fetchAvailableLevels()
-const ALL_POSSIBLE_LEVELS = [
-  { value: 100, label: "100 Level" },
-  { value: 200, label: "200 Level" },
-  { value: 300, label: "300 Level" },
-  { value: 400, label: "400 Level" },
-  { value: 500, label: "500 Level" },
-];
+import { getDepartmentLevels } from "@/lib/departmentLevels";
 
 const SEMESTERS = [
   { value: "first", label: "First Semester" },
@@ -94,10 +85,9 @@ function CommunityUploadContent() {
   const [newCourseLabel, setNewCourseLabel] = useState(""); // display label for review step
 
   // File state
-  const [file, setFile] = useState<File | null>(null);
-  const [convertedFile, setConvertedFile] = useState<File | null>(null);
-  const [showConversionDialog, setShowConversionDialog] = useState(false);
-  const [converting, setConverting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [submittingIndex, setSubmittingIndex] = useState<number | null>(null);
+  const [submittingFileName, setSubmittingFileName] = useState("");
 
   // Metadata state
   const [title, setTitle] = useState("");
@@ -112,7 +102,6 @@ function CommunityUploadContent() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [availableLevels, setAvailableLevels] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Fetch faculties on mount
@@ -140,21 +129,6 @@ function CommunityUploadContent() {
         setLoading(false);
       });
   }, [selectedFacultyId]);
-
-  // Fetch available levels when department is selected
-  useEffect(() => {
-    if (!selectedDepartmentId) { setAvailableLevels([]); return; }
-    supabase
-      .from("courses")
-      .select("level")
-      .eq("department_id", selectedDepartmentId)
-      .then(({ data }) => {
-        const distinct = [...new Set((data || []).map((r: any) => r.level))].sort();
-        setAvailableLevels(
-          ALL_POSSIBLE_LEVELS.filter(l => distinct.includes(l.value))
-        );
-      });
-  }, [selectedDepartmentId]);
 
   // Fetch courses when department + level + semester selected
   useEffect(() => {
@@ -184,62 +158,96 @@ function CommunityUploadContent() {
     if (prevIdx >= 0) setCurrentStep(STEPS[prevIdx].key);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+  const makeDisplayTitle = useCallback((inputFile: File) => {
+    return inputFile.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " " );
+  }, []);
 
-    if (!SUPPORTED_TYPES.includes(selected.type)) {
-      toast.error("Unsupported file type. Please upload PDF, DOC, DOCX, PPT, PPTX, or image files.");
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (!selectedFiles.length) return;
+
+    const validFiles: File[] = [];
+    let unsupportedCount = 0;
+
+    for (const selected of selectedFiles) {
+      if (!SUPPORTED_TYPES.includes(selected.type)) {
+        unsupportedCount += 1;
+        continue;
+      }
+      validFiles.push(selected);
+    }
+
+    if (unsupportedCount > 0) {
+      toast.error(`${unsupportedCount} file${unsupportedCount > 1 ? "s were" : " was"} skipped because the format is not supported.`);
+    }
+
+    if (!validFiles.length) {
+      e.target.value = "";
       return;
     }
-    if (selected.type !== "application/pdf") {
-      setFile(selected);
-      setShowConversionDialog(true);
-    } else {
-      setFile(selected);
-      setConvertedFile(null);
+
+    setFiles((prev) => {
+      const seen = new Set(prev.map((item) => `${item.name}-${item.size}-${item.lastModified}`));
+      const incoming = validFiles.filter((item) => {
+        const key = `${item.name}-${item.size}-${item.lastModified}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return [...prev, ...incoming];
+    });
+
+    if (!title.trim() && validFiles.length === 1 && files.length === 0) {
+      setTitle(makeDisplayTitle(validFiles[0]));
     }
 
-    // Auto-set title from filename
-    if (!title) {
-      const nameWithout = selected.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
-      setTitle(nameWithout);
+    const convertibleCount = validFiles.filter((item) => item.type !== "application/pdf").length;
+    if (convertibleCount > 0) {
+      toast.info(`${convertibleCount} file${convertibleCount > 1 ? "s will" : " will"} be converted to PDF automatically during submission.`);
     }
 
     e.target.value = "";
   };
 
-  const handleConvert = async () => {
-    if (!file) return;
-    setConverting(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+  const removeFileAtIndex = (indexToRemove: number) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-to-pdf`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-          body: formData,
-        }
-      );
-      if (!res.ok) throw new Error("Conversion failed");
-      const result = await res.json();
-      const pdfBytes = Uint8Array.from(atob(result.pdf), c => c.charCodeAt(0));
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      const converted = new window.File([blob], result.convertedName || "converted.pdf", { type: "application/pdf" });
-      setConvertedFile(converted);
-      setShowConversionDialog(false);
-      toast.success("File converted to PDF successfully!");
-    } catch (err) {
-      toast.error("Failed to convert file. Please upload a PDF instead.");
-      setFile(null);
-    } finally {
-      setConverting(false);
-      setShowConversionDialog(false);
+  const clearFiles = () => {
+    setFiles([]);
+  };
+
+  const convertFileToPdfIfNeeded = async (inputFile: File): Promise<File> => {
+    if (inputFile.type === "application/pdf") return inputFile;
+
+    const formData = new FormData();
+    formData.append("file", inputFile);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-to-pdf`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to convert ${inputFile.name} to PDF.`);
     }
+
+    const result = await res.json();
+    const pdfBytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    return new window.File([blob], result.convertedName || `${inputFile.name.replace(/\.[^.]+$/, "")}.pdf`, {
+      type: "application/pdf",
+    });
+  };
+
+  const getSubmissionTitle = (inputFile: File) => {
+    const derivedTitle = makeDisplayTitle(inputFile);
+    if (files.length === 1) {
+      return title.trim() || derivedTitle;
+    }
+    return title.trim() ? `${title.trim()} - ${derivedTitle}` : derivedTitle;
   };
 
   const computeHash = async (f: File): Promise<string> => {
@@ -248,19 +256,20 @@ function CommunityUploadContent() {
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
   };
 
-  const handleSubmit = async () => {
-    const uploadFile = convertedFile || file;
+  const submitFiles = async (skipDuplicateCheck = false) => {
     const effectiveCourseId = selectedCourseId || newCourseId;
-    if (!uploadFile) { toast.error("Please select a file."); return; }
+
+    if (!files.length) { toast.error("Please select at least one file."); return; }
     if (!effectiveCourseId) { toast.error("Please select or create a course first."); return; }
-    if (!title.trim()) { toast.error("Please enter a title for your material."); return; }
 
     setSubmitting(true);
+    setSubmittingIndex(null);
+    setSubmittingFileName("");
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check daily limit — use UTC midnight to match the DB trigger
       const utcMidnight = new Date();
       utcMidnight.setUTCHours(0, 0, 0, 0);
       const { count } = await supabase
@@ -269,164 +278,127 @@ function CommunityUploadContent() {
         .eq("user_id", user.id)
         .gte("created_at", utcMidnight.toISOString());
 
-      if ((count || 0) >= DAILY_UPLOAD_LIMIT) {
-        toast.error(`Daily upload limit reached (${DAILY_UPLOAD_LIMIT}). Please try again tomorrow.`);
+      if ((count || 0) + files.length > DAILY_UPLOAD_LIMIT) {
+        toast.error(`You can upload ${DAILY_UPLOAD_LIMIT - (count || 0)} more file(s) today. Batch is too large for the daily limit.`);
         setSubmitting(false);
         return;
       }
 
-      // Compute hash and check duplicates
-      const hash = await computeHash(uploadFile);
-      const { data: dupes } = await supabase.rpc("check_duplicate_upload", {
-        p_file_hash: hash,
-        p_file_name: file!.name,
-        p_file_size: file!.size,
-        p_course_id: effectiveCourseId,
-      });
+      if (!skipDuplicateCheck) {
+        const duplicatesFound: any[] = [];
 
-      if (dupes && dupes.length > 0 && !showDuplicateDialog) {
-        setDuplicateWarning(dupes);
-        setShowDuplicateDialog(true);
-        setSubmitting(false);
-        return;
+        for (const inputFile of files) {
+          const preparedFile = await convertFileToPdfIfNeeded(inputFile);
+          const hash = await computeHash(preparedFile);
+          const { data: dupes } = await supabase.rpc("check_duplicate_upload", {
+            p_file_hash: hash,
+            p_file_name: inputFile.name,
+            p_file_size: inputFile.size,
+            p_course_id: effectiveCourseId,
+          });
+
+          if (dupes && dupes.length > 0) {
+            duplicatesFound.push({
+              fileName: inputFile.name,
+              matches: dupes,
+            });
+          }
+        }
+
+        if (duplicatesFound.length > 0) {
+          setDuplicateWarning(duplicatesFound);
+          setShowDuplicateDialog(true);
+          setSubmitting(false);
+          return;
+        }
       }
 
-      // Upload file to storage
-      const filePath = `community/${user.id}/${Date.now()}_${uploadFile.name}`;
-      const { error: storageError } = await supabase.storage
-        .from("school_pdfs")
-        .upload(filePath, uploadFile);
+      let successCount = 0;
 
-      if (storageError) {
-        const isNetworkError = storageError.message?.includes("network") ||
-          storageError.message?.includes("fetch") ||
-          storageError.message?.includes("timeout") ||
-          storageError.message?.includes("Failed to fetch");
-        throw new Error(isNetworkError
-          ? "Upload failed — check your internet connection and try again."
-          : storageError.message
-        );
+      for (let index = 0; index < files.length; index += 1) {
+        const inputFile = files[index];
+        setSubmittingIndex(index);
+        setSubmittingFileName(inputFile.name);
+
+        const uploadFile = await convertFileToPdfIfNeeded(inputFile);
+        const hash = await computeHash(uploadFile);
+        const filePath = `community/${user.id}/${Date.now()}_${index}_${uploadFile.name}`;
+
+        const { error: storageError } = await supabase.storage
+          .from("school_pdfs")
+          .upload(filePath, uploadFile);
+
+        if (storageError) {
+          const isNetworkError = storageError.message?.includes("network") ||
+            storageError.message?.includes("fetch") ||
+            storageError.message?.includes("timeout") ||
+            storageError.message?.includes("Failed to fetch");
+          throw new Error(isNetworkError
+            ? `Upload failed for ${inputFile.name} — check your internet connection and try again.`
+            : storageError.message
+          );
+        }
+
+        const { error: insertError } = await supabase
+          .from("community_uploads")
+          .insert({
+            user_id: user.id,
+            faculty_id: selectedFacultyId,
+            department_id: selectedDepartmentId,
+            course_id: effectiveCourseId,
+            level: selectedLevel,
+            semester: selectedSemester,
+            title: getSubmissionTitle(inputFile),
+            description: description.trim() || null,
+            material_type: materialType,
+            file_path: filePath,
+            original_file_name: inputFile.name,
+            file_size: inputFile.size,
+            file_hash: hash,
+            status: "pending",
+          });
+
+        if (insertError) throw insertError;
+
+        await supabase.rpc("increment_pending_count" as any, { p_user_id: user.id });
+        successCount += 1;
       }
-
-      // Insert community_uploads record
-      const { error: insertError } = await supabase
-        .from("community_uploads")
-        .insert({
-          user_id: user.id,
-          faculty_id: selectedFacultyId,
-          department_id: selectedDepartmentId,
-          course_id: effectiveCourseId,
-          level: selectedLevel,
-          semester: selectedSemester,
-          title: title.trim(),
-          description: description.trim() || null,
-          material_type: materialType,
-          file_path: filePath,
-          original_file_name: file!.name,
-          file_size: file!.size,
-          file_hash: hash,
-          status: "pending",
-        });
-
-      if (insertError) throw insertError;
-
-      // Increment pending_count via upsert (insert or add 1)
-      await supabase.rpc("increment_pending_count" as any, { p_user_id: user.id });
 
       setSubmitted(true);
-      toast.success("Material submitted for review!");
+      toast.success(successCount === 1 ? "Material submitted for review!" : `${successCount} materials submitted for review!`);
     } catch (err: any) {
       console.error("Upload error:", err);
-      toast.error(err.message || "Failed to submit material");
+      toast.error(err.message || "Failed to submit materials");
     } finally {
       setSubmitting(false);
+      setSubmittingIndex(null);
+      setSubmittingFileName("");
     }
   };
 
-  const handleForceSubmit = () => {
+  const handleSubmit = async () => {
+    await submitFiles(false);
+  };
+
+  const handleForceSubmit = async () => {
     setShowDuplicateDialog(false);
     setDuplicateWarning([]);
-    // Re-trigger submit which will skip duplicate check this time
-    handleSubmitForce();
-  };
-
-  const handleSubmitForce = async () => {
-    const uploadFile = convertedFile || file;
-    const effectiveCourseId = selectedCourseId || newCourseId;
-    if (!uploadFile || !effectiveCourseId || !title.trim()) return;
-
-    setSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Daily limit also applies on force-submit (duplicate bypass)
-      const utcMidnightForce = new Date();
-      utcMidnightForce.setUTCHours(0, 0, 0, 0);
-      const { count: forceCount } = await supabase
-        .from("community_uploads")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", utcMidnightForce.toISOString());
-      if ((forceCount || 0) >= DAILY_UPLOAD_LIMIT) {
-        toast.error(`Daily upload limit reached (${DAILY_UPLOAD_LIMIT}). Please try again tomorrow.`);
-        setSubmitting(false);
-        return;
-      }
-
-      const hash = await computeHash(uploadFile);
-      const filePath = `community/${user.id}/${Date.now()}_${uploadFile.name}`;
-      const { error: storageError } = await supabase.storage
-        .from("school_pdfs")
-        .upload(filePath, uploadFile);
-      if (storageError) {
-        const isNetworkError = storageError.message?.includes("network") ||
-          storageError.message?.includes("fetch") ||
-          storageError.message?.includes("timeout") ||
-          storageError.message?.includes("Failed to fetch");
-        throw new Error(isNetworkError
-          ? "Upload failed — check your internet connection and try again."
-          : storageError.message
-        );
-      }
-
-      const { error: insertError } = await supabase
-        .from("community_uploads")
-        .insert({
-          user_id: user.id,
-          faculty_id: selectedFacultyId,
-          department_id: selectedDepartmentId,
-          course_id: effectiveCourseId,
-          level: selectedLevel,
-          semester: selectedSemester,
-          title: title.trim(),
-          description: description.trim() || null,
-          material_type: materialType,
-          file_path: filePath,
-          original_file_name: file!.name,
-          file_size: file!.size,
-          file_hash: hash,
-          status: "pending",
-        });
-      if (insertError) throw insertError;
-
-      // Increment pending_count (same as main submit path)
-      await supabase.rpc("increment_pending_count" as any, { p_user_id: user.id });
-
-      setSubmitted(true);
-      toast.success("Material submitted for review!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to submit material");
-    } finally {
-      setSubmitting(false);
-    }
+    await submitFiles(true);
   };
 
   // Selected names for review
   const selectedFacultyName = faculties.find(f => f.id === selectedFacultyId)?.name || "";
   const selectedDepartmentName = departments.find(d => d.id === selectedDepartmentId)?.name || "";
+  const availableLevels = getDepartmentLevels(selectedDepartmentName);
+  const LEVELS = availableLevels.map((level) => ({ value: level, label: `${level} Level` }));
   const selectedCourseName = courses.find(c => c.id === selectedCourseId);
-  const selectedLevelLabel = ALL_POSSIBLE_LEVELS.find(l => l.value === selectedLevel)?.label || "";
+  const selectedLevelLabel = LEVELS.find(l => l.value === selectedLevel)?.label || "";
+
+  useEffect(() => {
+    if (selectedLevel && !availableLevels.includes(selectedLevel)) {
+      setSelectedLevel(0);
+    }
+  }, [selectedLevel, availableLevels]);
   const selectedSemesterLabel = SEMESTERS.find(s => s.value === selectedSemester)?.label || "";
 
   const canProceed = (): boolean => {
@@ -436,8 +408,8 @@ function CommunityUploadContent() {
       case "level": return selectedLevel > 0;
       case "semester": return !!selectedSemester;
       case "course": return !!(selectedCourseId || newCourseId);
-      case "file": return !!file;
-      case "metadata": return !!title.trim();
+      case "file": return files.length > 0;
+      case "metadata": return true;
       case "review": return true;
       default: return false;
     }
@@ -466,10 +438,10 @@ function CommunityUploadContent() {
                     Submission Complete
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold leading-tight text-foreground sm:text-[1.75rem]">
-                    Submitted for review
+                    Batch submitted for review
                   </h2>
                   <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                    Your material has been submitted successfully. It will show up on the platform once it is reviewed and approved by the course rep or admin.
+                    Your upload batch has been submitted successfully. Each file will appear on the platform once it is reviewed and approved by the course rep or admin.
                   </p>
                 </div>
               </div>
@@ -483,7 +455,7 @@ function CommunityUploadContent() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground">What happens next?</p>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        Your submission will be checked before it becomes visible to other students.
+                        Each file in your batch will be checked before it becomes visible to other students.
                       </p>
                     </div>
                   </div>
@@ -493,9 +465,9 @@ function CommunityUploadContent() {
                       <BookOpen className="h-4 w-4 text-primary" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">Need to send another file?</p>
+                      <p className="text-sm font-medium text-foreground">Need to send another batch?</p>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        You can submit another material right away without leaving this flow.
+                        You can submit more materials right away without leaving this flow.
                       </p>
                     </div>
                   </div>
@@ -503,7 +475,7 @@ function CommunityUploadContent() {
 
                 <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Tip: keep titles clear and specific so approval is faster and students can find your material easily.
+                    Tip: clearer file names and course-specific titles make approval faster and help students find your materials more easily.
                   </p>
                 </div>
 
@@ -518,14 +490,13 @@ function CommunityUploadContent() {
                       setSelectedLevel(0);
                       setSelectedSemester("");
                       setSelectedCourseId("");
-                      setFile(null);
-                      setConvertedFile(null);
+                      setFiles([]);
                       setTitle("");
                       setDescription("");
                       setMaterialType("lecture_note");
                     }}
                   >
-                    Upload Another
+                    Upload Another Batch
                   </Button>
 
                   <Button
@@ -644,7 +615,7 @@ function CommunityUploadContent() {
             {currentStep === "level" && (
               <StepCard title="Select Level" icon={Layers} description="What level is this material for?">
                 <div className="grid grid-cols-2 gap-2">
-                  {(availableLevels.length > 0 ? availableLevels : ALL_POSSIBLE_LEVELS.slice(0, 4)).map(l => (
+                  {LEVELS.map(l => (
                     <button
                       key={l.value}
                       onClick={() => {
@@ -891,60 +862,88 @@ function CommunityUploadContent() {
             )}
 
             {currentStep === "file" && (
-              <StepCard title="Upload File" icon={Upload} description="Select your study material">
+              <StepCard title="Upload Files" icon={Upload} description="Select one or more study materials at once">
                 <div className="space-y-4">
-                  {file ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                      <File className="w-8 h-8 text-primary shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                          {convertedFile && " • Converted to PDF ✓"}
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => { setFile(null); setConvertedFile(null); }}>
-                        <X className="w-4 h-4" />
-                      </Button>
+                  <label
+                    htmlFor="community-file-upload"
+                    className="flex flex-col items-center justify-center gap-3 p-8 rounded-lg border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors bg-muted/20"
+                  >
+                    <Upload className="w-10 h-10 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-foreground">Tap to select one or more files</p>
+                      <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PPT, PPTX, or images</p>
                     </div>
-                  ) : (
-                    <label
-                      htmlFor="community-file-upload"
-                      className="flex flex-col items-center justify-center gap-3 p-8 rounded-lg border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors bg-muted/20"
-                    >
-                      <Upload className="w-10 h-10 text-muted-foreground" />
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-foreground">Tap to select a file</p>
-                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PPT, PPTX, or images</p>
-                      </div>
-                    </label>
-                  )}
+                  </label>
+
                   <input
                     id="community-file-upload"
                     type="file"
+                    multiple
                     accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
                     onChange={handleFileSelect}
                     className="hidden"
                   />
-                  {!file && (
-                    <Button variant="outline" className="w-full" onClick={() => document.getElementById("community-file-upload")?.click()}>
-                      <Upload className="w-4 h-4 mr-2" /> Choose File
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => document.getElementById("community-file-upload")?.click()}>
+                      <Upload className="w-4 h-4 mr-2" /> {files.length ? "Add More Files" : "Choose Files"}
                     </Button>
+                    {files.length > 0 && (
+                      <Button variant="ghost" className="shrink-0" onClick={clearFiles}>
+                        Clear All
+                      </Button>
+                    )}
+                  </div>
+
+                  {files.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2">
+                        <p className="text-sm font-medium text-foreground">{files.length} file{files.length > 1 ? "s" : ""} selected</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(files.reduce((total, item) => total + item.size, 0) / 1024 / 1024).toFixed(2)} MB total
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {files.map((item, index) => (
+                          <div key={`${item.name}-${item.size}-${item.lastModified}`} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                            <File className="w-8 h-8 text-primary shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground break-words">{item.name}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {(item.size / 1024 / 1024).toFixed(2)} MB
+                                {item.type !== "application/pdf" ? " • Will convert to PDF" : " • PDF ready"}
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => removeFileAtIndex(index)}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        You can upload multiple documents in one batch. Each file will be submitted as its own material under the same course, level, and semester.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               </StepCard>
             )}
 
             {currentStep === "metadata" && (
-              <StepCard title="Material Details" icon={FileText} description="Add information about this material">
+              <StepCard title="Material Details" icon={FileText} description="Add information for this upload batch">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
+                    <Label htmlFor="title">Batch Title Prefix (optional)</Label>
                     <Input
                       id="title"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      placeholder="e.g. Chapter 3 - Thermodynamics"
+                      placeholder="e.g. MEE401 Lecture Notes"
                       maxLength={200}
                     />
                   </div>
@@ -982,8 +981,20 @@ function CommunityUploadContent() {
                   <ReviewRow label="Level" value={selectedLevelLabel} />
                   <ReviewRow label="Semester" value={selectedSemesterLabel} />
                   <ReviewRow label="Course" value={selectedCourseName ? `${selectedCourseName.code} - ${selectedCourseName.name}` : newCourseLabel || ""} />
-                  <ReviewRow label="File" value={file?.name || ""} />
-                  <ReviewRow label="Title" value={title} />
+                  <ReviewRow label="Files" value={`${files.length} selected`} />
+                  <ReviewRow label="Title Style" value={title || "File names will be used"} />
+
+                  <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                    <p className="text-xs font-medium text-foreground">Files in this batch</p>
+                    <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                      {files.map((item) => (
+                        <div key={`${item.name}-${item.size}-${item.lastModified}`} className="flex items-center justify-between gap-3 text-xs">
+                          <span className="text-foreground truncate">{item.name}</span>
+                          <span className="text-muted-foreground shrink-0">{(item.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   {description && <ReviewRow label="Description" value={description} />}
                   <ReviewRow label="Type" value={MATERIAL_TYPES.find(m => m.value === materialType)?.label || ""} />
 
@@ -1013,7 +1024,11 @@ function CommunityUploadContent() {
               className="flex-1"
             >
               {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              {submitting ? "Submitting..." : "Submit for Review"}
+              {submitting
+                ? (submittingIndex !== null ? `Uploading ${submittingIndex + 1}/${files.length}` : "Submitting...")
+                : files.length > 1
+                  ? `Submit ${files.length} Files for Review`
+                  : "Submit for Review"}
             </Button>
           ) : (
             <Button
@@ -1027,27 +1042,6 @@ function CommunityUploadContent() {
         </div>
       </div>
 
-      {/* Conversion dialog */}
-      <Dialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Convert to PDF?</DialogTitle>
-            <DialogDescription>
-              This file ({file?.name}) is not a PDF. Would you like to convert it to PDF for consistent viewing?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowConversionDialog(false); setFile(null); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleConvert} disabled={converting}>
-              {converting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {converting ? "Converting..." : "Convert to PDF"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Duplicate warning dialog */}
       <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
         <DialogContent>
@@ -1056,14 +1050,21 @@ function CommunityUploadContent() {
               <AlertCircle className="w-5 h-5 text-destructive" /> Possible Duplicate
             </DialogTitle>
             <DialogDescription>
-              Similar materials already exist for this course:
+              Some files in this batch look similar to materials already uploaded for this course:
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-40 overflow-y-auto">
-            {duplicateWarning.map((d: any) => (
-              <div key={d.id} className="text-sm p-2 rounded bg-muted/50 border border-border">
-                <p className="font-medium text-foreground">{d.title}</p>
-                <p className="text-xs text-muted-foreground">Status: {d.status}</p>
+            {duplicateWarning.map((entry: any, index: number) => (
+              <div key={`${entry.fileName}-${index}`} className="rounded-lg border border-border bg-muted/50 p-3">
+                <p className="text-sm font-medium text-foreground">{entry.fileName}</p>
+                <div className="mt-2 space-y-2">
+                  {entry.matches.map((match: any) => (
+                    <div key={match.id} className="rounded-md border border-border/70 bg-background/70 p-2">
+                      <p className="text-sm text-foreground">{match.title}</p>
+                      <p className="text-xs text-muted-foreground">Status: {match.status}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
