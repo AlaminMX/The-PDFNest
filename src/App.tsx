@@ -42,6 +42,7 @@ const AdminUploads = lazy(() => import("./pages/AdminUploads"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // ── QueryClient: suppress thrown errors so a single query failure
 //    never crashes the entire app into a blank screen ──────────────
@@ -114,24 +115,24 @@ const App = () => (
           }>
           <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/dashboard" element={<Index />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/reps" element={<AdminReps />} />
-              <Route path="/admin/departments" element={<AdminDepartments />} />
-              <Route path="/admin/departments/:deptId/levels" element={<AdminDepartmentLevels />} />
-              <Route path="/admin/banners" element={<AdminBanners />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/logs" element={<AdminActivityLogs />} />
-              <Route path="/admin/sessions" element={<AdminSessionLogs />} />
-              <Route path="/admin/user/:userId" element={<AdminUserDetail />} />
-              <Route path="/admin/faculties" element={<AdminFaculties />} />
-              <Route path="/admin/waitlist" element={<AdminWaitlist />} />
-              <Route path="/admin/uploads" element={<AdminUploads />} />
+              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/reps" element={<ProtectedRoute><AdminReps /></ProtectedRoute>} />
+              <Route path="/admin/departments" element={<ProtectedRoute><AdminDepartments /></ProtectedRoute>} />
+              <Route path="/admin/departments/:deptId/levels" element={<ProtectedRoute><AdminDepartmentLevels /></ProtectedRoute>} />
+              <Route path="/admin/banners" element={<ProtectedRoute><AdminBanners /></ProtectedRoute>} />
+              <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute><AdminActivityLogs /></ProtectedRoute>} />
+              <Route path="/admin/sessions" element={<ProtectedRoute><AdminSessionLogs /></ProtectedRoute>} />
+              <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
+              <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
+              <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
+              <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
               <Route path="/afit-pdfs" element={<FacultySelection />} />
               <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
               <Route path="/school-store" element={<SchoolStore />} />
@@ -139,13 +140,13 @@ const App = () => (
               <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
               <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
               <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
-              <Route path="/rep/upload" element={<RepUpload />} />
-              <Route path="/rep/:userId" element={<RepProfile />} />
+              <Route path="/rep/upload" element={<ProtectedRoute><RepUpload /></ProtectedRoute>} />
+              <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
               <Route path="/user/:userId" element={<PublicProfile />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/ai-features" element={<AIFeatures />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/contribute" element={<CommunityUpload />} />
+              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
