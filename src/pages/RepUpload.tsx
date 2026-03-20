@@ -20,6 +20,7 @@ import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { motion, AnimatePresence } from "framer-motion";
+import { getDepartmentLevels } from "@/lib/departmentLevels";
 
 const SUPPORTED_TYPES = [
   "application/pdf",
@@ -48,37 +49,11 @@ export default function RepUpload() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isRep, departmentId, departmentName, displayName, loading: repLoading } = useRepStatus();
+  const availableLevels = getDepartmentLevels(departmentName);
   const [selectedLevel, setSelectedLevel] = useState<number>(100);
-  const [availableLevels, setAvailableLevels] = useState<{ value: number; label: string }[]>([
-    { value: 100, label: "100 Level" },
-    { value: 200, label: "200 Level" },
-    { value: 300, label: "300 Level" },
-    { value: 400, label: "400 Level" },
-  ]);
   const [selectedSemester, setSelectedSemester] = useState<string>("");
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>("lecture_note");
   const { courses, loading: coursesLoading } = useCourses(departmentId || undefined, selectedLevel, selectedSemester || undefined);
-
-  // Fetch the levels this department actually has courses for
-  useEffect(() => {
-    if (!departmentId) return;
-    supabase
-      .from("courses")
-      .select("level")
-      .eq("department_id", departmentId)
-      .then(({ data }) => {
-        const distinct = [...new Set((data || []).map((r: any) => r.level))].sort();
-        const all = [
-          { value: 100, label: "100 Level" },
-          { value: 200, label: "200 Level" },
-          { value: 300, label: "300 Level" },
-          { value: 400, label: "400 Level" },
-          { value: 500, label: "500 Level" },
-        ];
-        const filtered = all.filter(l => distinct.includes(l.value));
-        if (filtered.length > 0) setAvailableLevels(filtered);
-      });
-  }, [departmentId]);
   const { uploadNote, convertToPdf } = useLectureNotes();
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -101,6 +76,12 @@ export default function RepUpload() {
       setShowDisplayNamePrompt(true);
     }
   }, [displayName, isRep, repLoading]);
+
+  useEffect(() => {
+    if (selectedLevel && !availableLevels.includes(selectedLevel)) {
+      setSelectedLevel(availableLevels[0]);
+    }
+  }, [selectedLevel, availableLevels]);
 
   const generateTitle = useCallback((fileName: string, courseCode: string) => {
     // Remove file extension and clean up the name
@@ -378,8 +359,8 @@ export default function RepUpload() {
                     <SelectValue placeholder="Choose a level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableLevels.map(l => (
-                      <SelectItem key={l.value} value={String(l.value)}>{l.label}</SelectItem>
+                    {availableLevels.map((level) => (
+                      <SelectItem key={level} value={String(level)}>{level} Level</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
