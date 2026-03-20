@@ -31,6 +31,7 @@ interface UserData {
   createdAt: string;
   departmentId: string | null;
   departmentName: string | null;
+  level: number | null;
   nickname: string | null;
   preferredTheme: string | null;
   usageReason: string | null;
