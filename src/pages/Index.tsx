@@ -206,10 +206,6 @@ function AppSidebar({
       </SidebarHeader>
       
       <SidebarContent className="px-2 gap-1 overflow-y-auto">
-        {/* ── AFIT PDFs — primary feature, top of nav ── */}
-// 🔻 Only showing the relevant upgraded AFIT PDFs button section
-// Everything else in your file stays EXACTLY the same
-
 {/* ── AFIT PDFs — primary feature, top of nav ── */}
 <SidebarGroup className="py-2">
   <SidebarGroupContent className="pl-1">
