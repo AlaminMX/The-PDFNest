@@ -21,11 +21,13 @@ import {
   Calendar, BookOpen, File, Info, PlusCircle, ChevronDown
 } from "lucide-react";
 
-const LEVELS = [
+// Levels are fetched per-department from the DB — see fetchAvailableLevels()
+const ALL_POSSIBLE_LEVELS = [
   { value: 100, label: "100 Level" },
   { value: 200, label: "200 Level" },
   { value: 300, label: "300 Level" },
   { value: 400, label: "400 Level" },
+  { value: 500, label: "500 Level" },
 ];
 
 const SEMESTERS = [
@@ -110,6 +112,7 @@ function CommunityUploadContent() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [availableLevels, setAvailableLevels] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Fetch faculties on mount
@@ -137,6 +140,21 @@ function CommunityUploadContent() {
         setLoading(false);
       });
   }, [selectedFacultyId]);
+
+  // Fetch available levels when department is selected
+  useEffect(() => {
+    if (!selectedDepartmentId) { setAvailableLevels([]); return; }
+    supabase
+      .from("courses")
+      .select("level")
+      .eq("department_id", selectedDepartmentId)
+      .then(({ data }) => {
+        const distinct = [...new Set((data || []).map((r: any) => r.level))].sort();
+        setAvailableLevels(
+          ALL_POSSIBLE_LEVELS.filter(l => distinct.includes(l.value))
+        );
+      });
+  }, [selectedDepartmentId]);
 
   // Fetch courses when department + level + semester selected
   useEffect(() => {
@@ -408,7 +426,7 @@ function CommunityUploadContent() {
   const selectedFacultyName = faculties.find(f => f.id === selectedFacultyId)?.name || "";
   const selectedDepartmentName = departments.find(d => d.id === selectedDepartmentId)?.name || "";
   const selectedCourseName = courses.find(c => c.id === selectedCourseId);
-  const selectedLevelLabel = LEVELS.find(l => l.value === selectedLevel)?.label || "";
+  const selectedLevelLabel = ALL_POSSIBLE_LEVELS.find(l => l.value === selectedLevel)?.label || "";
   const selectedSemesterLabel = SEMESTERS.find(s => s.value === selectedSemester)?.label || "";
 
   const canProceed = (): boolean => {
@@ -565,7 +583,7 @@ function CommunityUploadContent() {
             {currentStep === "level" && (
               <StepCard title="Select Level" icon={Layers} description="What level is this material for?">
                 <div className="grid grid-cols-2 gap-2">
-                  {LEVELS.map(l => (
+                  {(availableLevels.length > 0 ? availableLevels : ALL_POSSIBLE_LEVELS.slice(0, 4)).map(l => (
                     <button
                       key={l.value}
                       onClick={() => {
