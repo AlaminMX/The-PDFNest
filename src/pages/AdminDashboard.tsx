@@ -170,23 +170,24 @@ export default function AdminDashboard() {
   const fetchAllUsers = async () => {
     try {
       // Fetch ALL profiles with department
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select(`
-          id, 
-          email, 
-          full_name, 
-          nickname,
-          preferred_theme,
-          usage_reason,
-          date_of_birth,
-          phone_number,
-          created_at,
-          department_id,
-          departments (
-            name
-          )
-        `)
+const { data: profilesData, error: profilesError } = await supabase
+  .from("profiles")
+  .select(`
+    id, 
+    email, 
+    full_name, 
+    nickname,
+    preferred_theme,
+    usage_reason,
+    date_of_birth,
+    phone_number,
+    created_at,
+    department_id,
+    level,
+    departments (
+      name
+    )
+  `)
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
