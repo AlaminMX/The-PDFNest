@@ -49,9 +49,36 @@ export default function RepUpload() {
   const { user } = useAuth();
   const { isRep, departmentId, departmentName, displayName, loading: repLoading } = useRepStatus();
   const [selectedLevel, setSelectedLevel] = useState<number>(100);
+  const [availableLevels, setAvailableLevels] = useState<{ value: number; label: string }[]>([
+    { value: 100, label: "100 Level" },
+    { value: 200, label: "200 Level" },
+    { value: 300, label: "300 Level" },
+    { value: 400, label: "400 Level" },
+  ]);
   const [selectedSemester, setSelectedSemester] = useState<string>("");
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>("lecture_note");
   const { courses, loading: coursesLoading } = useCourses(departmentId || undefined, selectedLevel, selectedSemester || undefined);
+
+  // Fetch the levels this department actually has courses for
+  useEffect(() => {
+    if (!departmentId) return;
+    supabase
+      .from("courses")
+      .select("level")
+      .eq("department_id", departmentId)
+      .then(({ data }) => {
+        const distinct = [...new Set((data || []).map((r: any) => r.level))].sort();
+        const all = [
+          { value: 100, label: "100 Level" },
+          { value: 200, label: "200 Level" },
+          { value: 300, label: "300 Level" },
+          { value: 400, label: "400 Level" },
+          { value: 500, label: "500 Level" },
+        ];
+        const filtered = all.filter(l => distinct.includes(l.value));
+        if (filtered.length > 0) setAvailableLevels(filtered);
+      });
+  }, [departmentId]);
   const { uploadNote, convertToPdf } = useLectureNotes();
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -351,10 +378,9 @@ export default function RepUpload() {
                     <SelectValue placeholder="Choose a level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="100">100 Level</SelectItem>
-                    <SelectItem value="200">200 Level</SelectItem>
-                    <SelectItem value="300">300 Level</SelectItem>
-                    <SelectItem value="400">400 Level</SelectItem>
+                    {availableLevels.map(l => (
+                      <SelectItem key={l.value} value={String(l.value)}>{l.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
