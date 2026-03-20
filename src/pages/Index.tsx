@@ -207,27 +207,57 @@ function AppSidebar({
       
       <SidebarContent className="px-2 gap-1 overflow-y-auto">
         {/* ── AFIT PDFs — primary feature, top of nav ── */}
-        <SidebarGroup className="py-2">
-          <SidebarGroupContent className="pl-1">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className="py-3 px-3 rounded-xl transition-all duration-150 bg-primary/8 hover:bg-primary/15 border border-primary/20 hover:border-primary/35 group"
-                >
-                  <Link to="/afit-pdfs">
-                    <GraduationCap className="w-[18px] h-[18px] text-primary shrink-0" />
-                    {open && (
-                      <span className="text-[13px] ml-0.5 font-semibold text-primary">
-                        AFIT PDFs
-                      </span>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+// 🔻 Only showing the relevant upgraded AFIT PDFs button section
+// Everything else in your file stays EXACTLY the same
+
+{/* ── AFIT PDFs — primary feature, top of nav ── */}
+<SidebarGroup className="py-2">
+  <SidebarGroupContent className="pl-1">
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          className="
+            min-h-[72px] 
+            w-full 
+            px-4 
+            py-4 
+            rounded-2xl 
+            transition-all 
+            duration-150 
+            bg-primary/10 
+            hover:bg-primary/20 
+            border 
+            border-primary/30 
+            hover:border-primary/50 
+            shadow-sm 
+            group
+          "
+        >
+          <Link
+            to="/afit-pdfs"
+            className="flex w-full items-center justify-center gap-3 text-center"
+          >
+            <GraduationCap className="w-5 h-5 text-primary shrink-0" />
+
+            {open && (
+              <span className="
+                text-base 
+                font-semibold 
+                text-primary 
+                leading-none 
+                text-center 
+                w-full
+              ">
+                AFIT PDFs
+              </span>
+            )}
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarGroupContent>
+</SidebarGroup>
 
         <div className="mx-4 h-px bg-sidebar-border" />
 
