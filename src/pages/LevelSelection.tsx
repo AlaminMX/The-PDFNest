@@ -198,7 +198,10 @@ function LevelSelectionContent() {
           <p className="text-xs text-muted-foreground">
             Missing materials for your level?{" "}
             <button
-              onClick={() => navigate("/auth")}
+              onClick={() => {
+              sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+              navigate("/auth");
+            }}
               className="text-primary underline underline-offset-2"
             >
               Upload to help your department.
