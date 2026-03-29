@@ -228,6 +228,7 @@ export default function AdminBanners() {
         title="Banner Management"
         subtitle="Create and manage announcement banners"
         showBack
+        backTo="/admin"
         icon={<Megaphone className="h-6 w-6 text-primary" />}
       />
 
@@ -512,24 +513,3 @@ export default function AdminBanners() {
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deletingBanner} onOpenChange={() => setDeletingBanner(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Banner</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingBanner?.title}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
