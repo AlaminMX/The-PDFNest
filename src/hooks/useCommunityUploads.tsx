@@ -22,7 +22,7 @@ export interface CommunityUpload {
   review_note: string | null;
   reviewed_at: string | null;
   created_at: string | null;
-  // Joined fields
+  // Enriched fields (fetched separately — no fragile FK join hints)
   uploader_name?: string;
   department_name?: string;
   course_code?: string;
@@ -30,7 +30,6 @@ export interface CommunityUpload {
 }
 
 interface UseUploadsOptions {
-  /** Scope: 'own' = current user's uploads, 'admin' = all, 'rep' = own department */
   scope: "own" | "admin" | "rep";
   departmentId?: string | null;
   statusFilter?: "pending" | "approved" | "rejected" | "all";
@@ -49,21 +48,13 @@ export function useCommunityUploads({
     setLoading(true);
     setError(null);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // NOTE: community_uploads.user_id has no FK to profiles, so we cannot
-      // use a Supabase join hint for the uploader name. Instead we join only
-      // the tables that DO have FK constraints: departments, courses.
+      // ── Step 1: Fetch community_uploads rows — plain select, no joins ──
       let query = supabase
         .from("community_uploads")
-        .select(
-          `*,
-          departments!community_uploads_department_id_fkey (name),
-          courses!community_uploads_course_id_fkey (code, name)`
-        )
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (scope === "own") {
@@ -71,7 +62,7 @@ export function useCommunityUploads({
       } else if (scope === "rep" && departmentId) {
         query = query.eq("department_id", departmentId);
       }
-      // admin: no extra filter — RLS allows all
+      // scope === "admin": RLS "Admins can view all uploads" handles it
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
@@ -80,30 +71,48 @@ export function useCommunityUploads({
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
 
-      const rows = data || [];
+      const rows = (data || []) as CommunityUpload[];
+      if (rows.length === 0) { setUploads([]); return; }
 
-      // Fetch uploader display names in one batched query
-      const userIds = [...new Set(rows.map((r: any) => r.user_id as string))];
+      // ── Step 2: Batch-fetch uploader display names ──────────────────
+      const userIds = [...new Set(rows.map(r => r.user_id))];
       let nameMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, display_name")
+          .select("id, display_name, nickname")
           .in("id", userIds);
         (profiles || []).forEach((p: any) => {
-          nameMap[p.id] = p.display_name || "Unknown";
+          nameMap[p.id] = p.display_name || p.nickname || "Unknown";
         });
       }
 
-      const mapped: CommunityUpload[] = rows.map((row: any) => ({
-        ...row,
-        uploader_name: nameMap[row.user_id] || "Unknown",
-        department_name: row.departments?.name || "Unknown",
-        course_code: row.courses?.code || "",
-        course_name: row.courses?.name || "",
-      }));
+      // ── Step 3: Batch-fetch department names ────────────────────────
+      const deptIds = [...new Set(rows.map(r => r.department_id).filter(Boolean))] as string[];
+      let deptMap: Record<string, string> = {};
+      if (deptIds.length > 0) {
+        const { data: depts } = await supabase
+          .from("departments").select("id, name").in("id", deptIds);
+        (depts || []).forEach((d: any) => { deptMap[d.id] = d.name; });
+      }
 
-      setUploads(mapped);
+      // ── Step 4: Batch-fetch course codes + names ────────────────────
+      const courseIds = [...new Set(rows.map(r => r.course_id).filter(Boolean))] as string[];
+      let courseMap: Record<string, { code: string; name: string }> = {};
+      if (courseIds.length > 0) {
+        const { data: courses } = await supabase
+          .from("courses").select("id, code, name").in("id", courseIds);
+        (courses || []).forEach((c: any) => { courseMap[c.id] = { code: c.code, name: c.name }; });
+      }
+
+      // ── Step 5: Merge ───────────────────────────────────────────────
+      setUploads(rows.map(row => ({
+        ...row,
+        uploader_name:   nameMap[row.user_id] || "Unknown",
+        department_name: (row.department_id && deptMap[row.department_id]) || "Unknown",
+        course_code:     (row.course_id && courseMap[row.course_id]?.code) || "",
+        course_name:     (row.course_id && courseMap[row.course_id]?.name) || "",
+      })));
     } catch (err: any) {
       console.error("useCommunityUploads error:", err);
       setError(err.message || "Failed to load uploads");
@@ -112,58 +121,35 @@ export function useCommunityUploads({
     }
   }, [scope, departmentId, statusFilter]);
 
-  useEffect(() => {
-    fetchUploads();
-  }, [fetchUploads]);
+  useEffect(() => { fetchUploads(); }, [fetchUploads]);
 
   const approveUpload = async (uploadId: string, note?: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
     const { error } = await supabase.rpc("approve_community_upload", {
-      p_upload_id: uploadId,
-      p_reviewer_id: user.id,
-      p_note: note || null,
+      p_upload_id: uploadId, p_reviewer_id: user.id, p_note: note || null,
     });
     if (error) throw error;
-    const approved = uploads.find(u => u.id === uploadId);
-    logActivity("upload_approved", { title: approved?.title || uploadId });
+    logActivity("upload_approved", { title: uploads.find(u => u.id === uploadId)?.title || uploadId });
     await fetchUploads();
   };
 
   const rejectUpload = async (uploadId: string, note?: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
     const { error } = await supabase.rpc("reject_community_upload", {
-      p_upload_id: uploadId,
-      p_reviewer_id: user.id,
-      p_note: note || null,
+      p_upload_id: uploadId, p_reviewer_id: user.id, p_note: note || null,
     });
     if (error) throw error;
-    const rejected = uploads.find(u => u.id === uploadId);
-    logActivity("upload_rejected", { title: rejected?.title || uploadId });
+    logActivity("upload_rejected", { title: uploads.find(u => u.id === uploadId)?.title || uploadId });
     await fetchUploads();
   };
 
   const deleteUpload = async (uploadId: string) => {
-    const { error } = await supabase
-      .from("community_uploads")
-      .delete()
-      .eq("id", uploadId);
+    const { error } = await supabase.from("community_uploads").delete().eq("id", uploadId);
     if (error) throw error;
     await fetchUploads();
   };
 
-  return {
-    uploads,
-    loading,
-    error,
-    refetch: fetchUploads,
-    approveUpload,
-    rejectUpload,
-    deleteUpload,
-  };
-}
+  return { uploads, loading, error, refetch: fetchUploads, approveUpload, rejectUpload, deleteUpload };
+            }
