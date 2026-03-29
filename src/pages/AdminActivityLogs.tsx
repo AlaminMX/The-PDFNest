@@ -353,6 +353,7 @@ export default function AdminActivityLogs() {
         title="Activity Logs"
         subtitle="What users have been doing on PDFNest"
         showBack
+        backTo="/admin"
         icon={<Activity className="h-5 w-5 text-primary" />}
       />
 
