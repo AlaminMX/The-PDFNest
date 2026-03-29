@@ -133,6 +133,7 @@ export default function AdminFaculties() {
         title="Faculty Management"
         subtitle="Create, edit, and manage faculties"
         showBack
+        backTo="/admin"
         icon={<Building className="h-6 w-6 text-primary" />}
       />
 
