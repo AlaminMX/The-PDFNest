@@ -378,4 +378,22 @@ export default function AdminDepartmentLevels() {
         </AlertDialogContent>
       </AlertDialog>
 
-    
+    <AlertDialog open={!!removeLevelTarget} onOpenChange={(open) => !open && setRemoveLevelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {removeLevelTarget} Level?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete <strong>all {groups.find(g => g.level === removeLevelTarget)?.courses.length} courses</strong> in {removeLevelTarget} Level for this department. This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingLevel}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveLevel} disabled={removingLevel} className="bg-destructive hover:bg-destructive/90">
+              {removingLevel ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Remove Level
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+ 
+      <SmartBottomNav />
+    </div>
+  );
+}
