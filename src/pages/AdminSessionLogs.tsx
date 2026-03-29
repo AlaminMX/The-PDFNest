@@ -139,6 +139,7 @@ export default function AdminSessionLogs() {
         title="Sessions & Security"
         subtitle="Sign-in history and failed login attempts"
         showBack
+        backTo="/admin"
         icon={<Shield className="h-5 w-5 text-primary" />}
       />
 
