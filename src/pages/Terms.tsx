@@ -7,6 +7,7 @@ export default function Terms() {
         title="Terms & Conditions"
         subtitle="Please read these terms carefully"
         showBack
+        backTo="/"
       />
 
       <main className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
