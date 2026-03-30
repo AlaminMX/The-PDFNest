@@ -575,4 +575,329 @@ export default function AdminReps() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="deptIcon">Icon Emoji (optional)</Label>
-                 
+                          <Input
+                            id="deptIcon"
+                            placeholder="e.g., 💻, 🔒"
+                            value={newDepartmentIcon}
+                            onChange={(e) => setNewDepartmentIcon(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Courses */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        Courses Offered
+                      </h3>
+                      <Button type="button" variant="outline" size="sm" onClick={addCourse} className="gap-1">
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Course
+                      </Button>
+                    </div>
+
+                    {/* Semester selector for create */}
+                    <div className="space-y-2">
+                      <Label>Semester</Label>
+                      <Tabs value={selectedCreateSemester} onValueChange={setSelectedCreateSemester}>
+                        <TabsList className="w-full">
+                          <TabsTrigger value="first" className="flex-1">First Semester</TabsTrigger>
+                          <TabsTrigger value="second" className="flex-1">Second Semester</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                      <p className="text-xs text-muted-foreground">
+                        All courses below will be added to the {selectedCreateSemester} semester.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {courses.map((course, index) => (
+                        <div key={index} className="flex gap-3 items-start">
+                          <div className="flex-1 grid grid-cols-3 gap-3">
+                            <Input
+                              placeholder="Code (optional)"
+                              value={course.code}
+                              onChange={(e) => updateCourse(index, "code", e.target.value)}
+                              className="col-span-1"
+                            />
+                            <Input
+                              placeholder="Course Name"
+                              value={course.name}
+                              onChange={(e) => updateCourse(index, "name", e.target.value)}
+                              className="col-span-2"
+                            />
+                          </div>
+                          {courses.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCourse(index)}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Add all courses this department offers for the selected semester.
+                    </p>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <DialogFooter className="px-6 py-4 border-t">
+                <Button variant="outline" onClick={resetForm}>Cancel</Button>
+                <Button onClick={handleCreateRep} disabled={creating}>
+                  {creating ? "Creating..." : "Create Rep & Department"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {loading ? (
+          <LoadingSpinner className="py-12" />
+        ) : reps.length === 0 ? (
+          <EmptyState
+            icon={<Users className="h-8 w-8 text-muted-foreground" />}
+            title="No course reps found"
+            description="There are no course representatives in the system yet. Create one to get started."
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {reps.map((rep) => (
+              <Card key={rep.id} className="hover:shadow-lg transition-all duration-200">
+                <CardHeader className="space-y-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="h-5 w-5 text-primary flex-shrink-0" />
+                    <span className="truncate">{rep.display_name || "Unnamed Rep"}</span>
+                  </CardTitle>
+                  <CardDescription className="truncate">
+                    {rep.departments?.name || "No Department Assigned"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground">
+                        {rep.lecture_notes_count} {rep.lecture_notes_count === 1 ? "upload" : "uploads"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground truncate">
+                        Last: {formatDate(rep.last_upload)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pt-2 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1"
+                      onClick={() => navigate(`/rep/${rep.id}`)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleOpenEditDialog(rep)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleDeleteRep(rep.id, rep.display_name || "Unnamed")}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Edit Rep Dialog - FULL editing */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-primary" />
+              Edit Rep Profile
+            </DialogTitle>
+            <DialogDescription>
+              Update the course representative's credentials, profile, and manage department courses.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] px-6 py-4">
+            <div className="space-y-6">
+              {/* Credentials Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Credentials
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email</Label>
+                    <Input
+                      id="editEmail"
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editPassword">New Password</Label>
+                    <Input
+                      id="editPassword"
+                      type="password"
+                      placeholder="Leave blank to keep current"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Only fill to change password</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Profile Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Profile
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="editDisplayName">Display Name</Label>
+                  <Input
+                    id="editDisplayName"
+                    value={editDisplayName}
+                    onChange={(e) => setEditDisplayName(e.target.value)}
+                    placeholder="Enter display name"
+                  />
+                </div>
+              </div>
+
+              {/* Department Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Department
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="editDepartment">Assigned Department</Label>
+                  <Select value={editDepartmentId} onValueChange={handleDepartmentChange}>
+                    <SelectTrigger id="editDepartment">
+                      <SelectValue placeholder="Select a department" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.icon && <span className="mr-2">{dept.icon}</span>}
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Courses Section */}
+              {editDepartmentId && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Department Courses
+                    </h3>
+                    <Button type="button" variant="outline" size="sm" onClick={addEditCourse} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Course
+                    </Button>
+                  </div>
+
+                  {/* Semester tabs for edit */}
+                  <Tabs value={editSemester} onValueChange={handleEditSemesterChange}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="first" className="flex-1">First Semester</TabsTrigger>
+                      <TabsTrigger value="second" className="flex-1">Second Semester</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  
+                  {loadingCourses ? (
+                    <div className="py-4 text-center text-muted-foreground">Loading courses...</div>
+                  ) : visibleEditCourses.length === 0 ? (
+                    <div className="py-4 text-center text-muted-foreground">
+                      No courses for the {editSemester} semester yet. Add courses for this department.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {editCourses.map((course, index) => 
+                        !course.isDeleted && (
+                          <div key={course.id || `new-${index}`} className="flex gap-3 items-start">
+                            <div className="flex-1 grid grid-cols-3 gap-3">
+                              <Input
+                                placeholder="Code"
+                                value={course.code}
+                                onChange={(e) => updateEditCourse(index, "code", e.target.value)}
+                                className="col-span-1"
+                              />
+                              <Input
+                                placeholder="Course Name"
+                                value={course.name}
+                                onChange={(e) => updateEditCourse(index, "name", e.target.value)}
+                                className="col-span-2"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeEditCourse(index)}
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Manage {editSemester} semester courses for this department. Changes will be saved when you click Save.
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+            <Button onClick={handleUpdateRep} disabled={updating}>
+              {updating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <footer className="mt-auto py-6 border-t border-border/40">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-xs text-muted-foreground/60">
+            Made with love ❤️ by Nexel
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
