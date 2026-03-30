@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
@@ -574,6 +575,7 @@ export default function AdminUserDetail() {
           </p>
         </div>
       </footer>
+          <SmartBottomNav />
     </div>
   );
 }
