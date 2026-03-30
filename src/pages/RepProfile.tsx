@@ -222,6 +222,7 @@ export default function RepProfile() {
           title={profile.displayName}
           subtitle="Course Representative"
           showBack
+        backTo="/dashboard"
         />
 
         <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
