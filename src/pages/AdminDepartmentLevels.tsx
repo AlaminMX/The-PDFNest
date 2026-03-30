@@ -378,7 +378,7 @@ export default function AdminDepartmentLevels() {
         </AlertDialogContent>
       </AlertDialog>
 
-    <AlertDialog open={!!removeLevelTarget} onOpenChange={(open) => !open && setRemoveLevelTarget(null)}>
+      <AlertDialog open={!!removeLevelTarget} onOpenChange={(open) => !open && setRemoveLevelTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {removeLevelTarget} Level?</AlertDialogTitle>
@@ -392,7 +392,7 @@ export default function AdminDepartmentLevels() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
- 
+
       <SmartBottomNav />
     </div>
   );
