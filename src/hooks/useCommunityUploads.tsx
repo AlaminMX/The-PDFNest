@@ -152,4 +152,4 @@ export function useCommunityUploads({
   };
 
   return { uploads, loading, error, refetch: fetchUploads, approveUpload, rejectUpload, deleteUpload };
-            }
+}
