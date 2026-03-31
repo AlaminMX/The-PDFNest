@@ -12,7 +12,7 @@ export interface CommunityUpload {
   semester: string;
   title: string;
   description: string | null;
-  material_type: str;
+  material_type: string;
   file_path: string;
   original_file_name: string;
   file_size: number;
