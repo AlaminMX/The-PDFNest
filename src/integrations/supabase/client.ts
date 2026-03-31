@@ -13,5 +13,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // CRITICAL: must be true so the client parses #access_token fragments
+    // from password-reset email links and fires PASSWORD_RECOVERY events.
+    detectSessionInUrl: true,
   }
 });
