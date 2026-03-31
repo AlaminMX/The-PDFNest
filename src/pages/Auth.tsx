@@ -48,7 +48,18 @@ export default function Auth() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // PASSWORD_RECOVERY fires when the user arrives via a reset-password email link.
+      // Send them to /reset-password so they can set a new password.
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/reset-password", { replace: true });
+        return;
+      }
+
+      // For a normal SIGNED_IN, navigate away from the auth page.
+      // But if we're on /reset-password (recovery redirect in progress),
+      // do NOT navigate — the ResetPassword page must handle the session.
       if (event === "SIGNED_IN" && session && !isOnboarding.current) {
+        if (window.location.pathname === "/reset-password") return;
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
         if (redirectTo) {
           sessionStorage.removeItem("redirectAfterLogin");
@@ -314,4 +325,5 @@ export default function Auth() {
       </motion.div>
     </div>
   );
-}
+                            }
+  
