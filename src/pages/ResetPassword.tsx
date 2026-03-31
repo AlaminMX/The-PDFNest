@@ -28,8 +28,6 @@ const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-const RECOVERY_WAIT_MS = 2500;
-
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -39,32 +37,31 @@ export default function ResetPassword() {
   const [hasRecoverySession, setHasRecoverySession] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
+  // Detect whether this looks like a recovery redirect
+  // Supabase can send either:
+  //   Legacy/implicit flow: #access_token=...&type=recovery in the hash
+  //   PKCE flow:            ?code=... in the query string
   const hasRecoveryParams = useMemo(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const hash = window.location.hash || "";
-
+    const search = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
     return (
-      searchParams.get("type") === "recovery" ||
-      searchParams.has("code") ||
+      search.get("type") === "recovery" ||
+      search.has("code") ||
       hash.includes("type=recovery") ||
-      hash.includes("access_token=") ||
-      hash.includes("refresh_token=")
+      hash.includes("access_token=")
     );
   }, []);
 
   useEffect(() => {
     let isMounted = true;
-    let timeoutId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    const markRecoveryReady = (
-      session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]
-    ) => {
-      if (!isMounted || !session) return;
-
+    const markReady = (email: string | null | undefined) => {
+      if (!isMounted) return;
+      setUserEmail(email ?? null);
       setHasRecoverySession(true);
-      setUserEmail(session.user?.email ?? null);
       setCheckingLink(false);
-
+      // Clean up hash fragment so it doesn't linger in the address bar
       if (window.location.hash) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -76,43 +73,46 @@ export default function ResetPassword() {
       setCheckingLink(false);
     };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (
-        event === "PASSWORD_RECOVERY" ||
-        event === "SIGNED_IN" ||
-        event === "INITIAL_SESSION" ||
-        event === "TOKEN_REFRESHED"
-      ) {
+    // Listen for auth state changes.
+    // PASSWORD_RECOVERY fires when Supabase processes the reset link hash.
+    // SIGNED_IN also fires for the recovery session — handle both.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         if (session) {
-          markRecoveryReady(session);
+          // Clear any pending timeout — we got a valid session
+          if (timeoutId) clearTimeout(timeoutId);
+          markReady(session.user?.email);
         }
       }
     });
 
-    const bootstrapRecovery = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session) {
-        markRecoveryReady(session);
+    // Also check if there's already a session (e.g. page refreshed after recovery link parsed)
+    const bootstrap = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && isMounted) {
+        if (timeoutId) clearTimeout(timeoutId);
+        markReady(session.user?.email);
         return;
       }
 
-      timeoutId = window.setTimeout(() => {
-        markInvalid();
-      }, hasRecoveryParams ? RECOVERY_WAIT_MS : 400);
+      // If recovery params are in the URL, wait longer for Supabase to process
+      // the token exchange (it happens async via onAuthStateChange above).
+      // If no recovery params at all, fail fast.
+      const waitMs = hasRecoveryParams ? 4000 : 600;
+      timeoutId = setTimeout(() => {
+        if (isMounted && checkingLink) markInvalid();
+      }, waitMs);
     };
 
-    bootstrapRecovery();
+    bootstrap();
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      if (timeoutId) window.clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasRecoveryParams]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -133,13 +133,11 @@ export default function ResetPassword() {
     }
 
     setSubmitting(true);
-
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
       toast.success("Password updated successfully.");
-
       await supabase.auth.signOut();
       navigate("/reset-password-success", { replace: true });
     } catch (error: any) {
@@ -177,7 +175,7 @@ export default function ResetPassword() {
               <div className="mt-5 space-y-2">
                 <img
                   src="/pdfnest-logo.png"
-                  alt="PDFNest Logo"
+                  alt="PDFNest"
                   className="mx-auto h-10 w-10 rounded-xl object-contain"
                 />
                 <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
@@ -189,9 +187,9 @@ export default function ResetPassword() {
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground sm:text-[15px]">
                   {checkingLink
-                    ? "Hang tight. We’re verifying your password reset session."
+                    ? "Hang tight — verifying your password reset session."
                     : hasRecoverySession
-                      ? `Set a strong new password${userEmail ? ` for ${userEmail}` : ""}. Once saved, this becomes the password for your account.`
+                      ? `Set a strong new password${userEmail ? ` for ${userEmail}` : ""}. Once saved, this replaces your old password.`
                       : "This link is no longer valid. Request a fresh reset email and try again."}
                 </p>
               </div>
@@ -233,12 +231,19 @@ export default function ResetPassword() {
 
                   <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
                     <p className="text-sm leading-6 text-muted-foreground">
-                      After you save this password, the old one stops working. You’ll be taken back to sign in with the new password.
+                      After saving, your old password stops working. You'll be signed out
+                      and can log in with the new password.
                     </p>
                   </div>
 
-                  <Button type="submit" className="h-11 w-full rounded-xl" disabled={submitting}>
-                    {submitting ? "Updating Password..." : "Save New Password"}
+                  <Button
+                    type="submit"
+                    className="h-11 w-full rounded-xl"
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating Password...</>
+                      : "Save New Password"}
                   </Button>
                 </form>
               ) : (
@@ -263,11 +268,11 @@ export default function ResetPassword() {
 
           {!checkingLink && hasRecoverySession && (
             <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">
-              For security, you’ll be signed out after the password is updated so you can log in cleanly with the new one.
+              For security, you'll be signed out after the password is updated.
             </p>
           )}
         </motion.div>
       </div>
     </div>
   );
-}
+        }
