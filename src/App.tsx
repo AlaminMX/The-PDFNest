@@ -153,6 +153,10 @@ const App = () => (
               <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
+              <Route path="/past-questions" element={<PQLevel />} />
+              <Route path="/past-questions/level/:level" element={<PQSemester />} />
+              <Route path="/past-questions/level/:level/semester/:semester" element={<PQCourses />} />
+              <Route path="/past-questions/level/:level/semester/:semester/:courseCode" element={<PQFiles />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
