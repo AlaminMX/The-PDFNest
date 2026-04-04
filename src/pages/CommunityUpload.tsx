@@ -559,25 +559,35 @@ function CommunityUploadContent() {
             {currentStep === "faculty" && (
               <StepCard title="Select Faculty" icon={Building2} description="Choose the faculty this material belongs to">
                 <div className="space-y-2">
-                  {faculties.map(f => (
-                    <button
-                      key={f.id}
-                      onClick={() => {
-                        setSelectedFacultyId(f.id);
-                        setSelectedDepartmentId("");
-                        setSelectedCourseId("");
-                      }}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        selectedFacultyId === f.id
-                          ? "border-primary bg-primary/5 text-foreground"
-                          : "border-border hover:border-primary/50 text-foreground"
-                      }`}
-                    >
-                      <span className="font-medium text-sm">{f.name}</span>
-                    </button>
-                  ))}
-                  {faculties.length === 0 && (
-                    <p className="text-muted-foreground text-sm text-center py-4">No faculties available</p>
+                  {loading ? (
+                    <>
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="h-12 rounded-lg bg-muted/30 animate-pulse" />
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {faculties.map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            setSelectedFacultyId(f.id);
+                            setSelectedDepartmentId("");
+                            setSelectedCourseId("");
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                            selectedFacultyId === f.id
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border hover:border-primary/50 text-foreground"
+                          }`}
+                        >
+                          <span className="font-medium text-sm">{f.name}</span>
+                        </button>
+                      ))}
+                      {faculties.length === 0 && (
+                        <p className="text-muted-foreground text-sm text-center py-4">No faculties available</p>
+                      )}
+                    </>
                   )}
                 </div>
               </StepCard>
