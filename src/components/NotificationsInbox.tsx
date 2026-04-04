@@ -1,4 +1,4 @@
-import { Bell, Check, FileText, Calendar, Building2 } from "lucide-react";
+import { Bell, Check, FileText, Calendar, Building2, CheckCircle2, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
@@ -10,7 +10,7 @@ import { NotificationsSkeleton } from "./NotificationsSkeleton";
 
 export function NotificationsInbox() {
   const { user } = useAuth();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = 
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
     useNotifications(user?.id);
 
   const getNotificationIcon = (type: string) => {
@@ -19,44 +19,84 @@ export function NotificationsInbox() {
         return <FileText className="h-5 w-5 text-primary" />;
       case "timetable_update":
         return <Calendar className="h-5 w-5 text-secondary" />;
+      case "upload_approved":
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case "upload_rejected":
+        return <XCircle className="h-5 w-5 text-destructive" />;
       default:
         return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
   const getNotificationTitle = (notification: Notification) => {
-    const { notification_type, metadata } = notification;
+    const { notification_type, title, metadata } = notification as any;
+
+    // Use the title column if available (from the fixed RPC)
+    if (title) return title;
+
+    // Fallback to deriving from type + metadata
     if (notification_type === "new_lecture_note") {
-      return `New lecture note: ${metadata.note_title || "Untitled"}`;
+      return `New lecture note: ${metadata?.note_title || "Untitled"}`;
     }
     if (notification_type === "timetable_update") {
-      const changeMessage = metadata.change_message || "Timetable updated";
-      return `${changeMessage}: ${metadata.course_code || ""}`;
+      const changeMessage = metadata?.change_message || "Timetable updated";
+      return `${changeMessage}: ${metadata?.course_code || ""}`;
+    }
+    if (notification_type === "upload_approved") {
+      return `Material Approved! 🎉`;
+    }
+    if (notification_type === "upload_rejected") {
+      return `Material Not Approved`;
     }
     return "Notification";
   };
 
   const getNotificationBody = (notification: Notification) => {
-    const { notification_type, metadata } = notification;
+    const { notification_type, message, metadata } = notification as any;
+
+    // Use message column if available (from the fixed RPC)
+    if (message) return message;
+
+    // Fallback
     if (notification_type === "new_lecture_note") {
-      return `${metadata.course_code || ""} • ${metadata.department_name || ""}`;
+      return `${metadata?.course_code || ""} • ${metadata?.department_name || ""}`;
     }
     if (notification_type === "timetable_update") {
-      const changedBy = metadata.changed_by ? `by ${metadata.changed_by}` : "";
-      return `${metadata.course_name || ""} • ${metadata.department_name || ""} ${changedBy}`.trim();
+      const changedBy = metadata?.changed_by ? `by ${metadata.changed_by}` : "";
+      return `${metadata?.course_name || ""} • ${metadata?.department_name || ""} ${changedBy}`.trim();
+    }
+    if (notification_type === "upload_approved") {
+      const note = metadata?.note;
+      return note
+        ? `Your material "${metadata?.title || ""}" is now live. Note: ${note}`
+        : `Your material "${metadata?.title || ""}" is now live.`;
+    }
+    if (notification_type === "upload_rejected") {
+      const reason = metadata?.reason && metadata.reason !== "No reason provided"
+        ? `Reason: ${metadata.reason}`
+        : "";
+      return `Your material "${metadata?.title || ""}" was not approved. ${reason}`.trim();
     }
     return "";
   };
 
-  // Group by department
+  // Group notifications: approval/rejection types don't have a useful department_name
+  // in metadata, so group them under a sensible label
+  const getGroupLabel = (notification: Notification) => {
+    const type = (notification as any).notification_type;
+    if (type === "upload_approved" || type === "upload_rejected") {
+      return "Your Contributions";
+    }
+    return (notification as any).metadata?.department_name || "Other";
+  };
+
   const groupedNotifications = notifications.reduce((acc, notif) => {
-    const deptName = notif.metadata?.department_name || "Other";
-    if (!acc[deptName]) acc[deptName] = [];
-    acc[deptName].push(notif);
+    const label = getGroupLabel(notif);
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(notif);
     return acc;
   }, {} as Record<string, Notification[]>);
 
-  // Show skeleton during initial load
   if (loading && notifications.length === 0) {
     return <NotificationsSkeleton />;
   }
@@ -87,18 +127,18 @@ export function NotificationsInbox() {
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground">No notifications yet</p>
             <p className="text-sm text-muted-foreground/70">
-              You'll be notified about new lecture notes and timetable updates
+              You'll be notified about new materials, timetable updates, and your contribution status
             </p>
           </CardContent>
         </Card>
       ) : (
         <ScrollArea className="h-[600px] rounded-lg border">
           <div className="p-4 space-y-6">
-            {Object.entries(groupedNotifications).map(([deptName, notifs]) => (
-              <div key={deptName} className="space-y-3">
+            {Object.entries(groupedNotifications).map(([groupLabel, notifs]) => (
+              <div key={groupLabel} className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Building2 className="h-4 w-4" />
-                  {deptName}
+                  {groupLabel}
                 </div>
                 <div className="space-y-2">
                   {notifs.map((notification) => (
@@ -113,7 +153,7 @@ export function NotificationsInbox() {
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <div className="mt-0.5">
-                            {getNotificationIcon(notification.notification_type)}
+                            {getNotificationIcon((notification as any).notification_type)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
@@ -152,4 +192,5 @@ export function NotificationsInbox() {
       )}
     </div>
   );
-}
+           }
+    
