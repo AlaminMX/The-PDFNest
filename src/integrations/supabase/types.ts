@@ -139,6 +139,7 @@ export type Database = {
           level: number
           material_type: string
           original_file_name: string
+          pq_course_id: string | null
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -160,6 +161,7 @@ export type Database = {
           level?: number
           material_type?: string
           original_file_name: string
+          pq_course_id?: string | null
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -181,6 +183,7 @@ export type Database = {
           level?: number
           material_type?: string
           original_file_name?: string
+          pq_course_id?: string | null
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -216,6 +219,20 @@ export type Database = {
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_uploads_pq_course_id_fkey"
+            columns: ["pq_course_id"]
+            isOneToOne: false
+            referencedRelation: "pq_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_uploads_pq_course_id_fkey"
+            columns: ["pq_course_id"]
+            isOneToOne: false
+            referencedRelation: "pq_courses_with_counts"
             referencedColumns: ["id"]
           },
         ]
@@ -545,6 +562,63 @@ export type Database = {
           },
         ]
       }
+      past_questions: {
+        Row: {
+          created_at: string | null
+          file_path: string
+          file_size: number
+          id: string
+          level: number | null
+          material_type: string | null
+          pq_course_id: string
+          title: string
+          uploaded_by: string
+          uploaded_by_display: string
+          views: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_path: string
+          file_size?: number
+          id?: string
+          level?: number | null
+          material_type?: string | null
+          pq_course_id: string
+          title: string
+          uploaded_by: string
+          uploaded_by_display: string
+          views?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string
+          file_size?: number
+          id?: string
+          level?: number | null
+          material_type?: string | null
+          pq_course_id?: string
+          title?: string
+          uploaded_by?: string
+          uploaded_by_display?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "past_questions_pq_course_id_fkey"
+            columns: ["pq_course_id"]
+            isOneToOne: false
+            referencedRelation: "pq_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "past_questions_pq_course_id_fkey"
+            columns: ["pq_course_id"]
+            isOneToOne: false
+            referencedRelation: "pq_courses_with_counts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdf_conversations: {
         Row: {
           id: string
@@ -697,6 +771,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pq_courses: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string | null
+          id: string
+          level: number
+          name: string
+          semester: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          level: number
+          name: string
+          semester?: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          level?: number
+          name?: string
+          semester?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1054,6 +1158,19 @@ export type Database = {
           },
         ]
       }
+      pq_courses_with_counts: {
+        Row: {
+          code: string | null
+          color: string | null
+          created_at: string | null
+          id: string | null
+          level: number | null
+          name: string | null
+          question_count: number | null
+          semester: string | null
+        }
+        Relationships: []
+      }
       public_rep_profiles: {
         Row: {
           avatar_url: string | null
@@ -1096,6 +1213,10 @@ export type Database = {
         Returns: undefined
       }
       approve_community_upload: {
+        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Returns: undefined
+      }
+      approve_pq_upload: {
         Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
         Returns: undefined
       }
