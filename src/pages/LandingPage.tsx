@@ -96,7 +96,7 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             className="gap-2 rounded-xl px-7 text-base font-semibold border-border/60 hover:bg-muted/60"
             onClick={() => {
               toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
-              setTimeout(() => navigate("/auth"), 1500);
+              setTimeout(() => window.location.href = "/auth", 1500);
             }}
           >
             <Upload className="w-4 h-4" />
