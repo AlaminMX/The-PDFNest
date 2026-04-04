@@ -326,6 +326,8 @@ export type Database = {
           level: number
           name: string
           semester: string
+          status: string
+          suggested_by: string | null
         }
         Insert: {
           code: string
@@ -336,6 +338,8 @@ export type Database = {
           level?: number
           name: string
           semester?: string
+          status?: string
+          suggested_by?: string | null
         }
         Update: {
           code?: string
@@ -346,6 +350,8 @@ export type Database = {
           level?: number
           name?: string
           semester?: string
+          status?: string
+          suggested_by?: string | null
         }
         Relationships: [
           {
@@ -380,6 +386,7 @@ export type Database = {
       }
       departments: {
         Row: {
+          allowed_levels: number[] | null
           category_id: string | null
           color: string | null
           created_at: string | null
@@ -392,6 +399,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          allowed_levels?: number[] | null
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -404,6 +412,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          allowed_levels?: number[] | null
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -472,6 +481,8 @@ export type Database = {
           file_path: string
           file_size: number
           id: string
+          level: number | null
+          material_type: string
           title: string
           uploaded_by: string
           uploaded_by_display: string
@@ -483,6 +494,8 @@ export type Database = {
           file_path: string
           file_size: number
           id?: string
+          level?: number | null
+          material_type?: string
           title: string
           uploaded_by: string
           uploaded_by_display: string
@@ -494,6 +507,8 @@ export type Database = {
           file_path?: string
           file_size?: number
           id?: string
+          level?: number | null
+          material_type?: string
           title?: string
           uploaded_by?: string
           uploaded_by_display?: string
@@ -683,88 +698,88 @@ export type Database = {
           },
         ]
       }
-profiles: {
-  Row: {
-    age: number | null
-    avatar_url: string | null
-    created_at: string | null
-    date_of_birth: string | null
-    default_category_id: string | null
-    default_sort_order: string | null
-    department_id: string | null
-    discovery_source: string | null
-    display_name: string | null
-    email: string | null
-    email_notifications_enabled: boolean | null
-    financial_literacy_interest: boolean | null
-    full_name: string | null
-    id: string
-    is_insider: boolean | null
-    is_student: boolean | null
-    level: number | null
-    nickname: string | null
-    phone_number: string | null
-    preferred_theme: string | null
-    school: string | null
-    terms_accepted: boolean | null
-    terms_accepted_at: string | null
-    total_storage_used: number | null
-    usage_reason: string | null
-  }
-  Insert: {
-    age?: number | null
-    avatar_url?: string | null
-    created_at?: string | null
-    date_of_birth?: string | null
-    default_category_id?: string | null
-    default_sort_order?: string | null
-    department_id?: string | null
-    discovery_source?: string | null
-    display_name?: string | null
-    email?: string | null
-    email_notifications_enabled?: boolean | null
-    financial_literacy_interest?: boolean | null
-    full_name?: string | null
-    id: string
-    is_insider?: boolean | null
-    is_student?: boolean | null
-    level?: number | null
-    nickname?: string | null
-    phone_number?: string | null
-    preferred_theme?: string | null
-    school?: string | null
-    terms_accepted?: boolean | null
-    terms_accepted_at?: string | null
-    total_storage_used?: number | null
-    usage_reason?: string | null
-  }
-  Update: {
-    age?: number | null
-    avatar_url?: string | null
-    created_at?: string | null
-    date_of_birth?: string | null
-    default_category_id?: string | null
-    default_sort_order?: string | null
-    department_id?: string | null
-    discovery_source?: string | null
-    display_name?: string | null
-    email?: string | null
-    email_notifications_enabled?: boolean | null
-    financial_literacy_interest?: boolean | null
-    full_name?: string | null
-    id?: string
-    is_insider?: boolean | null
-    is_student?: boolean | null
-    level?: number | null
-    nickname?: string | null
-    phone_number?: string | null
-    preferred_theme?: string | null
-    school?: string | null
-    terms_accepted?: boolean | null
-    terms_accepted_at?: string | null
-    total_storage_used?: number | null
-    usage_reason?: string | null
-  }
+      profiles: {
+        Row: {
+          age: number | null
+          avatar_url: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          default_category_id: string | null
+          default_sort_order: string | null
+          department_id: string | null
+          discovery_source: string | null
+          display_name: string | null
+          email: string | null
+          email_notifications_enabled: boolean | null
+          financial_literacy_interest: boolean | null
+          full_name: string | null
+          id: string
+          is_insider: boolean | null
+          is_student: boolean | null
+          level: number | null
+          nickname: string | null
+          phone_number: string | null
+          preferred_theme: string | null
+          school: string | null
+          terms_accepted: boolean | null
+          terms_accepted_at: string | null
+          total_storage_used: number | null
+          usage_reason: string | null
+        }
+        Insert: {
+          age?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          default_category_id?: string | null
+          default_sort_order?: string | null
+          department_id?: string | null
+          discovery_source?: string | null
+          display_name?: string | null
+          email?: string | null
+          email_notifications_enabled?: boolean | null
+          financial_literacy_interest?: boolean | null
+          full_name?: string | null
+          id: string
+          is_insider?: boolean | null
+          is_student?: boolean | null
+          level?: number | null
+          nickname?: string | null
+          phone_number?: string | null
+          preferred_theme?: string | null
+          school?: string | null
+          terms_accepted?: boolean | null
+          terms_accepted_at?: string | null
+          total_storage_used?: number | null
+          usage_reason?: string | null
+        }
+        Update: {
+          age?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          default_category_id?: string | null
+          default_sort_order?: string | null
+          department_id?: string | null
+          discovery_source?: string | null
+          display_name?: string | null
+          email?: string | null
+          email_notifications_enabled?: boolean | null
+          financial_literacy_interest?: boolean | null
+          full_name?: string | null
+          id?: string
+          is_insider?: boolean | null
+          is_student?: boolean | null
+          level?: number | null
+          nickname?: string | null
+          phone_number?: string | null
+          preferred_theme?: string | null
+          school?: string | null
+          terms_accepted?: boolean | null
+          terms_accepted_at?: string | null
+          total_storage_used?: number | null
+          usage_reason?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "profiles_default_category_id_fkey"
@@ -888,8 +903,10 @@ profiles: {
           department_id: string | null
           id: string
           is_read: boolean | null
+          message: string | null
           metadata: Json | null
           notification_type: string
+          title: string | null
           user_id: string
         }
         Insert: {
@@ -897,8 +914,10 @@ profiles: {
           department_id?: string | null
           id?: string
           is_read?: boolean | null
+          message?: string | null
           metadata?: Json | null
           notification_type: string
+          title?: string | null
           user_id: string
         }
         Update: {
@@ -906,8 +925,10 @@ profiles: {
           department_id?: string | null
           id?: string
           is_read?: boolean | null
+          message?: string | null
           metadata?: Json | null
           notification_type?: string
+          title?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1005,15 +1026,23 @@ profiles: {
       }
       courses_with_note_counts: {
         Row: {
+          assignment_count: number | null
           code: string | null
           created_at: string | null
           credit_units: number | null
           department_id: string | null
+          handout_count: number | null
           id: string | null
+          lecture_note_count: number | null
           level: number | null
           name: string | null
           note_count: number | null
+          other_count: number | null
+          past_question_count: number | null
           semester: string | null
+          status: string | null
+          suggested_by: string | null
+          tutorial_count: number | null
         }
         Relationships: [
           {
