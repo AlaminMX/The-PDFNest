@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useFaculties } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building } from "lucide-react";
+import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building, ClipboardList } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { RamadanDecoration } from "@/components/RamadanDecoration";
