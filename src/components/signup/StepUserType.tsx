@@ -43,7 +43,7 @@ export function StepUserType({ data, updateData, onNext, onBack }: Props) {
     if (
       data.departmentId &&
       data.level !== null &&
-      !availableLevels.includes(data.level)
+      !availableLevels.includes(data.level as any)
     ) {
       updateData({ level: null });
     }

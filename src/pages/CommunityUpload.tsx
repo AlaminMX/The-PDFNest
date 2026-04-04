@@ -396,7 +396,7 @@ function CommunityUploadContent() {
   const selectedLevelLabel = LEVELS.find(l => l.value === selectedLevel)?.label || "";
 
   useEffect(() => {
-    if (selectedLevel && !availableLevels.includes(selectedLevel)) {
+    if (selectedLevel && !availableLevels.includes(selectedLevel as any)) {
       setSelectedLevel(0);
     }
   }, [selectedLevel, availableLevels]);

@@ -163,9 +163,7 @@ export default function PQFiles() {
       </main>
 
       <GuestAuthPrompt open={guestOpen} action="download past questions" onClose={() => setGuestOpen(false)} />
-      {pdfViewerOpen && viewerPdfUrl && (
-        <PDFViewer pdfUrl={viewerPdfUrl} title={selectedTitle} onClose={() => { setPdfViewerOpen(false); setViewerPdfUrl(""); }} />
-      )}
+      <PDFViewer isOpen={pdfViewerOpen} pdfUrl={viewerPdfUrl} fileName={selectedTitle} onClose={() => { setPdfViewerOpen(false); setViewerPdfUrl(""); }} />
       <SmartBottomNav />
     </div>
   );

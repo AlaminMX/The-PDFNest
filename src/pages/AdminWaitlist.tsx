@@ -291,7 +291,6 @@ export default function AdminWaitlist() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-          <SmartBottomNav />
     </div>
   );
 }

@@ -17,6 +17,8 @@ export type ActivityType =
   | "ai_voice"
   | "ai_translate"
   | "ai_chat"
+  | "upload_approved"
+  | "upload_rejected"
   | "category_create"
   | "category_delete"
   | "profile_update"

@@ -36,7 +36,7 @@ export function useLectureNotes(courseId?: string) {
       if (fetchError) throw fetchError;
 
       // Get unique uploader IDs
-      const uploaderIds = [...new Set((notesData || []).map(note => note.uploaded_by))];
+      const uploaderIds = [...new Set((notesData || []).map((note: any) => note.uploaded_by))] as string[];
       
       // Fetch rep profiles for these uploaders
       let profilesMap: Record<string, { display_name: string | null; avatar_url: string | null }> = {};

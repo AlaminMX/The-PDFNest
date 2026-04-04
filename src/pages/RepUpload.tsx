@@ -78,7 +78,7 @@ export default function RepUpload() {
   }, [displayName, isRep, repLoading]);
 
   useEffect(() => {
-    if (selectedLevel && !availableLevels.includes(selectedLevel)) {
+    if (selectedLevel && !availableLevels.includes(selectedLevel as any)) {
       setSelectedLevel(availableLevels[0]);
     }
   }, [selectedLevel, availableLevels]);
