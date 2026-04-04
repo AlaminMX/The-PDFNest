@@ -138,6 +138,7 @@ const App = () => (
               <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
               <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
               <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
+              <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
               <Route path="/afit-pdfs" element={<FacultySelection />} />
               <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
               <Route path="/school-store" element={<SchoolStore />} />
