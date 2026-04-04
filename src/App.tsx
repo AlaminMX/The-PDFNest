@@ -40,6 +40,11 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const CommunityUpload = lazy(() => import("./pages/CommunityUpload"));
 const AdminUploads = lazy(() => import("./pages/AdminUploads"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const PQLevel = lazy(() => import("./pages/PQLevel"));
+const PQSemester = lazy(() => import("./pages/PQSemester"));
+const PQCourses = lazy(() => import("./pages/PQCourses"));
+const PQFiles = lazy(() => import("./pages/PQFiles"));
+const AdminPastQuestions = lazy(() => import("./pages/AdminPastQuestions"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -133,6 +138,7 @@ const App = () => (
               <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
               <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
               <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
+              <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
               <Route path="/afit-pdfs" element={<FacultySelection />} />
               <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
               <Route path="/school-store" element={<SchoolStore />} />
@@ -147,6 +153,10 @@ const App = () => (
               <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
+              <Route path="/past-questions" element={<PQLevel />} />
+              <Route path="/past-questions/level/:level" element={<PQSemester />} />
+              <Route path="/past-questions/level/:level/semester/:semester" element={<PQCourses />} />
+              <Route path="/past-questions/level/:level/semester/:semester/:courseCode" element={<PQFiles />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -83,7 +83,7 @@ export default function AdminDepartmentLevels() {
         .eq("department_id", deptId)
         .order("level").order("code");
 
-      const courses = (coursesData || []) as CourseEntry[];
+      const courses = (coursesData || []) as unknown as CourseEntry[];
       const ALL_LEVELS = getDepartmentLevels(name);
 
       const grouped = ALL_LEVELS.map((level) => {

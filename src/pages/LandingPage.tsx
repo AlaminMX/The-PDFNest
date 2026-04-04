@@ -96,7 +96,7 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             className="gap-2 rounded-xl px-7 text-base font-semibold border-border/60 hover:bg-muted/60"
             onClick={() => {
               toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
-              setTimeout(() => navigate("/auth"), 1500);
+              setTimeout(() => window.location.href = "/auth", 1500);
             }}
           >
             <Upload className="w-4 h-4" />
@@ -351,10 +351,10 @@ function ContributeSection() {
             </p>
             <Button
               className="rounded-xl gap-2 px-6 shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-shadow"
-              onClick={() => {
-                toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
-                setTimeout(() => navigate("/auth"), 1500);
-              }}
+            onClick={() => {
+              toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
+              setTimeout(() => window.location.href = "/auth", 1500);
+            }}
             >
               <Upload className="w-4 h-4" />
               Upload Material

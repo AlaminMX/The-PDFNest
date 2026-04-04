@@ -76,6 +76,7 @@ const sidebarItems = [
   { id: "sessions", label: "Sessions & Security", icon: Clock, path: "/admin/sessions" },
   { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
   { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
+  { id: "past-questions", label: "Past Questions", icon: FileText, path: "/admin/past-questions" },
 ];
 
 function RamadanToggleControl() {

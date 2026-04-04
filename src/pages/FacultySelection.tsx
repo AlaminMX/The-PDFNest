@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useFaculties } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building } from "lucide-react";
+import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building, ClipboardList } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { RamadanDecoration } from "@/components/RamadanDecoration";
@@ -81,7 +81,27 @@ function FacultySelectionContent() {
                 })}
           </div>
 
-          {/* School Store Tile - spans full width below grid */}
+          {/* Past Questions Tile */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: visibleFaculties.length * 0.06 }}
+            className="mt-3"
+          >
+            <button
+              onClick={() => navigate("/past-questions")}
+              className="w-full text-left px-5 py-4 rounded-xl bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-fuchsia-500/10 hover:from-violet-500/15 hover:via-purple-500/15 hover:to-fuchsia-500/15 border border-violet-500/20 transition-all duration-200 group flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/30">
+                <ClipboardList className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium">Past Questions</h3>
+                <p className="text-xs text-muted-foreground">Browse past exams & tests</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+          </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
