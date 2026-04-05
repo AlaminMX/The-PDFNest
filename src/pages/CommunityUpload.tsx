@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Upload, CheckCircle, AlertCircle,
   FileText, Loader2, X, GraduationCap, Building2, Layers,
-  Calendar, BookOpen, File, Info, PlusCircle, ChevronDown
+  Calendar, BookOpen, File, Info, PlusCircle, ChevronDown, ScrollText
 } from "lucide-react";
 import { getDepartmentLevels } from "@/lib/departmentLevels";
 
@@ -34,6 +34,12 @@ const MATERIAL_TYPES = [
   { value: "other", label: "Other" },
 ];
 
+const PQ_MATERIAL_TYPES = [
+  { value: "exam", label: "Exam" },
+  { value: "test", label: "Test" },
+  { value: "assignment", label: "Assignment" },
+];
+
 const SUPPORTED_TYPES = [
   "application/pdf",
   "application/msword",
@@ -47,13 +53,16 @@ const SUPPORTED_TYPES = [
 
 const DAILY_UPLOAD_LIMIT = 10;
 
+const PQ_LEVELS = [100, 200, 300, 400, 500].map(l => ({ value: l, label: `${l} Level` }));
+
 interface Faculty { id: string; name: string; slug: string; }
 interface Department { id: string; name: string; slug: string; faculty_id: string | null; }
 interface Course { id: string; code: string; name: string; }
+interface PQCourseOption { id: string; code: string; name: string; }
 
 type Step = "faculty" | "department" | "level" | "semester" | "course" | "file" | "metadata" | "review";
 
-const STEPS: { key: Step; label: string; icon: React.ElementType }[] = [
+const ALL_STEPS: { key: Step; label: string; icon: React.ElementType }[] = [
   { key: "faculty", label: "Faculty", icon: Building2 },
   { key: "department", label: "Department", icon: GraduationCap },
   { key: "level", label: "Level", icon: Layers },
@@ -70,6 +79,9 @@ function CommunityUploadContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // PQ mode
+  const [isPastQuestions, setIsPastQuestions] = useState(false);
+
   // Selection state
   const [selectedFacultyId, setSelectedFacultyId] = useState("");
   const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
@@ -81,8 +93,13 @@ function CommunityUploadContent() {
   const [newCourseCode, setNewCourseCode] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseCredits, setNewCourseCredits] = useState("3");
-  const [newCourseId, setNewCourseId] = useState(""); // id of a just-created pending course
-  const [newCourseLabel, setNewCourseLabel] = useState(""); // display label for review step
+  const [newCourseId, setNewCourseId] = useState("");
+  const [newCourseLabel, setNewCourseLabel] = useState("");
+
+  // PQ course state
+  const [pqCourses, setPqCourses] = useState<PQCourseOption[]>([]);
+  const [selectedPqCourseId, setSelectedPqCourseId] = useState("");
+  const [pqLoading, setPqLoading] = useState(false);
 
   // File state
   const [files, setFiles] = useState<File[]>([]);
@@ -103,20 +120,33 @@ function CommunityUploadContent() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
+  const [facultiesLoading, setFacultiesLoading] = useState(true);
+
+  // Dynamic steps based on PQ mode
+  const STEPS = useMemo(() => {
+    if (isPastQuestions) {
+      return ALL_STEPS.filter(s => s.key !== "department");
+    }
+    return ALL_STEPS;
+  }, [isPastQuestions]);
 
   // Fetch faculties on mount
   useEffect(() => {
+    setFacultiesLoading(true);
     supabase
       .from("faculties")
       .select("id, name, slug")
       .eq("is_visible", true)
       .order("display_order")
-      .then(({ data }) => setFaculties((data as Faculty[]) || []));
+      .then(({ data }) => {
+        setFaculties((data as Faculty[]) || []);
+        setFacultiesLoading(false);
+      });
   }, []);
 
   // Fetch departments when faculty changes
   useEffect(() => {
-    if (!selectedFacultyId) { setDepartments([]); return; }
+    if (!selectedFacultyId || isPastQuestions) { setDepartments([]); return; }
     setLoading(true);
     supabase
       .from("departments")
@@ -128,10 +158,11 @@ function CommunityUploadContent() {
         setDepartments((data as Department[]) || []);
         setLoading(false);
       });
-  }, [selectedFacultyId]);
+  }, [selectedFacultyId, isPastQuestions]);
 
-  // Fetch courses when department + level + semester selected
+  // Fetch courses when department + level + semester selected (regular mode)
   useEffect(() => {
+    if (isPastQuestions) return;
     if (!selectedDepartmentId || !selectedLevel || !selectedSemester) { setCourses([]); return; }
     setLoading(true);
     supabase
@@ -146,7 +177,23 @@ function CommunityUploadContent() {
         setCourses((data as Course[]) || []);
         setLoading(false);
       });
-  }, [selectedDepartmentId, selectedLevel, selectedSemester]);
+  }, [selectedDepartmentId, selectedLevel, selectedSemester, isPastQuestions]);
+
+  // Fetch PQ courses when in PQ mode + level + semester selected
+  useEffect(() => {
+    if (!isPastQuestions || !selectedLevel || !selectedSemester) { setPqCourses([]); return; }
+    setPqLoading(true);
+    supabase
+      .from("pq_courses")
+      .select("id, code, name")
+      .eq("level", selectedLevel)
+      .eq("semester", selectedSemester)
+      .order("code")
+      .then(({ data }) => {
+        setPqCourses((data as PQCourseOption[]) || []);
+        setPqLoading(false);
+      });
+  }, [isPastQuestions, selectedLevel, selectedSemester]);
 
   const stepIndex = STEPS.findIndex(s => s.key === currentStep);
 
@@ -160,7 +207,7 @@ function CommunityUploadContent() {
   };
 
   const makeDisplayTitle = useCallback((inputFile: File) => {
-    return inputFile.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " " );
+    return inputFile.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,10 +305,10 @@ function CommunityUploadContent() {
   };
 
   const submitFiles = async (skipDuplicateCheck = false) => {
-    const effectiveCourseId = selectedCourseId || newCourseId;
+    const effectiveCourseId = isPastQuestions ? selectedPqCourseId : (selectedCourseId || newCourseId);
 
     if (!files.length) { toast.error("Please select at least one file."); return; }
-    if (!effectiveCourseId) { toast.error("Please select or create a course first."); return; }
+    if (!effectiveCourseId) { toast.error(isPastQuestions ? "Please select a PQ course." : "Please select or create a course first."); return; }
 
     setSubmitting(true);
     setSubmittingIndex(null);
@@ -285,7 +332,8 @@ function CommunityUploadContent() {
         return;
       }
 
-      if (!skipDuplicateCheck) {
+      // Skip duplicate check for PQ mode (no check_duplicate_upload for pq_course_id)
+      if (!skipDuplicateCheck && !isPastQuestions) {
         const duplicatesFound: any[] = [];
 
         for (const inputFile of files) {
@@ -340,24 +388,34 @@ function CommunityUploadContent() {
           );
         }
 
+        const insertPayload: any = {
+          user_id: user.id,
+          level: selectedLevel,
+          semester: selectedSemester,
+          title: getSubmissionTitle(inputFile),
+          description: description.trim() || null,
+          material_type: materialType,
+          file_path: filePath,
+          original_file_name: inputFile.name,
+          file_size: inputFile.size,
+          file_hash: hash,
+          status: "pending",
+        };
+
+        if (isPastQuestions) {
+          insertPayload.pq_course_id = selectedPqCourseId;
+          insertPayload.faculty_id = null;
+          insertPayload.department_id = null;
+          insertPayload.course_id = null;
+        } else {
+          insertPayload.faculty_id = selectedFacultyId;
+          insertPayload.department_id = selectedDepartmentId;
+          insertPayload.course_id = effectiveCourseId;
+        }
+
         const { error: insertError } = await supabase
           .from("community_uploads")
-          .insert({
-            user_id: user.id,
-            faculty_id: selectedFacultyId,
-            department_id: selectedDepartmentId,
-            course_id: effectiveCourseId,
-            level: selectedLevel,
-            semester: selectedSemester,
-            title: getSubmissionTitle(inputFile),
-            description: description.trim() || null,
-            material_type: materialType,
-            file_path: filePath,
-            original_file_name: inputFile.name,
-            file_size: inputFile.size,
-            file_hash: hash,
-            status: "pending",
-          });
+          .insert(insertPayload);
 
         if (insertError) throw insertError;
 
@@ -388,32 +446,61 @@ function CommunityUploadContent() {
   };
 
   // Selected names for review
-  const selectedFacultyName = faculties.find(f => f.id === selectedFacultyId)?.name || "";
-  const selectedDepartmentName = departments.find(d => d.id === selectedDepartmentId)?.name || "";
-  const availableLevels = getDepartmentLevels(selectedDepartmentName);
-  const LEVELS = availableLevels.map((level) => ({ value: level, label: `${level} Level` }));
-  const selectedCourseName = courses.find(c => c.id === selectedCourseId);
+  const selectedFacultyName = isPastQuestions ? "Past Questions" : (faculties.find(f => f.id === selectedFacultyId)?.name || "");
+  const selectedDepartmentName = isPastQuestions ? "" : (departments.find(d => d.id === selectedDepartmentId)?.name || "");
+  const availableLevels = isPastQuestions ? [100, 200, 300, 400, 500] : getDepartmentLevels(selectedDepartmentName);
+  const LEVELS = isPastQuestions ? PQ_LEVELS : availableLevels.map((level) => ({ value: level, label: `${level} Level` }));
+  const selectedCourseName = isPastQuestions ? null : courses.find(c => c.id === selectedCourseId);
+  const selectedPqCourse = pqCourses.find(c => c.id === selectedPqCourseId);
   const selectedLevelLabel = LEVELS.find(l => l.value === selectedLevel)?.label || "";
+
+  const activeMaterialTypes = isPastQuestions ? PQ_MATERIAL_TYPES : MATERIAL_TYPES;
 
   useEffect(() => {
     if (selectedLevel && !availableLevels.includes(selectedLevel as any)) {
       setSelectedLevel(0);
     }
   }, [selectedLevel, availableLevels]);
+
+  // Reset material type when switching modes
+  useEffect(() => {
+    if (isPastQuestions) {
+      setMaterialType("exam");
+    } else {
+      setMaterialType("lecture_note");
+    }
+  }, [isPastQuestions]);
+
   const selectedSemesterLabel = SEMESTERS.find(s => s.value === selectedSemester)?.label || "";
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case "faculty": return !!selectedFacultyId;
+      case "faculty": return isPastQuestions || !!selectedFacultyId;
       case "department": return !!selectedDepartmentId;
       case "level": return selectedLevel > 0;
       case "semester": return !!selectedSemester;
-      case "course": return !!(selectedCourseId || newCourseId);
+      case "course": return isPastQuestions ? !!selectedPqCourseId : !!(selectedCourseId || newCourseId);
       case "file": return files.length > 0;
       case "metadata": return true;
       case "review": return true;
       default: return false;
     }
+  };
+
+  const resetAll = () => {
+    setSubmitted(false);
+    setCurrentStep("faculty");
+    setIsPastQuestions(false);
+    setSelectedFacultyId("");
+    setSelectedDepartmentId("");
+    setSelectedLevel(0);
+    setSelectedSemester("");
+    setSelectedCourseId("");
+    setSelectedPqCourseId("");
+    setFiles([]);
+    setTitle("");
+    setDescription("");
+    setMaterialType("lecture_note");
   };
 
   if (submitted) {
@@ -483,19 +570,7 @@ function CommunityUploadContent() {
                 <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                   <Button
                     className="h-11 w-full rounded-xl"
-                    onClick={() => {
-                      setSubmitted(false);
-                      setCurrentStep("faculty");
-                      setSelectedFacultyId("");
-                      setSelectedDepartmentId("");
-                      setSelectedLevel(0);
-                      setSelectedSemester("");
-                      setSelectedCourseId("");
-                      setFiles([]);
-                      setTitle("");
-                      setDescription("");
-                      setMaterialType("lecture_note");
-                    }}
+                    onClick={resetAll}
                   >
                     Upload Another Batch
                   </Button>
@@ -557,9 +632,9 @@ function CommunityUploadContent() {
             transition={{ duration: 0.2 }}
           >
             {currentStep === "faculty" && (
-              <StepCard title="Select Faculty" icon={Building2} description="Choose the faculty this material belongs to">
+              <StepCard title="Select Category" icon={Building2} description="Choose the type of material you want to upload">
                 <div className="space-y-2">
-                  {loading ? (
+                  {facultiesLoading ? (
                     <>
                       {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="h-12 rounded-lg bg-muted/30 animate-pulse" />
@@ -571,12 +646,14 @@ function CommunityUploadContent() {
                         <button
                           key={f.id}
                           onClick={() => {
+                            setIsPastQuestions(false);
                             setSelectedFacultyId(f.id);
                             setSelectedDepartmentId("");
                             setSelectedCourseId("");
+                            setSelectedPqCourseId("");
                           }}
                           className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                            selectedFacultyId === f.id
+                            !isPastQuestions && selectedFacultyId === f.id
                               ? "border-primary bg-primary/5 text-foreground"
                               : "border-border hover:border-primary/50 text-foreground"
                           }`}
@@ -584,6 +661,36 @@ function CommunityUploadContent() {
                           <span className="font-medium text-sm">{f.name}</span>
                         </button>
                       ))}
+
+                      {/* Past Questions special tile */}
+                      <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">or</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setIsPastQuestions(true);
+                          setSelectedFacultyId("");
+                          setSelectedDepartmentId("");
+                          setSelectedCourseId("");
+                          setSelectedPqCourseId("");
+                        }}
+                        className={`w-full text-left p-3 rounded-lg border transition-colors flex items-center gap-3 ${
+                          isPastQuestions
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border hover:border-primary/50 text-foreground"
+                        }`}
+                      >
+                        <ScrollText className="w-5 h-5 text-primary shrink-0" />
+                        <div>
+                          <span className="font-medium text-sm">Past Questions</span>
+                          <p className="text-xs text-muted-foreground">Upload exam papers, tests, and assignments</p>
+                        </div>
+                      </button>
+
                       {faculties.length === 0 && (
                         <p className="text-muted-foreground text-sm text-center py-4">No faculties available</p>
                       )}
@@ -593,7 +700,7 @@ function CommunityUploadContent() {
               </StepCard>
             )}
 
-            {currentStep === "department" && (
+            {currentStep === "department" && !isPastQuestions && (
               <StepCard title="Select Department" icon={GraduationCap} description={`Departments under ${selectedFacultyName}`}>
                 {loading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -632,6 +739,7 @@ function CommunityUploadContent() {
                       onClick={() => {
                         setSelectedLevel(l.value);
                         setSelectedCourseId("");
+                        setSelectedPqCourseId("");
                       }}
                       className={`p-3 rounded-lg border transition-colors text-center ${
                         selectedLevel === l.value
@@ -655,6 +763,7 @@ function CommunityUploadContent() {
                       onClick={() => {
                         setSelectedSemester(s.value);
                         setSelectedCourseId("");
+                        setSelectedPqCourseId("");
                       }}
                       className={`p-4 rounded-lg border transition-colors text-center ${
                         selectedSemester === s.value
@@ -669,13 +778,44 @@ function CommunityUploadContent() {
               </StepCard>
             )}
 
-            {currentStep === "course" && (
+            {currentStep === "course" && isPastQuestions && (
+              <StepCard title="Select PQ Course" icon={ScrollText} description={`Past question courses for ${selectedLevelLabel}, ${selectedSemesterLabel}`}>
+                {pqLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                ) : pqCourses.length === 0 ? (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      No PQ courses found for this level and semester. Ask your admin to add courses first.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-2">
+                    {pqCourses.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedPqCourseId(c.id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                          selectedPqCourseId === c.id
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border hover:border-primary/50 text-foreground"
+                        }`}
+                      >
+                        <span className="font-semibold text-sm">{c.code}</span>
+                        <span className="text-muted-foreground text-sm ml-2">{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </StepCard>
+            )}
+
+            {currentStep === "course" && !isPastQuestions && (
               <StepCard title="Select Course" icon={BookOpen} description={`Courses for ${selectedLevelLabel}, ${selectedSemesterLabel}`}>
                 {loading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Existing courses */}
                     {courses.length > 0 && (
                       <div className="space-y-2">
                         {courses.map(c => (
@@ -704,11 +844,10 @@ function CommunityUploadContent() {
                       </Alert>
                     )}
 
-                    {/* Newly created pending course — show as selected card */}
                     {newCourseId && !creatingNewCourse && (
                       <button
                         type="button"
-                        onClick={() => { /* already selected */ }}
+                        onClick={() => {}}
                         className="w-full text-left p-3 rounded-lg border border-primary bg-primary/5 text-foreground cursor-default"
                       >
                         <span className="font-semibold text-sm">{newCourseCode}</span>
@@ -717,7 +856,6 @@ function CommunityUploadContent() {
                       </button>
                     )}
 
-                    {/* Divider */}
                     {(courses.length > 0 || newCourseId) && !creatingNewCourse && (
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
@@ -727,7 +865,6 @@ function CommunityUploadContent() {
                       </div>
                     )}
 
-                    {/* Create new course toggle */}
                     {!creatingNewCourse ? (
                       <button
                         type="button"
@@ -797,7 +934,6 @@ function CommunityUploadContent() {
                               const name = newCourseName.trim();
                               if (!code || !name) { toast.error("Code and name are required"); return; }
 
-                              // Check for exact duplicate in this dept/level/semester
                               const { data: existing } = await supabase
                                 .from("courses")
                                 .select("id, code, name")
@@ -807,7 +943,6 @@ function CommunityUploadContent() {
                                 .ilike("code", code);
 
                               if (existing && existing.length > 0) {
-                                // Use the existing course instead
                                 setSelectedCourseId(existing[0].id);
                                 setNewCourseId("");
                                 setCreatingNewCourse(false);
@@ -841,7 +976,7 @@ function CommunityUploadContent() {
                               }
                               setNewCourseId(inserted.id);
                               setNewCourseLabel(`${code} — ${name} (pending)`);
-                              setCreatingNewCourse(false);  // collapse form, show card
+                              setCreatingNewCourse(false);
                               toast.success("Course saved — now select it above and continue.");
                             }}
                           >
@@ -851,7 +986,6 @@ function CommunityUploadContent() {
                           <Button
                             size="sm" variant="ghost" className="h-9"
                             onClick={async () => {
-                              // If a pending course was created but user cancels, remove it
                               if (newCourseId) {
                                 await supabase.from("courses").delete().eq("id", newCourseId).eq("status", "pending" as any);
                               }
@@ -954,7 +1088,7 @@ function CommunityUploadContent() {
                       id="title"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      placeholder="e.g. MEE401 Lecture Notes"
+                      placeholder={isPastQuestions ? "e.g. GNS101 2023 Exam" : "e.g. MEE401 Lecture Notes"}
                       maxLength={200}
                     />
                   </div>
@@ -974,7 +1108,7 @@ function CommunityUploadContent() {
                     <Select value={materialType} onValueChange={setMaterialType}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {MATERIAL_TYPES.map(mt => (
+                        {activeMaterialTypes.map(mt => (
                           <SelectItem key={mt.value} value={mt.value}>{mt.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -987,11 +1121,18 @@ function CommunityUploadContent() {
             {currentStep === "review" && (
               <StepCard title="Review & Submit" icon={CheckCircle} description="Verify your submission details">
                 <div className="space-y-3">
-                  <ReviewRow label="Faculty" value={selectedFacultyName} />
-                  <ReviewRow label="Department" value={selectedDepartmentName} />
+                  <ReviewRow label={isPastQuestions ? "Category" : "Faculty"} value={selectedFacultyName} />
+                  {!isPastQuestions && <ReviewRow label="Department" value={selectedDepartmentName} />}
                   <ReviewRow label="Level" value={selectedLevelLabel} />
                   <ReviewRow label="Semester" value={selectedSemesterLabel} />
-                  <ReviewRow label="Course" value={selectedCourseName ? `${selectedCourseName.code} - ${selectedCourseName.name}` : newCourseLabel || ""} />
+                  <ReviewRow
+                    label="Course"
+                    value={
+                      isPastQuestions
+                        ? (selectedPqCourse ? `${selectedPqCourse.code} - ${selectedPqCourse.name}` : "")
+                        : (selectedCourseName ? `${selectedCourseName.code} - ${selectedCourseName.name}` : newCourseLabel || "")
+                    }
+                  />
                   <ReviewRow label="Files" value={`${files.length} selected`} />
                   <ReviewRow label="Title Style" value={title || "File names will be used"} />
 
@@ -1007,7 +1148,7 @@ function CommunityUploadContent() {
                     </div>
                   </div>
                   {description && <ReviewRow label="Description" value={description} />}
-                  <ReviewRow label="Type" value={MATERIAL_TYPES.find(m => m.value === materialType)?.label || ""} />
+                  <ReviewRow label="Type" value={activeMaterialTypes.find(m => m.value === materialType)?.label || ""} />
 
                   <Alert className="mt-4">
                     <Info className="h-4 w-4" />
@@ -1134,7 +1275,6 @@ export default function CommunityUpload() {
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
 
-  // Use supabase directly to check auth without importing useAuth hook again
   useEffect(() => {
     import("@/integrations/supabase/client").then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
