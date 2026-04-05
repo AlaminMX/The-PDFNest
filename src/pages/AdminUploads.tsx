@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   ArrowLeft, Search, CheckCircle, XCircle, Eye, Loader2,
-  FileText, Filter, Building2, Inbox
+  FileText, Filter, Building2, Inbox, ScrollText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ function PreviewButton({ filePath }: { filePath: string }) {
     setLoading(true);
     const { data } = await supabase.storage
       .from("school_pdfs")
-      .createSignedUrl(filePath, 300); // 5 min
+      .createSignedUrl(filePath, 300);
     setLoading(false);
     if (data?.signedUrl) {
       setUrl(data.signedUrl);
@@ -106,6 +106,11 @@ function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDi
           <DialogDescription>
             <span className="font-medium text-foreground">{upload.title}</span>
             <span className="text-muted-foreground"> by {upload.uploader_name}</span>
+            {upload.pq_course_id && (
+              <span className="ml-2 text-xs text-primary font-medium">
+                (PQ: {upload.pq_course_code || upload.course_code})
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -178,7 +183,9 @@ export default function AdminUploads() {
     try {
       if (reviewAction === "approve") {
         await approveUpload(reviewTarget.id, note);
-        toast.success("Upload approved and added to lecture notes!");
+        toast.success(reviewTarget.pq_course_id
+          ? "Upload approved and added to past questions!"
+          : "Upload approved and added to lecture notes!");
       } else {
         await rejectUpload(reviewTarget.id, note);
         toast.success("Upload rejected.");
@@ -194,7 +201,9 @@ export default function AdminUploads() {
 
   // Filter uploads by department and search
   const filtered = uploads.filter((u) => {
-    const matchesDept = deptFilter === "all" || u.department_id === deptFilter;
+    const matchesDept = deptFilter === "all"
+      || u.department_id === deptFilter
+      || (deptFilter === "pq" && !!u.pq_course_id);
     const matchesSearch =
       !searchQuery ||
       u.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -271,6 +280,7 @@ export default function AdminUploads() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
+              <SelectItem value="pq">Past Questions</SelectItem>
               {departments.map((d) => (
                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
               ))}
@@ -323,7 +333,10 @@ export default function AdminUploads() {
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        <div>{upload.course_code || "—"}</div>
+                        <div className="flex items-center gap-1">
+                          {upload.pq_course_id && <ScrollText className="w-3 h-3 text-primary shrink-0" />}
+                          <span>{upload.pq_course_id ? `PQ: ${upload.course_code}` : (upload.course_code || "—")}</span>
+                        </div>
                         {upload.level && (
                           <div className="text-[11px] text-muted-foreground/60">{upload.level}L · {upload.material_type?.replace("_"," ")}</div>
                         )}

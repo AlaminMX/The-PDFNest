@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Trash2, Edit2, Loader2, FileText, BookOpen, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, Loader2, FileText, BookOpen, Eye, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -29,6 +29,12 @@ function formatBytes(bytes: number) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return (bytes / Math.pow(k, i)).toFixed(1) + " " + sizes[i];
 }
+
+const PQ_MATERIAL_TYPES = [
+  { value: "exam", label: "Exam" },
+  { value: "test", label: "Test" },
+  { value: "assignment", label: "Assignment" },
+];
 
 export default function AdminPastQuestions() {
   const navigate = useNavigate();
@@ -49,6 +55,15 @@ export default function AdminPastQuestions() {
   const [courseSemester, setCourseSemester] = useState("first");
   const [courseColor, setCourseColor] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Upload dialog
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadCourseId, setUploadCourseId] = useState("");
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadMaterialType, setUploadMaterialType] = useState("exam");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<{ type: "course" | "file"; id: string; name: string } | null>(null);
@@ -109,6 +124,67 @@ export default function AdminPastQuestions() {
       }
     } catch (err: any) { toast.error(err.message || "Failed"); }
     setDeleteTarget(null);
+  };
+
+  const openUploadDialog = () => {
+    setUploadCourseId(courses.length > 0 ? courses[0].id : "");
+    setUploadTitle("");
+    setUploadMaterialType("exam");
+    setUploadFile(null);
+    setUploadDialogOpen(true);
+  };
+
+  const handleUploadFile = async () => {
+    if (!uploadFile) { toast.error("Please select a file"); return; }
+    if (!uploadCourseId) { toast.error("Please select a course"); return; }
+    if (!uploadTitle.trim()) { toast.error("Please enter a title"); return; }
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, nickname")
+        .eq("id", user.id)
+        .single();
+
+      const displayName = profile?.display_name || profile?.nickname || "Admin";
+
+      const filePath = `past_questions/${Date.now()}_${uploadFile.name}`;
+      const { error: storageError } = await supabase.storage
+        .from("school_pdfs")
+        .upload(filePath, uploadFile);
+
+      if (storageError) throw storageError;
+
+      const selectedCourse = courses.find(c => c.id === uploadCourseId);
+
+      const { error: insertError } = await supabase
+        .from("past_questions")
+        .insert({
+          pq_course_id: uploadCourseId,
+          uploaded_by: user.id,
+          uploaded_by_display: displayName,
+          file_path: filePath,
+          title: uploadTitle.trim(),
+          file_size: uploadFile.size,
+          material_type: uploadMaterialType,
+          level: selectedCourse?.level || 100,
+        } as any);
+
+      if (insertError) throw insertError;
+
+      toast.success("File uploaded successfully");
+      setUploadDialogOpen(false);
+      fetchFiles();
+      fetchCourses();
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const filteredCourses = courses.filter(c => {
@@ -189,6 +265,10 @@ export default function AdminPastQuestions() {
           </TabsContent>
 
           <TabsContent value="files" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              <Button onClick={openUploadDialog} className="gap-2"><Upload className="w-4 h-4" /> Upload File</Button>
+            </div>
+
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
@@ -247,6 +327,59 @@ export default function AdminPastQuestions() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCourseDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveCourse} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{editingCourse ? "Update" : "Add"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload File Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Upload Past Question File</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Course *</Label>
+              <Select value={uploadCourseId} onValueChange={setUploadCourseId}>
+                <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
+                <SelectContent>
+                  {courses.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.code} — {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Title *</Label>
+              <Input value={uploadTitle} onChange={e => setUploadTitle(e.target.value)} placeholder="e.g. GNS101 2023 Exam" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Material Type</Label>
+              <Select value={uploadMaterialType} onValueChange={setUploadMaterialType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PQ_MATERIAL_TYPES.map(mt => <SelectItem key={mt.value} value={mt.value}>{mt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">File *</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              />
+              {uploadFile && (
+                <p className="text-xs text-muted-foreground mt-1">{uploadFile.name} ({formatBytes(uploadFile.size)})</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUploadFile} disabled={uploading}>
+              {uploading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Upload
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
