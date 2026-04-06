@@ -907,6 +907,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          user_id: string | null
           whatsapp_number: string
         }
         Insert: {
@@ -914,6 +915,7 @@ export type Database = {
           email: string
           id?: string
           name: string
+          user_id?: string | null
           whatsapp_number: string
         }
         Update: {
@@ -921,6 +923,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          user_id?: string | null
           whatsapp_number?: string
         }
         Relationships: []
