@@ -1,21 +1,25 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFaculties } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building, ClipboardList } from "lucide-react";
+import { ArrowLeft, BookOpen, ShoppingBag, ChevronRight, Building, ClipboardList, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { getDepartmentStyles } from "@/lib/departmentColors";
 import { motion } from "framer-motion";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 function FacultySelectionContent() {
   const navigate = useNavigate();
   const { faculties, loading } = useFaculties();
   const visibleFaculties = faculties.filter((f) => f.is_visible);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <RamadanDecoration />
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
       <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -33,7 +37,12 @@ function FacultySelectionContent() {
               <p className="text-xs text-muted-foreground">Academic Resources</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Search">
+              <Search className="w-4 h-4" />
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
