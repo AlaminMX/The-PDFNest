@@ -42,10 +42,16 @@ export function WaitlistSection() {
 
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in to join the waitlist.");
+        return;
+      }
       const { error } = await supabase.from("store_waitlist" as any).insert({
         name: result.data.name,
         email: result.data.email,
         whatsapp_number: result.data.whatsapp_number,
+        user_id: user.id,
       } as any);
       if (error) throw error;
       setSubmitted(true);

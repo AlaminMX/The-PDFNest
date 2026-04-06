@@ -52,10 +52,13 @@ function SchoolStoreContent() {
 
     setSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
       const { error } = await supabase.from("store_waitlist" as any).insert({
         name: result.data.name,
         email: result.data.email,
         whatsapp_number: result.data.whatsapp_number,
+        user_id: user.id,
       } as any);
 
       if (error) throw error;
