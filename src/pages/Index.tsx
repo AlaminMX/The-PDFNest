@@ -584,6 +584,8 @@ export default function Index() {
     enabled: !!user?.id
   });
 
+  const { badges: userBadges } = useContributorStats(user?.id);
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1966,6 +1968,7 @@ export default function Index() {
 
       {/* Bottom Navigation */}
       <SmartBottomNav />
+      <BadgeCelebration badges={userBadges} />
       
       <footer className="fixed bottom-0 left-0 right-0 py-2 text-center md:block hidden">
         <p className="text-xs text-muted-foreground/60">
