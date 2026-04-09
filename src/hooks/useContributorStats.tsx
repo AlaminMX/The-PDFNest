@@ -122,3 +122,106 @@ export function useLeaderboard(departmentId?: string | null, period?: "week" | "
 
   return { entries, loading, refetch: fetchLeaderboard };
 }
+
+export interface MonthlyLeaderboardEntry {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  department_id: string | null;
+  department_name: string | null;
+  monthly_uploads: number;
+  badges: ContributorBadge[];
+}
+
+export function useMonthlyLeaderboard(departmentId?: string | null) {
+  const [entries, setEntries] = useState<MonthlyLeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMonthly = useCallback(async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      let query = supabase
+        .from("community_uploads")
+        .select("user_id, reviewed_at, department_id")
+        .eq("status", "approved")
+        .gte("reviewed_at", firstOfMonth);
+
+      if (departmentId) {
+        query = query.eq("department_id", departmentId);
+      }
+
+      const { data: uploads } = await query;
+      if (!uploads || uploads.length === 0) {
+        setEntries([]);
+        setLoading(false);
+        return;
+      }
+
+      // Group by user_id
+      const countMap: Record<string, { count: number; department_id: string | null }> = {};
+      for (const u of uploads) {
+        if (!countMap[u.user_id]) {
+          countMap[u.user_id] = { count: 0, department_id: u.department_id };
+        }
+        countMap[u.user_id].count++;
+      }
+
+      const userIds = Object.keys(countMap);
+
+      // Fetch profiles and badges in parallel
+      const [profilesResult, badgesResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, department_id, departments(name)")
+          .in("id", userIds),
+        supabase
+          .from("contributor_badges")
+          .select("user_id, badge_type, earned_at")
+          .in("user_id", userIds),
+      ]);
+
+      const profileMap: Record<string, any> = {};
+      for (const p of profilesResult.data || []) {
+        profileMap[p.id] = p;
+      }
+
+      const badgeMap: Record<string, ContributorBadge[]> = {};
+      for (const b of badgesResult.data || []) {
+        if (!badgeMap[b.user_id]) badgeMap[b.user_id] = [];
+        badgeMap[b.user_id].push({ badge_type: b.badge_type, earned_at: b.earned_at || "" });
+      }
+
+      const result: MonthlyLeaderboardEntry[] = userIds
+        .map((uid) => {
+          const profile = profileMap[uid];
+          const dept = profile?.departments as any;
+          return {
+            user_id: uid,
+            display_name: profile?.display_name || null,
+            avatar_url: profile?.avatar_url || null,
+            department_id: profile?.department_id || countMap[uid].department_id,
+            department_name: dept?.name || null,
+            monthly_uploads: countMap[uid].count,
+            badges: badgeMap[uid] || [],
+          };
+        })
+        .sort((a, b) => b.monthly_uploads - a.monthly_uploads)
+        .slice(0, 50);
+
+      setEntries(result);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Error fetching monthly leaderboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [departmentId]);
+
+  useEffect(() => {
+    fetchMonthly();
+  }, [fetchMonthly]);
+
+  return { entries, loading, refetch: fetchMonthly };
+}
