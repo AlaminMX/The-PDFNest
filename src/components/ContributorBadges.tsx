@@ -9,7 +9,7 @@ interface BadgeConfig {
   color: string;
 }
 
-const BADGE_CONFIG: Record<string, BadgeConfig> = {
+export const BADGE_CONFIG: Record<string, BadgeConfig> = {
   first_upload: {
     label: "First Upload",
     description: "Submitted your first material",
@@ -33,6 +33,12 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
     description: "25+ approved uploads or Top 3 on leaderboard",
     emoji: "🏆",
     color: "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400",
+  },
+  monthly_champion: {
+    label: "Monthly #1",
+    description: "Ranked #1 in your department for a month",
+    emoji: "👑",
+    color: "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400",
   },
 };
 

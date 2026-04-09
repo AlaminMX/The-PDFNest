@@ -106,10 +106,10 @@ export function ContributorStats({ userId }: ContributorStatsProps) {
   }
 
   const tiles = [
-    { icon: <Trophy className="w-4 h-4 text-amber-500" />, value: stats?.total_points ?? 0, label: "Points", bg: "bg-amber-500/10" },
-    { icon: <CheckCircle className="w-4 h-4 text-green-500" />, value: stats?.approved_count ?? 0, label: "Approved", bg: "bg-green-500/10" },
-    { icon: <Clock className="w-4 h-4 text-blue-500" />, value: stats?.pending_count ?? 0, label: "Pending", bg: "bg-blue-500/10" },
-    { icon: <Trophy className="w-4 h-4 text-primary" />, value: departmentRank ? `#${departmentRank}` : "—", label: "Dept. Rank", bg: "bg-primary/10" },
+    { icon: <Trophy className="w-4 h-4 text-amber-500" />, value: stats?.total_points ?? 0, label: "Points", bg: "bg-amber-500/10", clickable: false },
+    { icon: <CheckCircle className="w-4 h-4 text-green-500" />, value: stats?.approved_count ?? 0, label: "Approved", bg: "bg-green-500/10", clickable: false },
+    { icon: <Clock className="w-4 h-4 text-blue-500" />, value: stats?.pending_count ?? 0, label: "Pending", bg: "bg-blue-500/10", clickable: false },
+    { icon: <Trophy className="w-4 h-4 text-primary" />, value: departmentRank ? `#${departmentRank}` : "—", label: "Dept. Rank", bg: "bg-primary/10", clickable: true },
   ];
 
   return (
@@ -131,8 +131,14 @@ export function ContributorStats({ userId }: ContributorStatsProps) {
         {/* Stats tiles */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {tiles.map(({ icon, value, label, bg }) => (
-              <div key={label} className={`rounded-lg p-3 ${bg} flex flex-col items-center text-center gap-1`}>
+            {tiles.map(({ icon, value, label, bg, clickable }) => (
+              <div
+                key={label}
+                className={`rounded-lg p-3 ${bg} flex flex-col items-center text-center gap-1 ${
+                  clickable ? "cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all" : ""
+                }`}
+                onClick={clickable ? () => navigate("/leaderboard") : undefined}
+              >
                 {icon}
                 <span className="text-lg font-bold leading-none">{value}</span>
                 <span className="text-[10px] text-muted-foreground">{label}</span>
