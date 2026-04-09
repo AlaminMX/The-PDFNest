@@ -6,6 +6,13 @@ const corsHeaders = {
 };
 
 const COURSE_CODE_RE = /^([A-Z]{2,4})\s?(\d{2,3})/i;
+const MAX_QUERY_LENGTH = 100;
+// Strip characters that could interfere with Postgres ILIKE patterns
+const SANITIZE_RE = /[%_\\]/g;
+
+function sanitize(input: string): string {
+  return input.replace(SANITIZE_RE, "\\$&");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,7 +28,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const trimmed = query.trim();
+    const trimmed = query.trim().slice(0, MAX_QUERY_LENGTH);
+    const sanitized = sanitize(trimmed);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -37,8 +45,8 @@ Deno.serve(async (req) => {
       if (rest.length >= 2) keywordHint = rest;
     }
 
-    const wildcardQuery = `%${trimmed}%`;
-    const codeWildcard = courseCodePattern ? `${courseCodePattern}%` : null;
+    const wildcardQuery = `%${sanitized}%`;
+    const codeWildcard = courseCodePattern ? `${sanitize(courseCodePattern)}%` : null;
 
     // Run all queries in parallel
     const [coursesRes, pqCoursesRes, notesRes, pqFilesRes] = await Promise.all([
