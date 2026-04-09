@@ -1,136 +1,80 @@
 
 
-# Global Smart Search System — Implementation Plan
+# Department Leaderboard + Badge Celebration System
 
-## Overview
-Build a command-palette-style global search that queries courses (department-specific), PQ courses, lecture notes, and past questions. Supports course code detection, multi-department disambiguation, and keyword hints for smart filtering.
+## Summary
+Upgrade the existing contributor system with a monthly department leaderboard, badge celebration animations, and expanded profile badge display. All ranking is based on approved uploads only (already enforced by existing DB functions).
 
-## Architecture
+## Changes
 
-```text
-GlobalSearch component (CommandDialog overlay)
-  ├─ Triggered from: PageHeader search icon + keyboard shortcut (Ctrl+K)
-  ├─ Input parsing: detectCourseCode() + extractKeywordHint()
-  └─ Results grouped in sections:
-       1. Course Matches (dept courses + PQ courses)
-       2. PDFs / Lecture Notes
-       3. Past Questions
-```
+### 1. Leaderboard Page Overhaul (`src/pages/Leaderboard.tsx`)
+- Replace "All Time / By Department" tabs with **"My Department / All Departments"** tabs
+- Default to user's own department (auto-detect via `useUserDepartment`)
+- Add department switcher (Select dropdown) visible in both tabs
+- Change banner text to "Monthly Leaderboard" with current month/year
+- **Hide raw points** from the UI — show only "X approved uploads" and rank
+- Add badge indicators (small emoji chips) next to usernames for earned badges
+- Highlight the current user's row with a distinct background color
+- Filter: only show users with `approved_count >= 1`
+- Add "Monthly #1" badge indicator for the top-ranked user
 
-## Search Data Strategy
+### 2. Monthly Leaderboard Logic (`src/hooks/useContributorStats.tsx`)
+- The existing `contributor_leaderboard` view uses `contributor_points.total_points` which is all-time
+- For monthly ranking, the `useLeaderboard` hook will query `community_uploads` directly, counting approved uploads within the current month (`reviewed_at >= start of month`)
+- New function: `useMonthlyLeaderboard(departmentId?)` that:
+  - Queries `community_uploads` WHERE `status = 'approved'` AND `reviewed_at >= firstDayOfMonth`
+  - Groups by `user_id`, counts approved uploads
+  - Joins with `profiles` for display name, avatar, department
+  - Orders by count DESC
+  - Filters by department if provided
+- Keep existing `useLeaderboard` for backward compatibility but the Leaderboard page will use the new monthly hook
 
-**Single edge function `search-global`** performs all queries server-side and returns grouped results. This avoids multiple client-side queries and keeps the search fast.
+### 3. Rank Click on Profile (`src/components/ContributorStats.tsx`)
+- Make the "Dept. Rank" tile clickable → navigates to `/leaderboard`
+- Add cursor-pointer and hover effect to the rank tile
 
-Input: `{ query: string }`
+### 4. Badge Celebration Component (`src/components/BadgeCelebration.tsx`)
+- New component: animated dialog/modal that appears when a new badge is detected
+- Uses existing `Confetti` component for particle effects
+- Shows: badge emoji (large, animated scale-in), badge name, description, "View on Profile" CTA
+- Framer Motion animations: scale-in for badge icon, fade-in for text
+- Detection logic: on the profile/dashboard, compare `badges` from hook against a localStorage key `pdfnest-seen-badges`. If new badges found, trigger celebration for the first unseen one, then mark as seen
+- "View on Profile" navigates to `/profile` and scrolls to contributions section
 
-Logic:
-1. Parse query → extract course code pattern (`/^[A-Z]{2,4}\s?\d{2,3}/i`) and remaining keywords
-2. If course code found:
-   - Query `courses` table for matching code (returns multiple departments)
-   - Query `pq_courses` table for matching code
-   - If keyword hint exists (e.g. "cyber"), filter/prioritize by department name match
-3. Query `lecture_notes` by title ILIKE
-4. Query `past_questions` by title ILIKE
-5. Return `{ courses: [...], pqCourses: [...], lectureNotes: [...], pastQuestions: [...] }`
+### 5. Badge Celebration Integration (`src/pages/Index.tsx` or `src/components/SmartBottomNav.tsx`)
+- Add `BadgeCelebration` component to the main dashboard layout so it triggers globally after login
+- It checks for new badges on mount, shows celebration once per new badge
 
-Each course result includes: `id, code, name, department_id, department_name, department_slug, faculty_slug, level, semester`
+### 6. Expanded Badge Display on Profile (`src/components/ContributorBadges.tsx`)
+- Already supports `showLocked` prop — no changes needed here
+- Add a new badge type to `BADGE_CONFIG`: `monthly_champion` with label "Monthly #1", description "Ranked #1 in your department for a month", emoji "👑"
 
-**Performance**: Uses `ILIKE` with indexed prefix matching. Results capped at 5 per section. Debounced 300ms on client.
+### 7. Profile Badge Section (`src/components/ContributorStats.tsx`)
+- Already renders `<ContributorBadges badges={badges} showLocked size="sm" />` — this already shows locked/unlocked states
+- No structural changes needed, just ensure `showLocked` is `true` (already is)
 
-## New Files
+### 8. Leaderboard Row UI Updates (`src/pages/Leaderboard.tsx`)
+- Remove `total_points` display from each row
+- Show "X uploads" as the primary metric
+- Add small badge chips next to display name for earned badges
+- Current user row: `bg-primary/10 border-l-2 border-primary` styling
 
-### 1. `supabase/functions/search-global/index.ts`
-Edge function that accepts a query string, parses it, runs parallel Supabase queries across `courses` (joined with `departments` and `faculties`), `pq_courses`, `lecture_notes`, and `past_questions`. Returns grouped results with navigation metadata.
+## Files Modified
+- `src/pages/Leaderboard.tsx` — overhaul UI, monthly scope, department auto-select, hide points
+- `src/hooks/useContributorStats.tsx` — add `useMonthlyLeaderboard` hook
+- `src/components/ContributorStats.tsx` — make rank tile clickable
+- `src/components/ContributorBadges.tsx` — add `monthly_champion` badge config
+- `src/components/BadgeCelebration.tsx` — **new** celebration modal component
+- `src/pages/Index.tsx` — mount `BadgeCelebration` on dashboard
 
-### 2. `src/components/GlobalSearch.tsx`
-Command dialog component using the existing `Command` primitives from `src/components/ui/command.tsx`:
-- Search input with debounce (300ms)
-- Grouped result sections: "Courses", "Past Question Courses", "PDFs", "Past Questions"
-- Multi-department disambiguation: when a course code matches 2+ departments, shows each as a separate clickable item with department name
-- Smart keyword hint: if query is "MTH102 cyber", the "Cyber Security" department result is shown first
-- Click behavior:
-  - Course → navigate to `/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode`
-  - PQ Course → navigate to `/past-questions/level/:level/semester/:semester/:courseCode`
-  - Lecture note → navigate to course page (the course it belongs to)
-  - Past question file → navigate to PQ course page
-- Empty state: "No results found. Try another keyword or upload material."
-- Keyboard: opens with Ctrl+K / Cmd+K, Escape closes
+## Files NOT Modified
+- No database migrations needed — monthly ranking is computed from existing `community_uploads.reviewed_at`
+- No edge functions needed
+- No changes to existing approval/rejection RPCs (they already correctly update points/badges)
 
-### 3. `src/hooks/useGlobalSearch.ts`
-Hook that manages debounced query state, calls the edge function via `supabase.functions.invoke('search-global', { body: { query } })`, and returns `{ results, loading, error }`.
-
-## Modified Files
-
-### 4. `src/components/PageHeader.tsx`
-- Add a search icon button (magnifying glass) next to ThemeToggle
-- Clicking opens GlobalSearch dialog
-- On mobile: search icon in header; on desktop: also show "Ctrl+K" hint
-
-### 5. `src/pages/FacultySelection.tsx`
-- Add a search bar at the top of the faculty grid (larger search input that opens GlobalSearch on focus/click)
-
-### 6. `src/App.tsx`
-- Add lazy import for search edge function (no route needed — it's a dialog overlay)
-
-## Edge Function Query Design
-
-```sql
--- Course matches (with department info)
-SELECT c.id, c.code, c.name, c.level, c.semester,
-       d.id as dept_id, d.name as dept_name, d.slug as dept_slug,
-       f.slug as faculty_slug
-FROM courses c
-JOIN departments d ON d.id = c.department_id
-LEFT JOIN faculties f ON f.id = d.faculty_id
-WHERE c.code ILIKE $1 OR c.name ILIKE $2
-ORDER BY CASE WHEN c.code ILIKE $1 THEN 0 ELSE 1 END
-LIMIT 10;
-
--- PQ course matches
-SELECT id, code, name, level, semester
-FROM pq_courses
-WHERE code ILIKE $1 OR name ILIKE $2
-LIMIT 5;
-
--- Lecture notes
-SELECT ln.id, ln.title, ln.file_path, c.code as course_code,
-       d.slug as dept_slug, f.slug as faculty_slug, c.level, c.semester
-FROM lecture_notes ln
-JOIN courses c ON c.id = ln.course_id
-JOIN departments d ON d.id = c.department_id
-LEFT JOIN faculties f ON f.id = d.faculty_id
-WHERE ln.title ILIKE $2
-LIMIT 5;
-
--- Past questions
-SELECT pq.id, pq.title, pq.file_path, pc.code as course_code,
-       pc.level, pc.semester
-FROM past_questions pq
-JOIN pq_courses pc ON pc.id = pq.pq_course_id
-WHERE pq.title ILIKE $2
-LIMIT 5;
-```
-
-## Multi-Department Disambiguation
-
-When course code matches multiple departments, results appear as:
-
-```
-Courses
-  MTH102 · Computer Science     →  click navigates to CS course page
-  MTH102 · Cyber Security       →  click navigates to Cyber course page
-  MTH102 · Mechanical Eng.      →  click navigates to Mech course page
-```
-
-If keyword hint present (e.g. "cyber"), results with matching department name sort first.
-
-## UI Details
-- Uses existing `CommandDialog`, `CommandInput`, `CommandList`, `CommandGroup`, `CommandItem` from `src/components/ui/command.tsx`
-- Each result item shows an icon (BookOpen for courses, FileText for PDFs, ScrollText for PQs)
-- Loading spinner while searching
-- Mobile: full-width dialog, touch-friendly hit targets
-- No layout shift — dialog is an overlay
-
-## No Database Migrations Needed
-All tables already exist. The edge function queries existing data.
+## Technical Details
+- Monthly leaderboard query: `SELECT user_id, COUNT(*) as monthly_uploads FROM community_uploads WHERE status = 'approved' AND reviewed_at >= date_trunc('month', now()) GROUP BY user_id ORDER BY monthly_uploads DESC`
+- Badge celebration uses localStorage `pdfnest-seen-badges` (JSON array of badge_types) to avoid repeat celebrations
+- Current user detection via `supabase.auth.getUser()` in the leaderboard page
+- All existing functionality preserved — no route changes, no schema changes
 
