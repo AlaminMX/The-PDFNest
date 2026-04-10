@@ -36,16 +36,7 @@ export default function Auth() {
     localStorage.setItem("hasVisitedBefore", "true");
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Skip auto-redirect if the URL contains recovery params —
-      // let the RecoveryRedirect interceptor or PASSWORD_RECOVERY event handle it.
-      const hash = window.location.hash;
-      const qp = new URLSearchParams(window.location.search);
-      const isRecovery =
-        hash.includes("type=recovery") ||
-        qp.get("type") === "recovery" ||
-        qp.has("code");
-
-      if (session && !isOnboarding.current && !isRecovery) {
+      if (session && !isOnboarding.current) {
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
         if (redirectTo) {
           sessionStorage.removeItem("redirectAfterLogin");

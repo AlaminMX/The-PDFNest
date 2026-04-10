@@ -22,9 +22,6 @@ export function useAuth() {
       setUser(newSession?.user ?? null);
 
       if (event === "SIGNED_IN" && newSession) {
-        // Don't navigate away if user is on the reset-password page
-        if (window.location.pathname === "/reset-password") return;
-
         // Defer side-effects so they don't block the render cycle
         setTimeout(() => {
           startSession().catch(() => {});
