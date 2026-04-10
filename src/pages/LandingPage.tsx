@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { isRecoveryRedirectInProgress } from "@/lib/authRecovery";
 import {
   BookOpen, Upload, ArrowRight, ChevronDown,
   GraduationCap, Users, Search,
@@ -420,9 +421,18 @@ export default function LandingPage() {
 
   // Redirect logged-in users straight to dashboard
   useEffect(() => {
+    if (isRecoveryRedirectInProgress()) return;
+
+    let isMounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted || isRecoveryRedirectInProgress()) return;
       if (session) navigate("/dashboard", { replace: true });
     });
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   return (
