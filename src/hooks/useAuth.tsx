@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { startSession, endSession, setupIdleDetection, logActivity } from "@/lib/sessionLogger";
+import { isRecoveryRedirectInProgress } from "@/lib/authRecovery";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -22,8 +23,8 @@ export function useAuth() {
       setUser(newSession?.user ?? null);
 
       if (event === "SIGNED_IN" && newSession) {
-        // Don't navigate away if user is on the reset-password page
-        if (window.location.pathname === "/reset-password") return;
+        // Don't treat a recovery session like a normal app sign-in.
+        if (isRecoveryRedirectInProgress()) return;
 
         // Defer side-effects so they don't block the render cycle
         setTimeout(() => {

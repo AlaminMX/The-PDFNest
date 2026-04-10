@@ -13,6 +13,12 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { logActivity } from "@/lib/sessionLogger";
 import { Loader2 } from "lucide-react";
+import {
+  getRecoveryRedirectPath,
+  getResetPasswordRedirectUrl,
+  hasRecoveryParams,
+  isRecoveryRedirectInProgress,
+} from "@/lib/authRecovery";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255),
@@ -36,15 +42,7 @@ export default function Auth() {
     localStorage.setItem("hasVisitedBefore", "true");
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Skip auto-redirect if the URL contains recovery params —
-      // let the RecoveryRedirect interceptor or PASSWORD_RECOVERY event handle it.
-      const hash = window.location.hash;
-      const qp = new URLSearchParams(window.location.search);
-      const isRecovery =
-        hash.includes("type=recovery") ||
-        qp.get("type") === "recovery" ||
-        qp.has("code");
-
+      const isRecovery = hasRecoveryParams();
       if (session && !isOnboarding.current && !isRecovery) {
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
         if (redirectTo) {
@@ -60,7 +58,11 @@ export default function Auth() {
       // PASSWORD_RECOVERY fires when the user arrives via a reset-password email link.
       // Send them to /reset-password so they can set a new password.
       if (event === "PASSWORD_RECOVERY") {
-        navigate("/reset-password", { replace: true });
+        const redirectPath = getRecoveryRedirectPath();
+
+        if (redirectPath) {
+          navigate(redirectPath, { replace: true });
+        }
         return;
       }
 
@@ -68,7 +70,7 @@ export default function Auth() {
       // But if we're on /reset-password (recovery redirect in progress),
       // do NOT navigate — the ResetPassword page must handle the session.
       if (event === "SIGNED_IN" && session && !isOnboarding.current) {
-        if (window.location.pathname === "/reset-password") return;
+        if (isRecoveryRedirectInProgress()) return;
         const redirectTo = sessionStorage.getItem("redirectAfterLogin");
         if (redirectTo) {
           sessionStorage.removeItem("redirectAfterLogin");
@@ -134,7 +136,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getResetPasswordRedirectUrl(),
       });
       if (error) throw error;
       toast.success("Password reset email sent! Check your inbox.");

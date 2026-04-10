@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { AlertTriangle, KeyRound, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { hasRecoveryParams } from "@/lib/authRecovery";
 
 const resetPasswordSchema = z
   .object({
@@ -41,16 +42,7 @@ export default function ResetPassword() {
   // Supabase can send either:
   //   Legacy/implicit flow: #access_token=...&type=recovery in the hash
   //   PKCE flow:            ?code=... in the query string
-  const hasRecoveryParams = useMemo(() => {
-    const search = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    return (
-      search.get("type") === "recovery" ||
-      search.has("code") ||
-      hash.includes("type=recovery") ||
-      hash.includes("access_token=")
-    );
-  }, []);
+  const hasRecoveryLinkParams = useMemo(() => hasRecoveryParams(), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,7 +91,7 @@ export default function ResetPassword() {
       // If recovery params are in the URL, wait longer for Supabase to process
       // the token exchange (it happens async via onAuthStateChange above).
       // If no recovery params at all, fail fast.
-      const waitMs = hasRecoveryParams ? 4000 : 600;
+      const waitMs = hasRecoveryLinkParams ? 4000 : 600;
       timeoutId = setTimeout(() => {
         if (isMounted && checkingLink) markInvalid();
       }, waitMs);
@@ -113,7 +105,7 @@ export default function ResetPassword() {
       if (timeoutId) clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasRecoveryParams]);
+  }, [hasRecoveryLinkParams]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();

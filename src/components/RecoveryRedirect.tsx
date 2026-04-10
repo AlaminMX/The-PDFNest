@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRecoveryRedirectPath } from "@/lib/authRecovery";
 
 /**
  * Global interceptor: if the URL contains recovery hash params
@@ -12,26 +13,17 @@ export function RecoveryRedirect() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    const params = new URLSearchParams(window.location.search);
+  useLayoutEffect(() => {
+    const redirectPath = getRecoveryRedirectPath({
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+    });
 
-    const isRecoveryHash =
-      hash.includes("type=recovery") || hash.includes("type=signup");
-    const hasCode = params.has("code");
-    const hasRecoveryType = params.get("type") === "recovery";
-
-    // Only intercept recovery flows, not signup confirmations
-    const isRecovery =
-      hash.includes("type=recovery") || hasRecoveryType;
-
-    if (isRecovery && location.pathname !== "/reset-password") {
-      // Carry the hash/query to the reset page so Supabase client can parse it
-      navigate(`/reset-password${window.location.search}${window.location.hash}`, {
-        replace: true,
-      });
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   return null;
 }
