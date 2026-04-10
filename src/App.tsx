@@ -47,6 +47,7 @@ const PQFiles = lazy(() => import("./pages/PQFiles"));
 const AdminPastQuestions = lazy(() => import("./pages/AdminPastQuestions"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
+import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // ── QueryClient: suppress thrown errors so a single query failure
@@ -112,6 +113,7 @@ const App = () => (
           <Sonner />
           <RamadanDecoration />
           <BrowserRouter>
+            <RecoveryRedirect />
             <ActivityRouteTracker />
             <Suspense fallback={
             <div className="min-h-screen flex items-center justify-center bg-background">
