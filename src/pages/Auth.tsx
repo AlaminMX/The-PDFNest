@@ -62,6 +62,8 @@ export default function Auth() {
 
         if (redirectPath) {
           navigate(redirectPath, { replace: true });
+        } else if (window.location.pathname !== "/reset-password") {
+          navigate("/reset-password", { replace: true });
         }
         return;
       }
