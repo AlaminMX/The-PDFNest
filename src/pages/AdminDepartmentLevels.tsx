@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, GraduationCap, BookOpen, Loader2, ChevronDown, ChevronRight, PlusCircle, Check, X, GitMerge, Clock } from "lucide-react";
+import { Plus, Trash2, GraduationCap, BookOpen, Loader2, ChevronDown, ChevronRight, PlusCircle, Check, X, GitMerge, Clock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
+import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { getDepartmentLevels } from "@/lib/departmentLevels";
 
 interface CourseEntry {
@@ -56,6 +57,7 @@ export default function AdminDepartmentLevels() {
   const [removingLevel, setRemovingLevel] = useState(false);
   const [mergeSource, setMergeSource] = useState<CourseEntry | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState("");
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -202,6 +204,12 @@ export default function AdminDepartmentLevels() {
       />
 
       <main className="container mx-auto px-4 py-6 max-w-3xl space-y-3">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setShowQuickCreate(true)} className="gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            Quick add course
+          </Button>
+        </div>
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
         ) : (
