@@ -195,7 +195,7 @@ export function CreateCourseModal({
     !!selectedDeptId &&
     !!normalizedCode &&
     !!name.trim() &&
-    !!availableLevels.includes(level) &&
+    (availableLevels as readonly number[]).includes(level) &&
     !duplicate &&
     !saving;
 
