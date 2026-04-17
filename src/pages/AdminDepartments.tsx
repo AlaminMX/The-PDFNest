@@ -15,10 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap } from "lucide-react";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap, BookPlus } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
+import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
 import { Reorder, useDragControls } from "framer-motion";
 
@@ -192,6 +193,7 @@ export default function AdminDepartments() {
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [orderedDepts, setOrderedDepts] = useState<any[]>([]);
+  const [showQuickCreateCourse, setShowQuickCreateCourse] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !adminLoading && !isAdmin) {
@@ -397,11 +399,19 @@ export default function AdminDepartments() {
       />
 
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-        {/* Create Button */}
-        <div className="flex justify-center">
+        {/* Create Buttons */}
+        <div className="flex flex-wrap gap-2 justify-center">
           <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Create Department
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowQuickCreateCourse(true)}
+            className="gap-2"
+          >
+            <BookPlus className="h-4 w-4" />
+            Quick add course
           </Button>
         </div>
 
@@ -450,6 +460,12 @@ export default function AdminDepartments() {
           </div>
         )}
       </main>
+
+      <CreateCourseModal
+        open={showQuickCreateCourse}
+        onClose={() => setShowQuickCreateCourse(false)}
+        mode="admin"
+      />
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

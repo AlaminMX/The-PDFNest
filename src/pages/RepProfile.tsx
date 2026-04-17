@@ -11,10 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Calendar, Award, Edit2, Inbox, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, Award, Edit2, Inbox, CheckCircle, XCircle, Eye, Loader2, Plus } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { EditProfileModal } from "@/components/EditProfileModal";
+import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -45,9 +46,10 @@ export default function RepProfile() {
   const [notes, setNotes] = useState<LectureNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   
   const isOwnProfile = user?.id === userId;
-  const { departmentId: repDeptId } = useRepStatus();
+  const { departmentId: repDeptId, departmentName: repDeptName } = useRepStatus();
 
   // Moderation state — only used when isOwnProfile is true
   const [reviewTarget, setReviewTarget] = useState<CommunityUpload | null>(null);
@@ -216,6 +218,16 @@ export default function RepProfile() {
         currentAvatarUrl={profile?.avatarUrl}
         onUpdateComplete={fetchRepProfile}
       />
+
+      {isOwnProfile && (
+        <CreateCourseModal
+          open={showCreateCourseModal}
+          onClose={() => setShowCreateCourseModal(false)}
+          mode="rep"
+          departmentId={repDeptId}
+          departmentName={repDeptName}
+        />
+      )}
       
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-24 md:pb-0">
         <PageHeader
@@ -250,20 +262,31 @@ export default function RepProfile() {
                       )}
                     </div>
                     <CardDescription className="text-base">
-                      {profile.departmentName} • 100L
+                      {profile.departmentName} • U25
                     </CardDescription>
                   </div>
                   
                   {isOwnProfile && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEditModal(true)}
-                      className="w-full md:w-auto"
-                    >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit Profile
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEditModal(true)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Edit Profile
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowCreateCourseModal(true)}
+                        className="w-full sm:w-auto"
+                        disabled={!repDeptId}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Course
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
