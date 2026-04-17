@@ -401,6 +401,15 @@ export default function AdminDepartmentLevels() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <CreateCourseModal
+        open={showQuickCreate}
+        onClose={() => setShowQuickCreate(false)}
+        mode="admin"
+        departmentId={deptId}
+        departmentName={deptName}
+        onCreated={() => fetchData()}
+      />
+
       <SmartBottomNav />
     </div>
   );
