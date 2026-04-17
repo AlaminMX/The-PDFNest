@@ -461,6 +461,12 @@ export default function AdminDepartments() {
         )}
       </main>
 
+      <CreateCourseModal
+        open={showQuickCreateCourse}
+        onClose={() => setShowQuickCreateCourse(false)}
+        mode="admin"
+      />
+
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-md">
