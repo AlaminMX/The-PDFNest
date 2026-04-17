@@ -289,6 +289,21 @@ export default function RepUpload() {
         }}
       />
 
+      <CreateCourseModal
+        open={showCreateCourseModal}
+        onClose={() => setShowCreateCourseModal(false)}
+        mode="rep"
+        departmentId={departmentId}
+        departmentName={departmentName}
+        initialLevel={selectedLevel}
+        initialSemester={(selectedSemester as "first" | "second") || "first"}
+        onCreated={(newId) => {
+          // Refresh course list and auto-select the new course if levels/sem match
+          refreshCourses();
+          setSelectedCourseId(newId);
+        }}
+      />
+
       {/* Conversion Dialog */}
       <Dialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
         <DialogContent>
