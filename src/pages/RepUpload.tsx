@@ -13,14 +13,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Upload, CheckCircle, AlertCircle, FileType, Loader2, X, FileText, Files } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle, AlertCircle, FileType, Loader2, X, FileText, Files, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
+import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDepartmentLevels } from "@/lib/departmentLevels";
+import { getRepLevelLabel } from "@/lib/repLevelLabels";
 
 const SUPPORTED_TYPES = [
   "application/pdf",
@@ -53,8 +55,9 @@ export default function RepUpload() {
   const [selectedLevel, setSelectedLevel] = useState<number>(100);
   const [selectedSemester, setSelectedSemester] = useState<string>("");
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>("lecture_note");
-  const { courses, loading: coursesLoading } = useCourses(departmentId || undefined, selectedLevel, selectedSemester || undefined);
+  const { courses, loading: coursesLoading, refresh: refreshCourses } = useCourses(departmentId || undefined, selectedLevel, selectedSemester || undefined);
   const { uploadNote, convertToPdf } = useLectureNotes();
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [fileQueue, setFileQueue] = useState<FileUploadItem[]>([]);
@@ -360,7 +363,7 @@ export default function RepUpload() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableLevels.map((level) => (
-                      <SelectItem key={level} value={String(level)}>{level} Level</SelectItem>
+                      <SelectItem key={level} value={String(level)}>{getRepLevelLabel(level)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -411,7 +414,20 @@ export default function RepUpload() {
 
               {/* Course Selection */}
               <div className="space-y-2">
-                <Label htmlFor="course">Select Course</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="course">Select Course</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                    onClick={() => setShowCreateCourseModal(true)}
+                    disabled={isProcessing || !departmentId}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New course
+                  </Button>
+                </div>
                 <Select
                   value={selectedCourseId}
                   onValueChange={setSelectedCourseId}
