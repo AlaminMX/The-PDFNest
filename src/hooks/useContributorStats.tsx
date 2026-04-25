@@ -140,80 +140,41 @@ export function useMonthlyLeaderboard(departmentId?: string | null) {
   const fetchMonthly = useCallback(async () => {
     setLoading(true);
     try {
-      const now = new Date();
-      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-      let query = supabase
-        .from("community_uploads")
-        .select("user_id, reviewed_at, department_id")
-        .eq("status", "approved")
-        .gte("reviewed_at", firstOfMonth);
+      let query = (supabase as any)
+        .from("monthly_contributor_leaderboard")
+        .select("user_id, display_name, avatar_url, department_id, department_name, monthly_uploads, badges")
+        .order("monthly_uploads", { ascending: false })
+        .order("display_name", { ascending: true })
+        .limit(50);
 
       if (departmentId) {
         query = query.eq("department_id", departmentId);
       }
 
-      const { data: uploads } = await query;
-      if (!uploads || uploads.length === 0) {
-        setEntries([]);
-        setLoading(false);
-        return;
-      }
+      const { data, error } = await query;
+      if (error) throw error;
 
-      // Group by user_id
-      const countMap: Record<string, { count: number; department_id: string | null }> = {};
-      for (const u of uploads) {
-        if (!countMap[u.user_id]) {
-          countMap[u.user_id] = { count: 0, department_id: u.department_id };
-        }
-        countMap[u.user_id].count++;
-      }
+      const normalized: MonthlyLeaderboardEntry[] = ((data || []) as any[]).map((row) => ({
+        user_id: row.user_id,
+        display_name: row.display_name || null,
+        avatar_url: row.avatar_url || null,
+        department_id: row.department_id || null,
+        department_name: row.department_name || null,
+        monthly_uploads: row.monthly_uploads || 0,
+        badges: Array.isArray(row.badges)
+          ? row.badges
+              .filter((b: any) => b && typeof b.badge_type === "string")
+              .map((b: any) => ({
+                badge_type: b.badge_type,
+                earned_at: typeof b.earned_at === "string" ? b.earned_at : "",
+              }))
+          : [],
+      }));
 
-      const userIds = Object.keys(countMap);
-
-      // Fetch profiles and badges in parallel
-      const [profilesResult, badgesResult] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, display_name, avatar_url, department_id, departments(name)")
-          .in("id", userIds),
-        supabase
-          .from("contributor_badges")
-          .select("user_id, badge_type, earned_at")
-          .in("user_id", userIds),
-      ]);
-
-      const profileMap: Record<string, any> = {};
-      for (const p of profilesResult.data || []) {
-        profileMap[p.id] = p;
-      }
-
-      const badgeMap: Record<string, ContributorBadge[]> = {};
-      for (const b of badgesResult.data || []) {
-        if (!badgeMap[b.user_id]) badgeMap[b.user_id] = [];
-        badgeMap[b.user_id].push({ badge_type: b.badge_type, earned_at: b.earned_at || "" });
-      }
-
-      const result: MonthlyLeaderboardEntry[] = userIds
-        .map((uid) => {
-          const profile = profileMap[uid];
-          const dept = profile?.departments as any;
-          return {
-            user_id: uid,
-            display_name: profile?.display_name || null,
-            avatar_url: profile?.avatar_url || null,
-            department_id: profile?.department_id || countMap[uid].department_id,
-            department_name: dept?.name || null,
-            monthly_uploads: countMap[uid].count,
-            badges: badgeMap[uid] || [],
-          };
-        })
-        .sort((a, b) => b.monthly_uploads - a.monthly_uploads)
-        .slice(0, 50);
-
-      setEntries(result);
+      setEntries(normalized);
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error fetching monthly leaderboard:", err);
+      setEntries([]);
     } finally {
       setLoading(false);
     }
