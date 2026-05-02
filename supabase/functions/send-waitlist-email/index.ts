@@ -102,7 +102,13 @@ Deno.serve(async (req) => {
     }
 
     // Build HTML email
-    const bodyHtml = emailBodyText.replace(/\n/g, "<br>");
+    const bodyHtml = emailBodyText
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+      .replace(/\n/g, "<br>");
     const htmlTemplate = `
 <!DOCTYPE html>
 <html>
