@@ -113,6 +113,13 @@ export type Database = {
             foreignKeyName: "categories_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "categories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -550,6 +557,13 @@ export type Database = {
             foreignKeyName: "lecture_notes_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "lecture_notes_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -653,6 +667,13 @@ export type Database = {
             foreignKeyName: "pdf_conversations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pdf_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -714,6 +735,13 @@ export type Database = {
             foreignKeyName: "pdf_files_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pdf_files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -755,6 +783,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pdf_files"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_summaries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "pdf_summaries_user_id_fkey"
@@ -962,6 +997,13 @@ export type Database = {
             foreignKeyName: "study_guides_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "monthly_contributor_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "study_guides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1154,6 +1196,26 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_contributor_leaderboard: {
+        Row: {
+          avatar_url: string | null
+          badges: Json | null
+          department_id: string | null
+          department_name: string | null
+          display_name: string | null
+          monthly_uploads: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
