@@ -82,9 +82,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Reject unauthenticated requests to prevent log pollution
+    if (userId === "guest") {
+      return new Response(JSON.stringify({ ok: true, session_id: "skipped" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
 
-    const timestamp = typeof body.timestamp === "string" ? body.timestamp : new Date().toISOString();
+    // Always use server-side timestamp to prevent spoofing
+    const timestamp = new Date().toISOString();
     const sessionId = typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : crypto.randomUUID();
     const action = typeof body.action === "string" && body.action.trim() ? body.action.trim().toUpperCase() : "UNKNOWN";
     const resource = typeof body.resource === "string" && body.resource.trim() ? body.resource.trim() : "/unknown";
