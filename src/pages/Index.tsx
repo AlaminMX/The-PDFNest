@@ -582,7 +582,7 @@ export default function Index() {
     enabled: !!user?.id
   });
 
-  const { badges: userBadges } = useContributorStats(user?.id);
+  
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
