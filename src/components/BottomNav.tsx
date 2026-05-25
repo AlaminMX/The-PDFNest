@@ -27,7 +27,6 @@ export function BottomNav({
 
   const tabs = [
     { icon: Home,       label: "Home",       path: "/dashboard",  showDot: false,          badge: 0,                  requiresAuth: false },
-    { icon: PlusCircle, label: "Contribute",  path: "/contribute", showDot: false,          badge: 0,                  requiresAuth: true  },
     { icon: User,       label: "Profile",     path: "/profile",    showDot: showProfileDot, badge: 0,                  requiresAuth: true  },
   ];
 
