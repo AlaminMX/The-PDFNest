@@ -1933,8 +1933,8 @@ export default function Index() {
 
       {/* Floating Action Button for quick upload */}
       <FloatingActionButton
-        onUpload={() => document.getElementById("file-input")?.click()}
-        onContribute={() => navigate("/contribute")} />
+        onUpload={() => document.getElementById("file-input")?.click()} />
+
       
 
       {/* Download Progress */}
