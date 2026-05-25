@@ -10,7 +10,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
+import { useInstitution } from "@/hooks/useInstitution";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -164,6 +164,7 @@ function AppSidebar({
 
 }: {categories: any[];selectedCategory: string;onSelectCategory: (id: string) => void;files: any[];newCategoryName: string;onNewCategoryNameChange: (name: string) => void;onAddCategory: () => void;onDeleteCategory: (id: string) => void;isAdmin: boolean;isRep: boolean;repUserId: string | undefined;onSignOut: () => void;onOpenTutorial: () => void;storageUsed: number;onOpenAIFeature: (featureType: AIModalType) => void;recentFiles: RecentFile[];onOpenRecentFile: (fileId: string) => void;}) {
   const { open, isMobile, setOpenMobile } = useSidebar();
+  const institution = useInstitution();
 
   const handleCategoryClick = (id: string) => {
     onSelectCategory(id);
@@ -211,44 +212,36 @@ function AppSidebar({
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
-          asChild
-          className="
-            min-h-[72px] 
-            w-full 
-            px-4 
-            py-4 
-            rounded-2xl 
-            transition-all 
-            duration-150 
-            bg-primary/10 
-            hover:bg-primary/20 
-            border 
-            border-primary/30 
-            hover:border-primary/50 
-            shadow-sm 
-            group
-          "
-        >
-          <Link
-            to="/afit-pdfs"
-            className="flex w-full items-center justify-center gap-3 text-center"
-          >
-            <GraduationCap className="w-5 h-5 text-primary shrink-0" />
-
-            {open && (
-              <span className="
-                text-base 
-                font-semibold 
-                text-primary 
-                leading-none 
-                text-center 
-                w-full
-              ">
-                AFIT PDFs
-              </span>
-            )}
-          </Link>
-        </SidebarMenuButton>
+  asChild
+  className={cn(
+    "min-h-[72px] w-full px-4 py-4 rounded-2xl transition-all duration-150",
+    "bg-primary/10 hover:bg-primary/20",
+    "border border-primary/30 hover:border-primary/50",
+    "shadow-sm group",
+    // Elevated highlight when the user arrived via afit.pdfnest.com.ng
+    institution.key === "afit" && "ring-2 ring-primary bg-primary/20 border-primary/60"
+  )}
+>
+  <Link
+    to="/afit-pdfs"
+    className="flex w-full items-center justify-center gap-3 text-center"
+  >
+    <GraduationCap className="w-5 h-5 text-primary shrink-0" />
+ 
+    {open && (
+      <span className="
+        text-base
+        font-semibold
+        text-primary
+        leading-none
+        text-center
+        w-full
+      ">
+        AFIT PDFs
+      </span>
+    )}
+  </Link>
+</SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   </SidebarGroupContent>
