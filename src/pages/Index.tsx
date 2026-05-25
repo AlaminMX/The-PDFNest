@@ -81,8 +81,6 @@ import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
-import { BadgeCelebration } from "@/components/BadgeCelebration";
-import { useContributorStats } from "@/hooks/useContributorStats";
 
 function DesktopHeaderNav() {
   const baseLinkClass =
@@ -584,7 +582,7 @@ export default function Index() {
     enabled: !!user?.id
   });
 
-  const { badges: userBadges } = useContributorStats(user?.id);
+  
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -1113,40 +1111,26 @@ export default function Index() {
           </header>
           
           <div className="flex-1 p-4 md:p-6 pb-28 overflow-auto">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4">
-                <svg className="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                </svg>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
-                Organize Your PDFs
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Upload, categorize, and manage your documents effortlessly   
-              </p>
-            </div>
-
-            {/* ── AFIT PDFs quick access card ── */}
-            <div className="max-w-2xl mx-auto mb-8">
-              <Link
-                to="/afit-pdfs"
-                className="flex items-center gap-4 p-4 rounded-2xl bg-primary/8 border border-primary/20 hover:bg-primary/12 hover:border-primary/35 transition-all duration-200 group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <GraduationCap className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">AFIT Lecture Notes & Past Questions</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Browse academic materials organized by faculty, department and course</p>
-                </div>
-                <div className="shrink-0 text-primary/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <div className="relative text-center mb-12 mx-auto max-w-3xl">
+              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-2xl rounded-[2.5rem]" />
+              <div className="rounded-[2rem] border border-border/40 bg-card/40 backdrop-blur-xl px-6 py-10 md:px-10 md:py-14 shadow-[0_8px_40px_-12px_hsl(var(--primary)/0.15)]">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-md">
+                  <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
                   </svg>
                 </div>
-              </Link>
+                <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80 mb-3 font-medium">Your Workspace</p>
+                <h1 className="text-4xl md:text-5xl font-serif font-semibold text-foreground mb-3 tracking-tight leading-[1.05]">
+                  Organize your PDFs
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+                  Upload, categorize, and manage your documents — all in one calm, private workspace.
+                </p>
+              </div>
             </div>
+
+
+
 
             {/* Getting Started Checklist for new users */}
             {showChecklist && user &&
@@ -1954,8 +1938,8 @@ export default function Index() {
 
       {/* Floating Action Button for quick upload */}
       <FloatingActionButton
-        onUpload={() => document.getElementById("file-input")?.click()}
-        onContribute={() => navigate("/contribute")} />
+        onUpload={() => document.getElementById("file-input")?.click()} />
+
       
 
       {/* Download Progress */}
@@ -1968,7 +1952,6 @@ export default function Index() {
 
       {/* Bottom Navigation */}
       <SmartBottomNav />
-      <BadgeCelebration badges={userBadges} />
       
       <footer className="fixed bottom-0 left-0 right-0 py-2 text-center md:block hidden">
         <p className="text-xs text-muted-foreground/60">
