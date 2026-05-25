@@ -1125,26 +1125,7 @@ export default function Index() {
               </p>
             </div>
 
-            {/* ── AFIT PDFs quick access card ── */}
-            <div className="max-w-2xl mx-auto mb-8">
-              <Link
-                to="/afit-pdfs"
-                className="flex items-center gap-4 p-4 rounded-2xl bg-primary/8 border border-primary/20 hover:bg-primary/12 hover:border-primary/35 transition-all duration-200 group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <GraduationCap className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm">AFIT Lecture Notes & Past Questions</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Browse academic materials organized by faculty, department and course</p>
-                </div>
-                <div className="shrink-0 text-primary/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            </div>
+
 
             {/* Getting Started Checklist for new users */}
             {showChecklist && user &&
