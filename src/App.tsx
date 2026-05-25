@@ -1,3 +1,18 @@
+/**
+ * App.tsx  (MODIFIED)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PLACE THIS FILE AT:  src/App.tsx
+ *                      (replaces your existing src/App.tsx)
+ *
+ * CHANGES vs original:
+ *   1. Import DomainRedirect.
+ *   2. Mount <DomainRedirect /> inside <BrowserRouter>, right next to the
+ *      existing <RecoveryRedirect /> and <ActivityRouteTracker />.
+ *
+ * Everything else is identical to your original file.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,16 +65,18 @@ import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-// ── QueryClient: suppress thrown errors so a single query failure
-//    never crashes the entire app into a blank screen ──────────────
+// ── NEW: domain-based institution redirect ───────────────────────────────────
+import { DomainRedirect } from "@/components/DomainRedirect";
+// ────────────────────────────────────────────────────────────────────────────
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
-      staleTime: 5 * 60 * 1000,        // 5 min — data stays fresh, fewer re-fetches
-      gcTime: 15 * 60 * 1000,          // 15 min — keep in memory between navigations
-      refetchOnWindowFocus: false,      // don't re-fetch every tab switch on poor networks
+      staleTime: 5 * 60 * 1000,
+      gcTime: 15 * 60 * 1000,
+      refetchOnWindowFocus: false,
       throwOnError: false,
     },
     mutations: {
@@ -68,7 +85,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// ── ErrorBoundary: catches any unhandled render/component errors ──
 interface ErrorBoundaryState { hasError: boolean; error: Error | null }
 class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: ReactNode }) {
@@ -115,55 +131,60 @@ const App = () => (
           <BrowserRouter>
             <RecoveryRedirect />
             <ActivityRouteTracker />
+
+            {/* ── Domain-based institution redirect (NEW) ────────────────── */}
+            <DomainRedirect />
+            {/* ────────────────────────────────────────────────────────────── */}
+
             <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-background">
-              <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-          }>
-          <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
-              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-              <Route path="/admin/reps" element={<ProtectedRoute><AdminReps /></ProtectedRoute>} />
-              <Route path="/admin/departments" element={<ProtectedRoute><AdminDepartments /></ProtectedRoute>} />
-              <Route path="/admin/departments/:deptId/levels" element={<ProtectedRoute><AdminDepartmentLevels /></ProtectedRoute>} />
-              <Route path="/admin/banners" element={<ProtectedRoute><AdminBanners /></ProtectedRoute>} />
-              <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
-              <Route path="/admin/logs" element={<ProtectedRoute><AdminActivityLogs /></ProtectedRoute>} />
-              <Route path="/admin/sessions" element={<ProtectedRoute><AdminSessionLogs /></ProtectedRoute>} />
-              <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
-              <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
-              <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
-              <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
-              <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
-              <Route path="/afit-pdfs" element={<FacultySelection />} />
-              <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
-              <Route path="/school-store" element={<SchoolStore />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<LevelSelection />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
-              <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
-              <Route path="/rep/upload" element={<ProtectedRoute><RepUpload /></ProtectedRoute>} />
-              <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
-              <Route path="/user/:userId" element={<PublicProfile />} />
-              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-              <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
-              <Route path="/past-questions" element={<PQLevel />} />
-              <Route path="/past-questions/level/:level" element={<PQSemester />} />
-              <Route path="/past-questions/level/:level/semester/:semester" element={<PQCourses />} />
-              <Route path="/past-questions/level/:level/semester/:semester/:courseCode" element={<PQFiles />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+              <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+              </div>
+            }>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
+                <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin/reps" element={<ProtectedRoute><AdminReps /></ProtectedRoute>} />
+                <Route path="/admin/departments" element={<ProtectedRoute><AdminDepartments /></ProtectedRoute>} />
+                <Route path="/admin/departments/:deptId/levels" element={<ProtectedRoute><AdminDepartmentLevels /></ProtectedRoute>} />
+                <Route path="/admin/banners" element={<ProtectedRoute><AdminBanners /></ProtectedRoute>} />
+                <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+                <Route path="/admin/logs" element={<ProtectedRoute><AdminActivityLogs /></ProtectedRoute>} />
+                <Route path="/admin/sessions" element={<ProtectedRoute><AdminSessionLogs /></ProtectedRoute>} />
+                <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
+                <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
+                <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
+                <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
+                <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
+                <Route path="/afit-pdfs" element={<FacultySelection />} />
+                <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
+                <Route path="/school-store" element={<SchoolStore />} />
+                <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<LevelSelection />} />
+                <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
+                <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
+                <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+                <Route path="/rep/upload" element={<ProtectedRoute><RepUpload /></ProtectedRoute>} />
+                <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
+                <Route path="/user/:userId" element={<PublicProfile />} />
+                <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
+                <Route path="/past-questions" element={<PQLevel />} />
+                <Route path="/past-questions/level/:level" element={<PQSemester />} />
+                <Route path="/past-questions/level/:level/semester/:semester" element={<PQCourses />} />
+                <Route path="/past-questions/level/:level/semester/:semester/:courseCode" element={<PQFiles />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
