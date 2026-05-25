@@ -81,8 +81,6 @@ import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { DownloadProgress } from "@/components/DownloadProgress";
 import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { SparkleBackground } from "@/components/SparkleBackground";
-import { BadgeCelebration } from "@/components/BadgeCelebration";
-import { useContributorStats } from "@/hooks/useContributorStats";
 
 function DesktopHeaderNav() {
   const baseLinkClass =
