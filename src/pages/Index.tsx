@@ -1111,19 +1111,24 @@ export default function Index() {
           </header>
           
           <div className="flex-1 p-4 md:p-6 pb-28 overflow-auto">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-3xl mb-4">
-                <svg className="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                </svg>
+            <div className="relative text-center mb-12 mx-auto max-w-3xl">
+              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-2xl rounded-[2.5rem]" />
+              <div className="rounded-[2rem] border border-border/40 bg-card/40 backdrop-blur-xl px-6 py-10 md:px-10 md:py-14 shadow-[0_8px_40px_-12px_hsl(var(--primary)/0.15)]">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-md">
+                  <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                  </svg>
+                </div>
+                <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80 mb-3 font-medium">Your Workspace</p>
+                <h1 className="text-4xl md:text-5xl font-serif font-semibold text-foreground mb-3 tracking-tight leading-[1.05]">
+                  Organize your PDFs
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+                  Upload, categorize, and manage your documents — all in one calm, private workspace.
+                </p>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
-                Organize Your PDFs
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Upload, categorize, and manage your documents effortlessly   
-              </p>
             </div>
+
 
 
 
