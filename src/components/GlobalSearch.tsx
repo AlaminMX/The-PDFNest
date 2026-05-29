@@ -72,7 +72,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         value={query}
         onValueChange={setQuery}
       />
-      <CommandList className="max-h-[60vh]">
+      <CommandList className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overscroll-contain">
         {loading && query.trim().length >= 2 && (
           <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
