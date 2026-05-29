@@ -6,6 +6,7 @@ import { usePDFFiles } from "@/hooks/usePDFFiles";
 import { useCategories } from "@/hooks/useCategories";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { uploadManager } from "@/lib/uploadManager";
+import { cn } from "@/lib/utils";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logActivity } from "@/lib/sessionLogger";
 import { useQuery } from "@tanstack/react-query";
