@@ -6,6 +6,7 @@ import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { useSemesterCounts } from "@/hooks/useSemesterCounts";
+import { buildBrowsePath } from "@/lib/browseNavigation";
 
 const SEMESTERS = [
   { key: "first", label: "First Semester", icon: "📘" },
@@ -14,7 +15,7 @@ const SEMESTERS = [
 
 function SemesterSelectionContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug, level } = useParams<{ facultySlug: string; deptSlug: string; level: string }>();
+  const { facultySlug, deptSlug, level } = useParams<{ facultySlug?: string; deptSlug: string; level: string }>();
   const levelNum = parseInt(level || '100', 10);
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
   const { counts, loading: countsLoading } = useSemesterCounts(currentDept?.id, levelNum);
@@ -47,7 +48,7 @@ function SemesterSelectionContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}`)}
+              onClick={() => deptSlug && navigate(buildBrowsePath(deptSlug, facultySlug))}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -94,7 +95,7 @@ function SemesterSelectionContent() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <button
-                  onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}/semester/${sem.key}`)}
+                  onClick={() => deptSlug && level && navigate(buildBrowsePath(deptSlug, facultySlug, "level", level, "semester", sem.key))}
                   className="w-full text-left p-6 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/20 hover:border-border/40 transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-4">
