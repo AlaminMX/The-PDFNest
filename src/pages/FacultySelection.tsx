@@ -484,9 +484,11 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
           <h3 className="font-semibold mb-0.5 text-sm leading-tight" style={{ color: styles.textColor }}>
             {faculty.name}
           </h3>
-          <p className="text-xs text-muted-foreground">
-            {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
-          </p>
+          {typeof faculty.department_count === "number" && (
+            <p className="text-xs text-muted-foreground">
+              {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
+            </p>
+          )}
         </div>
         <ChevronRight className="absolute bottom-4 right-4 w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
       </button>
