@@ -27,6 +27,7 @@ import { getDepartmentStyles } from "@/lib/departmentColors";
 import { motion } from "framer-motion";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import afitLogo from "@/assets/afit-logo.png";
+import { buildBrowsePath } from "@/lib/browseNavigation";
 
 interface RecentNote {
   id: string;
@@ -40,6 +41,14 @@ interface RecentNote {
   semester?: string;
 }
 
+interface StandaloneDept {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  icon: string | null;
+}
+
 function FacultySelectionContent() {
   const navigate = useNavigate();
   const { faculties, loading: facLoading } = useFaculties();
@@ -48,7 +57,20 @@ function FacultySelectionContent() {
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
   const [trendingNotes, setTrendingNotes] = useState<RecentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
+  const [standaloneDepts, setStandaloneDepts] = useState<StandaloneDept[]>([]);
   const { entries: topContributors, loading: contribLoading } = useMonthlyLeaderboard();
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("departments")
+        .select("id, name, slug, color, icon")
+        .is("faculty_id", null)
+        .eq("is_visible", true)
+        .order("display_order", { ascending: true });
+      setStandaloneDepts((data || []) as StandaloneDept[]);
+    })();
+  }, []);
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -89,8 +111,8 @@ function FacultySelectionContent() {
   }, []);
 
   const goToNote = (n: RecentNote) => {
-    if (!n.faculty_slug || !n.department_slug || !n.course_code || !n.level || !n.semester) return;
-    navigate(`/afit-pdfs/${n.faculty_slug}/${n.department_slug}/level/${n.level}/semester/${n.semester}/${n.course_code}`);
+    if (!n.department_slug || !n.course_code || !n.level || !n.semester) return;
+    navigate(buildBrowsePath(n.department_slug, n.faculty_slug, "level", n.level, "semester", n.semester, n.course_code));
   };
 
   return (
