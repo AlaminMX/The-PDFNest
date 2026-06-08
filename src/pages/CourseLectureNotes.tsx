@@ -55,10 +55,11 @@ import { TranslatorModal } from "@/components/TranslatorModal";
 import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { PDFViewer } from "@/components/PDFViewer";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
+import { buildBrowsePath } from "@/lib/browseNavigation";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug, level: levelParam, semester, courseCode } = useParams<{ facultySlug: string; deptSlug: string; level: string; semester: string; courseCode: string }>();
+  const { facultySlug, deptSlug, level: levelParam, semester, courseCode } = useParams<{ facultySlug?: string; deptSlug: string; level: string; semester: string; courseCode: string }>();
   const levelNum = parseInt(levelParam || '100', 10);
   const { departments, loading: deptLoading } = useDepartments();
   const { user } = useAuth();
@@ -218,7 +219,7 @@ function CourseLectureNotesContent() {
   };
 
   const handleShare = (noteId: string, title: string) => {
-    const url = `${window.location.origin}/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}/semester/${semester}/${courseCode}?note=${noteId}`;
+    const url = `${window.location.origin}${buildBrowsePath(deptSlug || "", facultySlug, "level", levelParam || "100", "semester", semester || "first", courseCode || "")}?note=${noteId}`;
     
     if (navigator.share) {
       navigator.share({ title, url }).catch(() => {});
@@ -354,7 +355,7 @@ function CourseLectureNotesContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${levelParam}/semester/${semester}`)}
+              onClick={() => deptSlug && navigate(buildBrowsePath(deptSlug, facultySlug, "level", levelParam || "100", "semester", semester || "first"))}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />

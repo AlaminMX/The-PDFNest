@@ -850,6 +850,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           email_notifications_enabled: boolean | null
+          faculty_id: string | null
           financial_literacy_interest: boolean | null
           full_name: string | null
           id: string
@@ -857,6 +858,7 @@ export type Database = {
           is_student: boolean | null
           level: number | null
           nickname: string | null
+          onboarding_complete: boolean
           phone_number: string | null
           preferred_theme: string | null
           school: string | null
@@ -877,6 +879,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
+          faculty_id?: string | null
           financial_literacy_interest?: boolean | null
           full_name?: string | null
           id: string
@@ -884,6 +887,7 @@ export type Database = {
           is_student?: boolean | null
           level?: number | null
           nickname?: string | null
+          onboarding_complete?: boolean
           phone_number?: string | null
           preferred_theme?: string | null
           school?: string | null
@@ -904,6 +908,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           email_notifications_enabled?: boolean | null
+          faculty_id?: string | null
           financial_literacy_interest?: boolean | null
           full_name?: string | null
           id?: string
@@ -911,6 +916,7 @@ export type Database = {
           is_student?: boolean | null
           level?: number | null
           nickname?: string | null
+          onboarding_complete?: boolean
           phone_number?: string | null
           preferred_theme?: string | null
           school?: string | null
@@ -932,6 +938,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
             referencedColumns: ["id"]
           },
         ]

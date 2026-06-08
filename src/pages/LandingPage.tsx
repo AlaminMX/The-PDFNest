@@ -418,22 +418,42 @@ function Footer() {
 export default function LandingPage() {
   const navigate = useNavigate();
   const facultySectionRef = useRef<HTMLElement>(null!);
+  const [checking, setChecking] = useState(true);
 
-  // Redirect logged-in users straight to dashboard
+  // Redirect logged-in users straight to dashboard before showing the landing UI
   useEffect(() => {
-    if (isRecoveryRedirectInProgress()) return;
+    if (isRecoveryRedirectInProgress()) {
+      setChecking(false);
+      return;
+    }
 
     let isMounted = true;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted || isRecoveryRedirectInProgress()) return;
-      if (session) navigate("/dashboard", { replace: true });
+      if (!isMounted) return;
+      if (isRecoveryRedirectInProgress()) {
+        setChecking(false);
+        return;
+      }
+      if (session) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        setChecking(false);
+      }
     });
 
     return () => {
       isMounted = false;
     };
   }, [navigate]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-7 h-7 border-2 border-muted-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

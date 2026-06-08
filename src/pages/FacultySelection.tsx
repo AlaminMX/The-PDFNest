@@ -27,6 +27,7 @@ import { getDepartmentStyles } from "@/lib/departmentColors";
 import { motion } from "framer-motion";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import afitLogo from "@/assets/afit-logo.png";
+import { buildBrowsePath } from "@/lib/browseNavigation";
 
 interface RecentNote {
   id: string;
@@ -40,6 +41,14 @@ interface RecentNote {
   semester?: string;
 }
 
+interface StandaloneDept {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  icon: string | null;
+}
+
 function FacultySelectionContent() {
   const navigate = useNavigate();
   const { faculties, loading: facLoading } = useFaculties();
@@ -48,7 +57,20 @@ function FacultySelectionContent() {
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
   const [trendingNotes, setTrendingNotes] = useState<RecentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
+  const [standaloneDepts, setStandaloneDepts] = useState<StandaloneDept[]>([]);
   const { entries: topContributors, loading: contribLoading } = useMonthlyLeaderboard();
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("departments")
+        .select("id, name, slug, color, icon")
+        .is("faculty_id", null)
+        .eq("is_visible", true)
+        .order("display_order", { ascending: true });
+      setStandaloneDepts((data || []) as StandaloneDept[]);
+    })();
+  }, []);
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -89,8 +111,8 @@ function FacultySelectionContent() {
   }, []);
 
   const goToNote = (n: RecentNote) => {
-    if (!n.faculty_slug || !n.department_slug || !n.course_code || !n.level || !n.semester) return;
-    navigate(`/afit-pdfs/${n.faculty_slug}/${n.department_slug}/level/${n.level}/semester/${n.semester}/${n.course_code}`);
+    if (!n.department_slug || !n.course_code || !n.level || !n.semester) return;
+    navigate(buildBrowsePath(n.department_slug, n.faculty_slug, "level", n.level, "semester", n.semester, n.course_code));
   };
 
   return (
@@ -196,6 +218,28 @@ function FacultySelectionContent() {
                   );
                 })}
           </div>
+
+          {/* Standalone (no-faculty) departments */}
+          {standaloneDepts.length > 0 && (
+            <>
+              <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="grid grid-cols-2 gap-3">
+                {standaloneDepts.map((dept, index) => {
+                  const styles = getDepartmentStyles(dept.color, index);
+                  return (
+                    <FacultyCard
+                      key={dept.id}
+                      faculty={{ ...dept, department_count: undefined }}
+                      styles={styles}
+                      index={index}
+                      onClick={() => navigate(`/afit-pdfs/dept/${dept.slug}`)}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             <button
@@ -440,9 +484,11 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
           <h3 className="font-semibold mb-0.5 text-sm leading-tight" style={{ color: styles.textColor }}>
             {faculty.name}
           </h3>
-          <p className="text-xs text-muted-foreground">
-            {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
-          </p>
+          {typeof faculty.department_count === "number" && (
+            <p className="text-xs text-muted-foreground">
+              {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
+            </p>
+          )}
         </div>
         <ChevronRight className="absolute bottom-4 right-4 w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
       </button>
