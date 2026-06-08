@@ -219,6 +219,28 @@ function FacultySelectionContent() {
                 })}
           </div>
 
+          {/* Standalone (no-faculty) departments */}
+          {standaloneDepts.length > 0 && (
+            <>
+              <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="grid grid-cols-2 gap-3">
+                {standaloneDepts.map((dept, index) => {
+                  const styles = getDepartmentStyles(dept.color, index);
+                  return (
+                    <FacultyCard
+                      key={dept.id}
+                      faculty={{ ...dept, department_count: undefined }}
+                      styles={styles}
+                      index={index}
+                      onClick={() => navigate(`/afit-pdfs/dept/${dept.slug}`)}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             <button
               onClick={() => navigate("/past-questions")}
