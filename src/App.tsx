@@ -60,6 +60,7 @@ const PQSemester = lazy(() => import("./pages/PQSemester"));
 const PQCourses = lazy(() => import("./pages/PQCourses"));
 const PQFiles = lazy(() => import("./pages/PQFiles"));
 const AdminPastQuestions = lazy(() => import("./pages/AdminPastQuestions"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
@@ -145,6 +146,7 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
@@ -169,6 +171,11 @@ const App = () => (
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
+                {/* Standalone (no-faculty) department routes */}
+                <Route path="/afit-pdfs/dept/:deptSlug" element={<LevelSelection />} />
+                <Route path="/afit-pdfs/dept/:deptSlug/level/:level" element={<SemesterSelection />} />
+                <Route path="/afit-pdfs/dept/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
+                <Route path="/afit-pdfs/dept/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
                 <Route path="/rep/upload" element={<ProtectedRoute><RepUpload /></ProtectedRoute>} />
                 <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
                 <Route path="/user/:userId" element={<PublicProfile />} />

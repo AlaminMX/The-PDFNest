@@ -7,7 +7,6 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { SignupWizard } from "@/components/signup/SignupWizard";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -25,6 +24,30 @@ const authSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").max(100),
 });
 
+// Decide where to send a freshly authenticated user.
+async function routeAfterAuth(userId: string, navigate: (to: string, opts?: any) => void) {
+  const redirectTo = sessionStorage.getItem("redirectAfterLogin");
+  if (redirectTo) {
+    sessionStorage.removeItem("redirectAfterLogin");
+    navigate(redirectTo, { replace: true });
+    return;
+  }
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("onboarding_complete")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!data || data.onboarding_complete === false) {
+      navigate("/onboarding", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  } catch {
+    navigate("/dashboard", { replace: true });
+  }
+}
+
 export default function Auth() {
   const navigate = useNavigate();
 
@@ -36,30 +59,22 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const isOnboarding = useRef(false);
+  const routedRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem("hasVisitedBefore", "true");
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const isRecovery = hasRecoveryParams();
-      if (session && !isOnboarding.current && !isRecovery) {
-        const redirectTo = sessionStorage.getItem("redirectAfterLogin");
-        if (redirectTo) {
-          sessionStorage.removeItem("redirectAfterLogin");
-          navigate(redirectTo, { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+      if (session && !routedRef.current && !isRecovery) {
+        routedRef.current = true;
+        routeAfterAuth(session.user.id, navigate);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // PASSWORD_RECOVERY fires when the user arrives via a reset-password email link.
-      // Send them to /reset-password so they can set a new password.
       if (event === "PASSWORD_RECOVERY") {
         const redirectPath = getRecoveryRedirectPath();
-
         if (redirectPath) {
           navigate(redirectPath, { replace: true });
         } else if (window.location.pathname !== "/reset-password") {
@@ -68,29 +83,17 @@ export default function Auth() {
         return;
       }
 
-      // For a normal SIGNED_IN, navigate away from the auth page.
-      // But if we're on /reset-password (recovery redirect in progress),
-      // do NOT navigate — the ResetPassword page must handle the session.
-      if (event === "SIGNED_IN" && session && !isOnboarding.current) {
+      if (event === "SIGNED_IN" && session && !routedRef.current) {
         if (isRecoveryRedirectInProgress()) return;
-        const redirectTo = sessionStorage.getItem("redirectAfterLogin");
-        if (redirectTo) {
-          sessionStorage.removeItem("redirectAfterLogin");
-          navigate(redirectTo, { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+        routedRef.current = true;
+        routeAfterAuth(session.user.id, navigate);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleStartOnboarding = () => { isOnboarding.current = true; };
-  const handleFinishOnboarding = () => { isOnboarding.current = false; navigate("/dashboard"); };
-  const handleAbortOnboarding = () => { isOnboarding.current = false; };
-
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       authSchema.parse({ email, password });
@@ -109,11 +112,8 @@ export default function Auth() {
       });
       if (error) throw error;
 
-      if (!rememberMe) {
-        sessionStorage.setItem("tempSession", "true");
-      } else {
-        sessionStorage.removeItem("tempSession");
-      }
+      if (!rememberMe) sessionStorage.setItem("tempSession", "true");
+      else sessionStorage.removeItem("tempSession");
       toast.success("Welcome back!");
     } catch (error: any) {
       logActivity("login_failed", {
@@ -121,6 +121,35 @@ export default function Auth() {
         reason: error?.message ?? "unknown",
       }).catch(() => {});
       toast.error(error.message || "Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      authSchema.parse({ email, password });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0].message);
+        return;
+      }
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/onboarding`,
+        },
+      });
+      if (error) throw error;
+      toast.success("Account created! Check your email to verify.");
+      // If session was returned (auto-confirm), the listener will route.
+    } catch (error: any) {
+      toast.error(error.message || "Sign-up failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -150,16 +179,11 @@ export default function Auth() {
     }
   };
 
-  if (!isLogin && !isForgotPassword) {
-    return (
-      <SignupWizard
-        onSwitchToLogin={() => setIsLogin(true)}
-        onStartOnboarding={handleStartOnboarding}
-        onFinishOnboarding={handleFinishOnboarding}
-        onAbortOnboarding={handleAbortOnboarding}
-      />
-    );
-  }
+  const subtitle = isForgotPassword
+    ? "Reset your password"
+    : isLogin
+      ? "Welcome back"
+      : "Create your account";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
@@ -202,9 +226,7 @@ export default function Auth() {
           </motion.div>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">PDFNest</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">
-              {isForgotPassword ? "Reset your password" : "Welcome back"}
-            </p>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">{subtitle}</p>
           </div>
         </motion.div>
 
@@ -248,7 +270,7 @@ export default function Auth() {
               </div>
             </form>
           ) : (
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -272,36 +294,38 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  autoComplete="current-password"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="rememberMe"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                  />
-                  <label htmlFor="rememberMe" className="text-sm text-muted-foreground leading-none cursor-pointer">
-                    Remember me
-                  </label>
+              {isLogin && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    />
+                    <label htmlFor="rememberMe" className="text-sm text-muted-foreground leading-none cursor-pointer">
+                      Remember me
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-sm text-primary hover:underline"
+                    disabled={loading}
+                  >
+                    Forgot password?
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={loading}
-                >
-                  Forgot password?
-                </button>
-              </div>
+              )}
 
               <Button type="submit" className="w-full h-11" disabled={loading}>
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isLogin ? "Signing in..." : "Creating account..."}</>
                 ) : (
-                  "Sign In"
+                  isLogin ? "Sign In" : "Create Account"
                 )}
               </Button>
             </form>
@@ -309,13 +333,13 @@ export default function Auth() {
 
           {!isForgotPassword && (
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
-                onClick={() => setIsLogin(false)}
+                onClick={() => setIsLogin((v) => !v)}
                 className="text-primary hover:underline font-medium"
               >
-                Sign up
+                {isLogin ? "Sign up" : "Sign in"}
               </button>
             </p>
           )}
@@ -338,5 +362,4 @@ export default function Auth() {
       </motion.div>
     </div>
   );
-                            }
-  
+}
