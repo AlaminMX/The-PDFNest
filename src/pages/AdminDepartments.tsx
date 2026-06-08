@@ -599,10 +599,10 @@ export default function AdminDepartments() {
                   onValueChange={(value) => setNewDept({ ...newDept, faculty_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger id="newDeptFaculty">
-                    <SelectValue placeholder="No faculty" />
+                    <SelectValue placeholder="— No Faculty (Standalone) —" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No faculty</SelectItem>
+                    <SelectItem value="none">— No Faculty (Standalone) —</SelectItem>
                     {faculties.map((fac) => (
                       <SelectItem key={fac.id} value={fac.id}>
                         {fac.name}
@@ -767,10 +767,10 @@ export default function AdminDepartments() {
                     onValueChange={(value) => setEditingDept({ ...editingDept, faculty_id: value === "none" ? null : value })}
                   >
                     <SelectTrigger id="editDeptFaculty">
-                      <SelectValue placeholder="No faculty" />
+                      <SelectValue placeholder="— No Faculty (Standalone) —" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No faculty</SelectItem>
+                      <SelectItem value="none">— No Faculty (Standalone) —</SelectItem>
                       {faculties.map((fac) => (
                         <SelectItem key={fac.id} value={fac.id}>
                           {fac.name}
