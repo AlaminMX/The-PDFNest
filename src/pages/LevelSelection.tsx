@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { useState, useEffect, useMemo } from "react";
 import { getDepartmentLevels, getLevelLabel } from "@/lib/departmentLevels";
+import { buildBrowsePath } from "@/lib/browseNavigation";
 
 const LEVEL_ICONS: Record<number, string> = {
   100: "🌱",
@@ -19,7 +20,7 @@ const LEVEL_ICONS: Record<number, string> = {
 
 function LevelSelectionContent() {
   const navigate = useNavigate();
-  const { facultySlug, deptSlug } = useParams<{ facultySlug: string; deptSlug: string }>();
+  const { facultySlug, deptSlug } = useParams<{ facultySlug?: string; deptSlug: string }>();
   const { data: currentDept, isLoading: deptLoading } = useDepartmentBySlug(deptSlug);
   const departmentLevels = useMemo(
     () => getDepartmentLevels(currentDept?.name || deptSlug),
@@ -88,7 +89,7 @@ function LevelSelectionContent() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/afit-pdfs/${facultySlug}`)}
+              onClick={() => navigate(facultySlug ? `/afit-pdfs/${facultySlug}` : "/afit-pdfs")}
               className="rounded-full h-9 w-9"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -141,7 +142,8 @@ function LevelSelectionContent() {
                   className={count > 0 ? "cursor-pointer" : "cursor-default"}
                   onClick={() =>
                     count > 0 &&
-                    navigate(`/afit-pdfs/${facultySlug}/${deptSlug}/level/${level}`)
+                    deptSlug &&
+                    navigate(buildBrowsePath(deptSlug, facultySlug, "level", level))
                   }
                 >
                   <div
