@@ -74,7 +74,7 @@ const sidebarItems = [
   { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
   { id: "activity", label: "Activity Logs", icon: Activity, path: "/admin/logs" },
   { id: "sessions", label: "Sessions & Security", icon: Clock, path: "/admin/sessions" },
-  { id: "waitlist", label: "Store Waitlist", icon: ShoppingBag, path: "/admin/waitlist" },
+  { id: "projects", label: "Final Year Projects", icon: ShoppingBag, path: "/admin/projects" },
   { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
   { id: "past-questions", label: "Past Questions", icon: FileText, path: "/admin/past-questions" },
 ];

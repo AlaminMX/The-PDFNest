@@ -14,7 +14,7 @@ export function LandingFooter() {
             <Link to="/auth" className="hover:text-foreground transition-colors">Sign Up</Link>
             <Link to="/auth" className="hover:text-foreground transition-colors">Log In</Link>
             <Link to="/afit-pdfs" className="hover:text-foreground transition-colors">AFIT PDFs</Link>
-            <Link to="/school-store" className="hover:text-foreground transition-colors">School Store</Link>
+            <Link to="/projects" className="hover:text-foreground transition-colors">FYP Hub</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </nav>

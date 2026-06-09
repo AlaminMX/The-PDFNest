@@ -498,6 +498,81 @@ export type Database = {
         }
         Relationships: []
       }
+      final_year_projects: {
+        Row: {
+          abstract: string | null
+          author_name: string
+          created_at: string
+          department_id: string | null
+          faculty_id: string | null
+          file_path: string
+          file_size: number
+          id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          supervisor_name: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          abstract?: string | null
+          author_name: string
+          created_at?: string
+          department_id?: string | null
+          faculty_id?: string | null
+          file_path: string
+          file_size?: number
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          supervisor_name?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          abstract?: string | null
+          author_name?: string
+          created_at?: string
+          department_id?: string | null
+          faculty_id?: string | null
+          file_path?: string
+          file_size?: number
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          supervisor_name?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "final_year_projects_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "final_year_projects_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lecture_notes: {
         Row: {
           course_id: string
@@ -948,33 +1023,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      store_waitlist: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          name: string
-          user_id: string | null
-          whatsapp_number: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          name: string
-          user_id?: string | null
-          whatsapp_number: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          name?: string
-          user_id?: string | null
-          whatsapp_number?: string
-        }
-        Relationships: []
       }
       study_guides: {
         Row: {
