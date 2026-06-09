@@ -138,6 +138,7 @@ const App = () => (
           <BrowserRouter>
             <RecoveryRedirect />
             <ActivityRouteTracker />
+            <AdminRealtimeMount />
 
             {/* ── Domain-based institution redirect (NEW) ────────────────── */}
             <DomainRedirect />
