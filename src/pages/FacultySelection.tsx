@@ -257,15 +257,15 @@ function FacultySelectionContent() {
             </button>
 
             <button
-              onClick={() => navigate("/school-store")}
-              className="text-left px-4 py-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/15 hover:to-orange-500/15 border border-amber-500/20 transition-all duration-200 group flex items-center gap-3"
+              onClick={() => navigate("/projects")}
+              className="text-left px-4 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/15 hover:to-teal-500/15 border border-emerald-500/20 transition-all duration-200 group flex items-center gap-3"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
                 <ShoppingBag className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm">School Store</h4>
-                <p className="text-xs text-muted-foreground">Coming soon</p>
+                <h4 className="font-medium text-sm">Final Year Projects</h4>
+                <p className="text-xs text-muted-foreground">Browse & submit FYPs</p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:translate-x-0.5 transition-transform shrink-0" />
             </button>
@@ -456,41 +456,40 @@ function NotesList({
 }
 
 function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles: any; index: number; onClick: () => void }) {
+  const vibrantBg = faculty.color || styles.accentBg;
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.06 }}
+      whileHover={{ scale: 1.02 }}
     >
       <button
         onClick={onClick}
-        className="w-full text-left p-5 rounded-xl border border-border/20 hover:border-border/40 transition-all duration-200 group aspect-[4/3] flex flex-col justify-between relative overflow-hidden"
-        style={{ background: styles.bgLight }}
+        className="w-full text-left p-5 rounded-2xl transition-all duration-200 group aspect-[4/3] flex flex-col justify-between relative overflow-hidden text-white"
+        style={{
+          backgroundColor: vibrantBg,
+          boxShadow: `0 10px 30px -10px ${styles.glowColor || "rgba(0,0,0,0.3)"}`,
+        }}
       >
-        <div
-          className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
-          style={{ background: styles.accentBg }}
-        />
-        <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 text-2xl"
-          style={{
-            background: styles.accentBg,
-            boxShadow: `0 4px 16px ${styles.glowColor}`,
-          }}
-        >
+        {/* Subtle radial overlay for depth */}
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-transparent to-black/25" />
+
+        <div className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
           {faculty.icon || <Building className="w-6 h-6 text-white" />}
         </div>
-        <div>
-          <h3 className="font-semibold mb-0.5 text-sm leading-tight" style={{ color: styles.textColor }}>
+        <div className="relative">
+          <h3 className="font-semibold mb-0.5 text-sm leading-tight text-white drop-shadow-md">
             {faculty.name}
           </h3>
           {typeof faculty.department_count === "number" && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white/80">
               {faculty.department_count} {faculty.department_count === 1 ? "dept" : "depts"}
             </p>
           )}
         </div>
-        <ChevronRight className="absolute bottom-4 right-4 w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight className="absolute bottom-4 right-4 w-4 h-4 text-white/70 group-hover:translate-x-0.5 transition-transform" />
       </button>
     </motion.div>
   );

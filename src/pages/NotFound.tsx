@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Paths that are genuinely public — show real 404 for these
 const PUBLIC_PREFIXES = [
   "/", "/auth", "/terms", "/privacy", "/reset-password",
-  "/afit-pdfs", "/school-store", "/user/", "/leaderboard",
+  "/afit-pdfs", "/projects", "/user/", "/leaderboard",
 ];
 
 const NotFound = () => {

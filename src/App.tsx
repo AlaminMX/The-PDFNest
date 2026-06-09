@@ -39,8 +39,8 @@ const AdminActivityLogs = lazy(() => import("./pages/AdminActivityLogs"));
 const AFITPDFs = lazy(() => import("./pages/AFITPDFs"));
 const FacultySelection = lazy(() => import("./pages/FacultySelection"));
 const AdminFaculties = lazy(() => import("./pages/AdminFaculties"));
-const SchoolStore = lazy(() => import("./pages/SchoolStore"));
-const AdminWaitlist = lazy(() => import("./pages/AdminWaitlist"));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
+const AdminProjects = lazy(() => import("./pages/AdminProjects"));
 const SemesterSelection = lazy(() => import("./pages/SemesterSelection"));
 const LevelSelection = lazy(() => import("./pages/LevelSelection"));
 const DepartmentCourses = lazy(() => import("./pages/DepartmentCourses"));
@@ -161,12 +161,12 @@ const App = () => (
                 <Route path="/admin/sessions" element={<ProtectedRoute><AdminSessionLogs /></ProtectedRoute>} />
                 <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
                 <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
-                <Route path="/admin/waitlist" element={<ProtectedRoute><AdminWaitlist /></ProtectedRoute>} />
+                <Route path="/admin/projects" element={<ProtectedRoute><AdminProjects /></ProtectedRoute>} />
                 <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
                 <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
                 <Route path="/afit-pdfs" element={<FacultySelection />} />
                 <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
-                <Route path="/school-store" element={<SchoolStore />} />
+                <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug" element={<LevelSelection />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level" element={<SemesterSelection />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
