@@ -65,6 +65,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
 // ── NEW: domain-based institution redirect ───────────────────────────────────
 import { DomainRedirect } from "@/components/DomainRedirect";
@@ -119,6 +120,11 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
     }
     return this.props.children;
   }
+}
+
+function AdminRealtimeMount() {
+  useAdminNotifications();
+  return null;
 }
 
 const App = () => (
