@@ -43,6 +43,8 @@ const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 const AdminProjects = lazy(() => import("./pages/AdminProjects"));
 const SemesterSelection = lazy(() => import("./pages/SemesterSelection"));
 const LevelSelection = lazy(() => import("./pages/LevelSelection"));
+const StandaloneDepartment = lazy(() => import("./pages/StandaloneDepartment"));
+const StandaloneDocuments = lazy(() => import("./pages/StandaloneDocuments"));
 const DepartmentCourses = lazy(() => import("./pages/DepartmentCourses"));
 const CourseLectureNotes = lazy(() => import("./pages/CourseLectureNotes"));
 const RepUpload = lazy(() => import("./pages/RepUpload"));
@@ -179,7 +181,8 @@ const App = () => (
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
                 <Route path="/afit-pdfs/:facultySlug/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
                 {/* Standalone (no-faculty) department routes */}
-                <Route path="/afit-pdfs/dept/:deptSlug" element={<LevelSelection />} />
+                <Route path="/afit-pdfs/dept/:deptSlug" element={<StandaloneDepartment />} />
+                <Route path="/afit-pdfs/dept/:deptSlug/:section" element={<StandaloneDocuments />} />
                 <Route path="/afit-pdfs/dept/:deptSlug/level/:level" element={<SemesterSelection />} />
                 <Route path="/afit-pdfs/dept/:deptSlug/level/:level/semester/:semester" element={<DepartmentCourses />} />
                 <Route path="/afit-pdfs/dept/:deptSlug/level/:level/semester/:semester/:courseCode" element={<CourseLectureNotes />} />
