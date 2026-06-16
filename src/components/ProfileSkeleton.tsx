@@ -12,8 +12,15 @@ export function ProfileSkeleton() {
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border/30">
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
-              <Link to="/dashboard"><ArrowLeft className="w-4 h-4" /></Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9"
+              asChild
+            >
+              <Link to="/dashboard">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
             </Button>
             <span className="font-semibold text-base">Profile</span>
           </div>
@@ -21,7 +28,18 @@ export function ProfileSkeleton() {
         </div>
       </header>
 
-      <main className="max-w-xl mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-xl mx-auto px-4 py-10 space-y-5">
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="relative h-20 w-24 perspective-[600px]">
+            <div className="absolute left-2 top-2 h-16 w-10 origin-right rounded-l-lg bg-primary/20 shadow-sm animate-[flip-page-left_1.2s_ease-in-out_infinite]" />
+            <div className="absolute right-2 top-2 h-16 w-10 origin-left rounded-r-lg bg-primary/35 shadow-sm animate-[flip-page-right_1.2s_ease-in-out_infinite]" />
+            <div className="absolute left-1/2 top-2 h-16 w-px -translate-x-1/2 bg-primary/40" />
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Loading your profile...
+          </p>
+        </div>
+
         {/* Hero card skeleton */}
         <div className="rounded-2xl bg-card border border-border/40 overflow-hidden">
           {/* Banner */}
@@ -43,8 +61,11 @@ export function ProfileSkeleton() {
           </div>
           {/* Stats row */}
           <div className="border-t border-border/30 flex divide-x divide-border/30">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="flex flex-col items-center gap-1.5 py-4 flex-1">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center gap-1.5 py-4 flex-1"
+              >
                 <Skeleton className="h-3 w-3 rounded-full" />
                 <Skeleton className="h-6 w-8" />
                 <Skeleton className="h-2.5 w-12" />
@@ -67,11 +88,11 @@ export function ProfileSkeleton() {
         </div>
 
         {/* List section skeleton (recent / categories) */}
-        {[1, 2].map(s => (
+        {[1, 2].map((s) => (
           <div key={s} className="space-y-1.5">
             <Skeleton className="h-3 w-20 ml-1" />
             <div className="rounded-2xl bg-card border border-border/40 overflow-hidden divide-y divide-border/30">
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
                   <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
                   <div className="flex-1 space-y-1.5">

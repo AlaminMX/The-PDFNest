@@ -2,13 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getDepartmentStyles, getDepartmentIcon } from "@/lib/departmentColors";
+import { getDepartmentStyles } from "@/lib/departmentColors";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { isRecoveryRedirectInProgress } from "@/lib/authRecovery";
 import {
-  BookOpen, Upload, ArrowRight, ChevronDown,
-  GraduationCap, Users, Search,
+  BookOpen,
+  Upload,
+  ArrowRight,
+  ChevronDown,
+  GraduationCap,
+  Users,
+  Search,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -19,6 +24,7 @@ interface Faculty {
   slug: string;
   icon: string | null;
   color: string | null;
+  background_image_url?: string | null;
   display_order: number | null;
   is_visible: boolean;
   department_count?: number;
@@ -44,13 +50,24 @@ function Nav() {
     >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/pdfnest-logo.png" alt="PDFNest" className="h-7 w-7 rounded-md" />
-          <span className="font-bold text-base tracking-tight text-foreground">PDFNest</span>
+          <img
+            src="/pdfnest-logo.png"
+            alt="PDFNest"
+            className="h-7 w-7 rounded-md"
+          />
+          <span className="font-bold text-base tracking-tight text-foreground">
+            PDFNest
+          </span>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-sm">
-            <Link to="/auth">Log In</Link>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden sm:inline-flex text-sm"
+          >
+            <Link to="/auth?mode=signin">Log In</Link>
           </Button>
           <Button asChild size="sm" className="rounded-lg text-sm px-4">
             <Link to="/auth">Get Started</Link>
@@ -96,8 +113,11 @@ function Hero({ onBrowse }: { onBrowse: () => void }) {
             variant="outline"
             className="gap-2 rounded-xl px-7 text-base font-semibold border-border/60 hover:bg-muted/60"
             onClick={() => {
-              toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
-              setTimeout(() => window.location.href = "/auth", 1500);
+              toast.info(
+                "Sign in or create a free account to upload materials.",
+                { duration: 3000 },
+              );
+              setTimeout(() => (window.location.href = "/auth"), 1500);
             }}
           >
             <Upload className="w-4 h-4" />
@@ -143,7 +163,8 @@ function FacultyCard({
   onClick: () => void;
 }) {
   const styles = getDepartmentStyles(faculty.color, index);
-  const icon = getDepartmentIcon(faculty.icon, faculty.name);
+  const icon = faculty.icon?.trim();
+  const backgroundImage = faculty.background_image_url?.trim();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -153,19 +174,30 @@ function FacultyCard({
       onMouseLeave={() => setHovered(false)}
       className="group relative text-left rounded-xl border transition-all duration-200 p-5 w-full focus:outline-none focus:ring-2 focus:ring-primary/40"
       style={{
-        backgroundColor: hovered ? styles.bgHover : styles.bgLight,
+        backgroundColor: backgroundImage
+          ? "transparent"
+          : hovered
+            ? styles.bgHover
+            : styles.bgLight,
+        backgroundImage: backgroundImage
+          ? `linear-gradient(${faculty.color ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${hovered ? 0.72 : 0.62}), hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${hovered ? 0.72 : 0.62})` : "rgba(0,0,0,0), rgba(0,0,0,0)"}), url(${backgroundImage})`
+          : undefined,
+        backgroundSize: backgroundImage ? "cover" : undefined,
+        backgroundPosition: backgroundImage ? "center" : undefined,
         borderColor: hovered
           ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.35)`
           : `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, 0.18)`,
         boxShadow: hovered ? `0 4px 20px -4px ${styles.glowColor}` : "none",
       }}
     >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4 transition-transform duration-200 group-hover:scale-105"
-        style={{ backgroundColor: styles.accentBg }}
-      >
-        {icon}
-      </div>
+      {icon && (
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4 transition-transform duration-200 group-hover:scale-105"
+          style={{ backgroundColor: styles.accentBg }}
+        >
+          {icon}
+        </div>
+      )}
       <p
         className="text-sm font-semibold leading-snug mb-1 line-clamp-2"
         style={{ color: styles.accentText }}
@@ -188,7 +220,11 @@ function FacultyCard({
 
 // ─── Faculty Grid ─────────────────────────────────────────────────────────────
 
-function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) {
+function FacultyGrid({
+  sectionRef,
+}: {
+  sectionRef: React.RefObject<HTMLElement>;
+}) {
   const navigate = useNavigate();
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,7 +239,9 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
         // Fetch visible faculties — works for anon once RLS policy is set
         const { data: facData } = await supabase
           .from("faculties")
-          .select("id, name, slug, icon, color, display_order, is_visible")
+          .select(
+            "id, name, slug, icon, color, background_image_url, display_order, is_visible",
+          )
           .eq("is_visible", true)
           .order("display_order", { ascending: true });
 
@@ -223,7 +261,9 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
             deptData.forEach((d: any) => {
               map.set(d.faculty_id, (map.get(d.faculty_id) || 0) + 1);
             });
-            setFaculties(rows.map((f) => ({ ...f, department_count: map.get(f.id) ?? 0 })));
+            setFaculties(
+              rows.map((f) => ({ ...f, department_count: map.get(f.id) ?? 0 })),
+            );
           } else if (!cancelled) {
             setFaculties(rows);
           }
@@ -238,26 +278,28 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filtered = search.trim()
     ? faculties.filter((f) =>
-        f.name.toLowerCase().includes(search.trim().toLowerCase())
+        f.name.toLowerCase().includes(search.trim().toLowerCase()),
       )
     : faculties;
 
   return (
     <section ref={sectionRef} id="faculties" className="px-4 pb-16">
       <div className="max-w-6xl mx-auto">
-
         {/* Header */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Choose Your Faculty
           </h2>
           <p className="text-sm text-muted-foreground">
-            Select your faculty to browse departments and access materials instantly
+            Select your faculty to browse departments and access materials
+            instantly
           </p>
         </div>
 
@@ -324,7 +366,6 @@ function FacultyGrid({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> 
             </Link>
           </Button>
         </div>
-
       </div>
     </section>
   );
@@ -348,14 +389,18 @@ function ContributeSection() {
               Help Your Department Grow
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Upload lecture notes, past questions, or handouts to help students in your department.
+              Upload lecture notes, past questions, or handouts to help students
+              in your department.
             </p>
             <Button
               className="rounded-xl gap-2 px-6 shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-shadow"
-            onClick={() => {
-              toast.info("Sign in or create a free account to upload materials.", { duration: 3000 });
-              setTimeout(() => window.location.href = "/auth", 1500);
-            }}
+              onClick={() => {
+                toast.info(
+                  "Sign in or create a free account to upload materials.",
+                  { duration: 3000 },
+                );
+                setTimeout(() => (window.location.href = "/auth"), 1500);
+              }}
             >
               <Upload className="w-4 h-4" />
               Upload Material
@@ -375,8 +420,9 @@ function AboutSection() {
       <div className="max-w-xl mx-auto text-center space-y-3">
         <h2 className="text-lg font-bold text-foreground">What is PDFNest?</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          PDFNest is a digital academic library built for AFIT students where lecture notes,
-          past questions, and study materials are organized by department and course.
+          PDFNest is a digital academic library built for AFIT students where
+          lecture notes, past questions, and study materials are organized by
+          department and course.
         </p>
       </div>
     </section>
@@ -391,22 +437,62 @@ function Footer() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-2.5">
-            <img src="/pdfnest-logo.png" alt="PDFNest" className="h-7 w-7 rounded-md" />
+            <img
+              src="/pdfnest-logo.png"
+              alt="PDFNest"
+              className="h-7 w-7 rounded-md"
+            />
             <span className="font-bold text-base text-foreground">PDFNest</span>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
-            <Link to="/afit-pdfs" className="hover:text-foreground transition-colors">Materials</Link>
-            <Link to="/auth" className="hover:text-foreground transition-colors">Contribute</Link>
-            <Link to="/auth" className="hover:text-foreground transition-colors">Sign Up</Link>
-            <Link to="/auth" className="hover:text-foreground transition-colors">Log In</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link
+              to="/afit-pdfs"
+              className="hover:text-foreground transition-colors"
+            >
+              Materials
+            </Link>
+            <Link
+              to="/auth"
+              className="hover:text-foreground transition-colors"
+            >
+              Contribute
+            </Link>
+            <Link
+              to="/auth"
+              className="hover:text-foreground transition-colors"
+            >
+              Sign Up
+            </Link>
+            <Link
+              to="/auth?mode=signin"
+              className="hover:text-foreground transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              to="/terms"
+              className="hover:text-foreground transition-colors"
+            >
+              Terms
+            </Link>
+            <Link
+              to="/privacy"
+              className="hover:text-foreground transition-colors"
+            >
+              Privacy
+            </Link>
           </nav>
         </div>
         <div className="border-t border-border/30 pt-6 text-center space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Built for AFIT Students</p>
-          <p className="text-xs text-muted-foreground/60">In collaboration with AFIT Digital Market</p>
-          <p className="text-xs text-muted-foreground/40 mt-3">Made with ❤️ by Nexel</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            Built for AFIT Students
+          </p>
+          <p className="text-xs text-muted-foreground/60">
+            In collaboration with AFIT Digital Market
+          </p>
+          <p className="text-xs text-muted-foreground/40 mt-3">
+            Made with ❤️ by Nexel
+          </p>
         </div>
       </div>
     </footer>
@@ -461,7 +547,10 @@ export default function LandingPage() {
       <main>
         <Hero
           onBrowse={() =>
-            facultySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+            facultySectionRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            })
           }
         />
         <FacultyGrid sectionRef={facultySectionRef} />

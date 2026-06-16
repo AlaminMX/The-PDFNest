@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 interface Faculty {
   id: string;
@@ -23,6 +23,9 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [isStudent, setIsStudent] = useState<boolean | null>(null);
+  const [nickname, setNickname] = useState("");
+  const [showComplete, setShowComplete] = useState(false);
   const [facultyId, setFacultyId] = useState<string | null>(null);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [level, setLevel] = useState<number | null>(null);
@@ -32,7 +35,9 @@ export default function Onboarding() {
   // Guard: must be authenticated, and skip if already complete
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth", { replace: true });
         return;
@@ -76,15 +81,27 @@ export default function Onboarding() {
     if (!userId) return;
     setSaving(true);
     try {
-      const update: Record<string, any> = { onboarding_complete: true };
-      if (!skip) {
+      const update: Record<string, any> = {
+        onboarding_complete: true,
+        is_student: isStudent === true,
+        nickname: nickname.trim() || null,
+        display_name: nickname.trim() || null,
+      };
+      if (!skip && isStudent) {
         update.faculty_id = facultyId;
         update.department_id = departmentId;
         update.level = level;
+      } else {
+        update.faculty_id = null;
+        update.department_id = null;
+        update.level = null;
       }
-      const { error } = await supabase.from("profiles").update(update).eq("id", userId);
+      const { error } = await supabase
+        .from("profiles")
+        .update(update)
+        .eq("id", userId);
       if (error) throw error;
-      navigate("/dashboard", { replace: true });
+      setShowComplete(true);
     } catch (e: any) {
       toast.error(e.message || "Could not save preferences");
       setSaving(false);
@@ -92,6 +109,7 @@ export default function Onboarding() {
   };
 
   const next = () => setStep((s) => s + 1);
+  const goDashboard = () => navigate("/dashboard", { replace: true });
 
   if (loading) {
     return (
@@ -102,7 +120,8 @@ export default function Onboarding() {
   }
 
   const stepLabel = String(step).padStart(2, "0");
-  const progress = (step / 3) * 100;
+  const totalSteps = isStudent === false ? 2 : 5;
+  const progress = (step / totalSteps) * 100;
 
   return (
     <div
@@ -125,7 +144,7 @@ export default function Onboarding() {
 
       {/* Step counter */}
       <div className="fixed top-4 right-5 text-[11px] font-mono text-white/50 tracking-widest z-50">
-        {stepLabel} / 03
+        {stepLabel} / {String(totalSteps).padStart(2, "0")}
       </div>
 
       <main className="min-h-screen flex flex-col items-center justify-center px-5 py-16 max-w-2xl mx-auto">
@@ -133,6 +152,92 @@ export default function Onboarding() {
           {step === 1 && (
             <motion.div
               key="step1"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-md mx-auto"
+            >
+              <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-2">
+                Are you a student?
+              </h1>
+              <p className="text-sm text-white/40 text-center mb-10">
+                Student accounts can select school details and contribute
+                materials.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Yes, I am", value: true },
+                  { label: "No", value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    onClick={() => setIsStudent(option.value)}
+                    className={`p-5 rounded-xl border transition-all duration-150 ${
+                      isStudent === option.value
+                        ? "border-white bg-white/5"
+                        : "border-white/10 hover:border-white/30 bg-white/[0.02]"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{option.label}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={next}
+                  disabled={isStudent === null}
+                  className="px-6 py-2.5 rounded-lg bg-white text-black text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition"
+                >
+                  Continue
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-md mx-auto"
+            >
+              <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-center mb-2">
+                Choose a username
+              </h1>
+              <p className="text-sm text-white/40 text-center mb-8">
+                This nickname will appear on your profile.
+              </p>
+              <input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Username / nickname"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/40"
+              />
+              <div className="mt-8 flex items-center justify-between">
+                <button
+                  onClick={() => setStep(1)}
+                  className="text-sm text-white/40 hover:text-white/70 transition"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => (isStudent ? setStep(3) : finish(true))}
+                  disabled={!nickname.trim() || saving}
+                  className="px-6 py-2.5 rounded-lg bg-white text-black text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition inline-flex items-center gap-2"
+                >
+                  {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {isStudent ? "Continue" : "Finish"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div
+              key="step3"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
@@ -150,17 +255,19 @@ export default function Onboarding() {
                   <button
                     key={f.id}
                     onClick={() => setFacultyId(f.id)}
-                    className={`text-left p-5 rounded-xl border transition-all duration-150 ${
-                      facultyId === f.id
-                        ? "border-white bg-white/5"
-                        : "border-white/10 hover:border-white/30 bg-white/[0.02]"
-                    }`}
+                    className={`text-left p-5 rounded-xl border transition-all duration-150 ${facultyId === f.id ? "border-white bg-white/5" : "border-white/10 hover:border-white/30 bg-white/[0.02]"}`}
                   >
                     <p className="text-sm font-medium">{f.name}</p>
                   </button>
                 ))}
               </div>
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8 flex items-center justify-between">
+                <button
+                  onClick={() => setStep(2)}
+                  className="text-sm text-white/40 hover:text-white/70 transition"
+                >
+                  Back
+                </button>
                 <button
                   onClick={next}
                   disabled={!facultyId}
@@ -172,9 +279,9 @@ export default function Onboarding() {
             </motion.div>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
             <motion.div
-              key="step2"
+              key="step4"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
@@ -205,7 +312,9 @@ export default function Onboarding() {
                   >
                     <span
                       className={`w-4 h-4 rounded-full border-2 ${
-                        departmentId === d.id ? "border-white bg-white" : "border-white/30"
+                        departmentId === d.id
+                          ? "border-white bg-white"
+                          : "border-white/30"
                       }`}
                     />
                     <span className="text-sm">{d.name}</span>
@@ -214,7 +323,7 @@ export default function Onboarding() {
               </div>
               <div className="mt-8 flex items-center justify-between">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(3)}
                   className="text-sm text-white/40 hover:text-white/70 transition"
                 >
                   Back
@@ -230,9 +339,9 @@ export default function Onboarding() {
             </motion.div>
           )}
 
-          {step === 3 && (
+          {step === 5 && (
             <motion.div
-              key="step3"
+              key="step5"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
@@ -262,7 +371,7 @@ export default function Onboarding() {
               </div>
               <div className="mt-8 flex items-center justify-between">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(4)}
                   className="text-sm text-white/40 hover:text-white/70 transition"
                 >
                   Back
@@ -289,6 +398,24 @@ export default function Onboarding() {
           Skip for now
         </button>
       </main>
+
+      {showComplete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#111] p-6 text-center shadow-2xl">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-400" />
+            <h2 className="mt-4 text-xl font-semibold">Welcome to PDFNest!</h2>
+            <p className="mt-2 text-sm text-white/50">
+              Congratulations, your sign-up is complete.
+            </p>
+            <button
+              onClick={goDashboard}
+              className="mt-6 w-full rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black hover:bg-white/90"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

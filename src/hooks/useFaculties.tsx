@@ -7,6 +7,7 @@ export interface Faculty {
   slug: string;
   icon: string | null;
   color: string | null;
+  background_image_url?: string | null;
   display_order: number;
   is_visible: boolean;
   created_at: string;
@@ -71,7 +72,9 @@ export function useFaculties() {
     } catch (err: any) {
       if (err?.name === "AbortError") return;
       console.error("useFaculties:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch faculties");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch faculties",
+      );
       // Serve stale cache on error so page isn't blank
       if (_cache) setFaculties(_cache);
     } finally {
