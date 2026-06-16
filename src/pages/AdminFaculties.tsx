@@ -9,8 +9,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Building, Edit, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -23,7 +39,12 @@ export default function AdminFaculties() {
   const { faculties, loading: facultiesLoading, refresh } = useFaculties();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newFaculty, setNewFaculty] = useState({ name: "", icon: "", color: "" });
+  const [newFaculty, setNewFaculty] = useState({
+    name: "",
+    icon: "",
+    color: "",
+    backgroundImageUrl: "",
+  });
   const [creating, setCreating] = useState(false);
 
   const [editingFaculty, setEditingFaculty] = useState<any | null>(null);
@@ -40,7 +61,12 @@ export default function AdminFaculties() {
   }, [isAdmin, authLoading, adminLoading, navigate]);
 
   const generateSlug = (name: string) =>
-    name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .trim();
 
   const handleCreate = async () => {
     if (!newFaculty.name.trim()) {
@@ -49,18 +75,22 @@ export default function AdminFaculties() {
     }
     setCreating(true);
     try {
-      const maxOrder = faculties.reduce((max, f) => Math.max(max, f.display_order || 0), 0);
+      const maxOrder = faculties.reduce(
+        (max, f) => Math.max(max, f.display_order || 0),
+        0,
+      );
       const { error } = await supabase.from("faculties" as any).insert({
         name: newFaculty.name.trim(),
         slug: generateSlug(newFaculty.name),
         icon: newFaculty.icon.trim() || null,
         color: newFaculty.color.trim() || null,
+        background_image_url: newFaculty.backgroundImageUrl.trim() || null,
         display_order: maxOrder + 1,
       } as any);
       if (error) throw error;
       toast.success("Faculty created");
       setShowCreateDialog(false);
-      setNewFaculty({ name: "", icon: "", color: "" });
+      setNewFaculty({ name: "", icon: "", color: "", backgroundImageUrl: "" });
       refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed to create faculty");
@@ -79,6 +109,8 @@ export default function AdminFaculties() {
           name: editingFaculty.name.trim(),
           icon: editingFaculty.icon?.trim() || null,
           color: editingFaculty.color?.trim() || null,
+          background_image_url:
+            editingFaculty.backgroundImageUrl?.trim() || null,
           is_visible: editingFaculty.is_visible,
         } as any)
         .eq("id", editingFaculty.id);
@@ -97,7 +129,10 @@ export default function AdminFaculties() {
     if (!deletingFaculty) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from("faculties" as any).delete().eq("id", deletingFaculty.id);
+      const { error } = await supabase
+        .from("faculties" as any)
+        .delete()
+        .eq("id", deletingFaculty.id);
       if (error) throw error;
       toast.success("Faculty deleted");
       setDeletingFaculty(null);
@@ -148,7 +183,9 @@ export default function AdminFaculties() {
         {facultiesLoading ? (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Loading faculties...</p>
+            <p className="text-sm text-muted-foreground">
+              Loading faculties...
+            </p>
           </div>
         ) : faculties.length === 0 ? (
           <Card className="text-center py-12">
@@ -160,20 +197,39 @@ export default function AdminFaculties() {
         ) : (
           <div className="max-w-2xl mx-auto space-y-3">
             {faculties.map((faculty) => (
-              <Card key={faculty.id} className={`overflow-hidden ${!faculty.is_visible ? "opacity-60" : ""}`}>
+              <Card
+                key={faculty.id}
+                className={`overflow-hidden ${!faculty.is_visible ? "opacity-60" : ""}`}
+              >
                 <div className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-2xl shrink-0">
-                    {faculty.icon || <Building className="w-6 h-6 text-primary" />}
+                  <div
+                    className="w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0"
+                    style={{
+                      backgroundImage: faculty.background_image_url
+                        ? `linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url(${faculty.background_image_url})`
+                        : undefined,
+                    }}
+                  >
+                    {faculty.icon || null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold">{faculty.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {faculty.department_count} departments · slug: {faculty.slug}
+                      {faculty.department_count} departments · slug:{" "}
+                      {faculty.slug}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handleToggleVisibility(faculty)}>
-                      {faculty.is_visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleToggleVisibility(faculty)}
+                    >
+                      {faculty.is_visible ? (
+                        <Eye className="h-4 w-4" />
+                      ) : (
+                        <EyeOff className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       variant="outline"
@@ -185,6 +241,8 @@ export default function AdminFaculties() {
                           icon: faculty.icon || "",
                           color: faculty.color || "",
                           is_visible: faculty.is_visible,
+                          backgroundImageUrl:
+                            faculty.background_image_url || "",
                         })
                       }
                       className="gap-1.5"
@@ -213,31 +271,74 @@ export default function AdminFaculties() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Create Faculty</DialogTitle>
-            <DialogDescription>Add a new faculty grouping for departments.</DialogDescription>
+            <DialogDescription>
+              Add a new faculty grouping for departments.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Name *</Label>
-              <Input value={newFaculty.name} onChange={(e) => setNewFaculty({ ...newFaculty, name: e.target.value })} placeholder="e.g. Faculty of Engineering" />
+              <Input
+                value={newFaculty.name}
+                onChange={(e) =>
+                  setNewFaculty({ ...newFaculty, name: e.target.value })
+                }
+                placeholder="e.g. Faculty of Engineering"
+              />
             </div>
             <div className="space-y-2">
               <Label>Icon (emoji)</Label>
-              <Input value={newFaculty.icon} onChange={(e) => setNewFaculty({ ...newFaculty, icon: e.target.value })} placeholder="e.g. 🏗️" />
+              <Input
+                value={newFaculty.icon}
+                onChange={(e) =>
+                  setNewFaculty({ ...newFaculty, icon: e.target.value })
+                }
+                placeholder="e.g. 🏗️"
+              />
             </div>
             <div className="space-y-2">
               <Label>Color</Label>
-              <Input value={newFaculty.color} onChange={(e) => setNewFaculty({ ...newFaculty, color: e.target.value })} placeholder="e.g. blue" />
+              <Input
+                value={newFaculty.color}
+                onChange={(e) =>
+                  setNewFaculty({ ...newFaculty, color: e.target.value })
+                }
+                placeholder="e.g. blue"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Background image URL</Label>
+              <Input
+                value={newFaculty.backgroundImageUrl}
+                onChange={(e) =>
+                  setNewFaculty({
+                    ...newFaculty,
+                    backgroundImageUrl: e.target.value,
+                  })
+                }
+                placeholder="https://..."
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={creating}>{creating ? "Creating..." : "Create"}</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingFaculty} onOpenChange={() => setEditingFaculty(null)}>
+      <Dialog
+        open={!!editingFaculty}
+        onOpenChange={() => setEditingFaculty(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Faculty</DialogTitle>
@@ -246,41 +347,94 @@ export default function AdminFaculties() {
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input value={editingFaculty.name} onChange={(e) => setEditingFaculty({ ...editingFaculty, name: e.target.value })} />
+                <Input
+                  value={editingFaculty.name}
+                  onChange={(e) =>
+                    setEditingFaculty({
+                      ...editingFaculty,
+                      name: e.target.value,
+                    })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label>Icon (emoji)</Label>
-                <Input value={editingFaculty.icon} onChange={(e) => setEditingFaculty({ ...editingFaculty, icon: e.target.value })} />
+                <Input
+                  value={editingFaculty.icon}
+                  onChange={(e) =>
+                    setEditingFaculty({
+                      ...editingFaculty,
+                      icon: e.target.value,
+                    })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label>Color</Label>
-                <Input value={editingFaculty.color} onChange={(e) => setEditingFaculty({ ...editingFaculty, color: e.target.value })} />
+                <Input
+                  value={editingFaculty.color}
+                  onChange={(e) =>
+                    setEditingFaculty({
+                      ...editingFaculty,
+                      color: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Background image URL</Label>
+                <Input
+                  value={editingFaculty.backgroundImageUrl}
+                  onChange={(e) =>
+                    setEditingFaculty({
+                      ...editingFaculty,
+                      backgroundImageUrl: e.target.value,
+                    })
+                  }
+                />
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={editingFaculty.is_visible} onCheckedChange={(v) => setEditingFaculty({ ...editingFaculty, is_visible: v })} />
+                <Switch
+                  checked={editingFaculty.is_visible}
+                  onCheckedChange={(v) =>
+                    setEditingFaculty({ ...editingFaculty, is_visible: v })
+                  }
+                />
                 <Label>Visible to users</Label>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingFaculty(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+            <Button variant="outline" onClick={() => setEditingFaculty(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
-      <AlertDialog open={!!deletingFaculty} onOpenChange={() => setDeletingFaculty(null)}>
+      <AlertDialog
+        open={!!deletingFaculty}
+        onOpenChange={() => setDeletingFaculty(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Faculty</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingFaculty?.name}"? Departments under this faculty will be unlinked but not deleted.
+              Are you sure you want to delete "{deletingFaculty?.name}"?
+              Departments under this faculty will be unlinked but not deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
