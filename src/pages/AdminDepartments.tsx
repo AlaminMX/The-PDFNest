@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { CreateCourseModal } from "@/components/CreateCourseModal";
+import { TileImageUpload } from "@/components/TileImageUpload";
 import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
 import { Reorder, useDragControls } from "framer-motion";
 
@@ -31,6 +32,7 @@ interface EditingDepartment {
   is_visible: boolean;
   category_id: string | null;
   faculty_id: string | null;
+  background_image_url: string | null;
 }
 
 interface NewDepartment {
@@ -39,6 +41,7 @@ interface NewDepartment {
   icon: string;
   category_id: string;
   faculty_id: string;
+  background_image_url: string;
 }
 
 interface DepartmentItemProps {
@@ -188,7 +191,7 @@ export default function AdminDepartments() {
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
+  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "" });
   const [creating, setCreating] = useState(false);
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -216,6 +219,7 @@ export default function AdminDepartments() {
       is_visible: dept.is_visible !== false,
       category_id: dept.category_id || null,
       faculty_id: dept.faculty_id || null,
+      background_image_url: dept.background_image_url || null,
     });
   };
 
@@ -254,7 +258,8 @@ export default function AdminDepartments() {
           is_visible: editingDept.is_visible,
           category_id: editingDept.category_id || null,
           faculty_id: editingDept.faculty_id || null,
-        })
+          background_image_url: editingDept.background_image_url || null,
+        } as any)
         .eq("id", editingDept.id);
 
       if (error) throw error;
@@ -303,13 +308,14 @@ export default function AdminDepartments() {
           is_visible: true,
           category_id: newDept.category_id?.trim() || null,
           faculty_id: newDept.faculty_id?.trim() || null,
-        });
+          background_image_url: newDept.background_image_url || null,
+        } as any);
 
       if (error) throw error;
 
       toast.success("Department created successfully");
       setShowCreateDialog(false);
-      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "" });
+      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "" });
       refreshDepartments();
     } catch (error: any) {
       console.error("Error creating department:", error);
