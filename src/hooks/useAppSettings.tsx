@@ -3,10 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface AppSettings {
   ramadan_theme_enabled: boolean;
+  new_departments_label_enabled: boolean;
+  new_departments_label: string;
 }
 
 const defaultSettings: AppSettings = {
   ramadan_theme_enabled: false,
+  new_departments_label_enabled: true,
+  new_departments_label: "New Departments",
 };
 
 export function useAppSettings() {
@@ -29,6 +33,12 @@ export function useAppSettings() {
         if (row.key === "ramadan_theme_enabled") {
           parsed.ramadan_theme_enabled = row.value === "true";
         }
+        if (row.key === "new_departments_label_enabled") {
+          parsed.new_departments_label_enabled = row.value !== "false";
+        }
+        if (row.key === "new_departments_label") {
+          parsed.new_departments_label = row.value || defaultSettings.new_departments_label;
+        }
       });
 
       setSettings(parsed);
@@ -43,8 +53,7 @@ export function useAppSettings() {
     try {
       const { error } = await supabase
         .from("app_settings" as any)
-        .update({ value } as any)
-        .eq("key", key);
+        .upsert({ key, value } as any, { onConflict: "key" });
 
       if (error) throw error;
 
@@ -53,6 +62,18 @@ export function useAppSettings() {
         setSettings((prev) => ({
           ...prev,
           ramadan_theme_enabled: value === "true",
+        }));
+      }
+      if (key === "new_departments_label_enabled") {
+        setSettings((prev) => ({
+          ...prev,
+          new_departments_label_enabled: value !== "false",
+        }));
+      }
+      if (key === "new_departments_label") {
+        setSettings((prev) => ({
+          ...prev,
+          new_departments_label: value || defaultSettings.new_departments_label,
         }));
       }
 

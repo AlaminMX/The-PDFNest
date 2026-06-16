@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useFaculties } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ interface RepProfile {
   display_name: string | null;
   email: string | null;
   department_id: string | null;
+  faculty_id: string | null;
   departments: {
     name: string;
   } | null;
@@ -44,6 +46,7 @@ export default function AdminReps() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { departments } = useDepartments();
+  const { faculties } = useFaculties();
   const [reps, setReps] = useState<RepProfile[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -65,6 +68,7 @@ export default function AdminReps() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editDisplayName, setEditDisplayName] = useState("");
+  const [editFacultyId, setEditFacultyId] = useState("");
   const [editDepartmentId, setEditDepartmentId] = useState("");
   const [editCourses, setEditCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
@@ -118,6 +122,7 @@ export default function AdminReps() {
           display_name,
           email,
           department_id,
+          faculty_id,
           departments (
             name
           )
@@ -362,6 +367,10 @@ export default function AdminReps() {
     setEditEmail(rep.email || "");
     setEditPassword("");
     setEditDisplayName(rep.display_name || "");
+    const departmentFacultyId = rep.department_id
+      ? departments.find((department) => department.id === rep.department_id)?.faculty_id || rep.faculty_id || ""
+      : rep.faculty_id || "";
+    setEditFacultyId(departmentFacultyId);
     setEditDepartmentId(rep.department_id || "");
     setEditSemester("first");
     setShowEditDialog(true);
@@ -371,6 +380,16 @@ export default function AdminReps() {
     } else {
       setEditCourses([]);
     }
+  };
+
+  const filteredEditDepartments = editFacultyId
+    ? departments.filter((department) => department.faculty_id === editFacultyId)
+    : departments;
+
+  const handleFacultyChange = (newFacultyId: string) => {
+    setEditFacultyId(newFacultyId);
+    setEditDepartmentId("");
+    setEditCourses([]);
   };
 
   const handleDepartmentChange = async (newDeptId: string) => {
@@ -404,6 +423,7 @@ export default function AdminReps() {
           password: editPassword || undefined,
           displayName: editDisplayName.trim(),
           departmentId: editDepartmentId || null,
+          facultyId: editFacultyId || null,
         },
       });
 
@@ -797,13 +817,30 @@ export default function AdminReps() {
                   Department
                 </h3>
                 <div className="space-y-2">
+                  <Label htmlFor="editFaculty">Assigned Faculty</Label>
+                  <Select value={editFacultyId} onValueChange={handleFacultyChange}>
+                    <SelectTrigger id="editFaculty">
+                      <SelectValue placeholder="Select a faculty" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {faculties.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.id}>
+                          {faculty.icon && <span className="mr-2">{faculty.icon}</span>}
+                          {faculty.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Controls which faculty this rep can share uploads across.</p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="editDepartment">Assigned Department</Label>
                   <Select value={editDepartmentId} onValueChange={handleDepartmentChange}>
                     <SelectTrigger id="editDepartment">
                       <SelectValue placeholder="Select a department" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {departments.map((dept) => (
+                      {filteredEditDepartments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.icon && <span className="mr-2">{dept.icon}</span>}
                           {dept.name}
