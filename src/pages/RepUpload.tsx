@@ -82,6 +82,7 @@ interface FileUploadItem {
   file: File;
   title: string;
   status: "pending" | "converting" | "uploading" | "success" | "error";
+  progress: number;
   error?: string;
   convertedFile?: File;
 }
@@ -123,6 +124,7 @@ export default function RepUpload() {
     completed: 0,
     total: 0,
   });
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [facultyDepartmentOptions, setFacultyDepartmentOptions] = useState<
     FacultyDepartmentOption[]
   >([]);
@@ -247,8 +249,7 @@ export default function RepUpload() {
     return baseName;
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const addFilesToQueue = useCallback((files: File[]) => {
     if (files.length === 0) return;
 
     const course = courses.find((c) => c.id === selectedCourseId);
@@ -270,25 +271,34 @@ export default function RepUpload() {
       }
     });
 
-    // Add PDF files directly to queue
     if (validFiles.length > 0) {
       const newItems: FileUploadItem[] = validFiles.map((file) => ({
         id: crypto.randomUUID(),
         file,
         title: generateTitle(file.name, courseCode),
         status: "pending" as const,
+        progress: 0,
       }));
       setFileQueue((prev) => [...prev, ...newItems]);
     }
 
-    // If there are non-PDF files, show conversion dialog
     if (nonPdfFiles.length > 0) {
       setPendingNonPdfFiles(nonPdfFiles);
       setShowConversionDialog(true);
     }
+  }, [courses, generateTitle, selectedCourseId]);
 
-    // Reset file input
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addFilesToQueue(Array.from(e.target.files || []));
     e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFiles(false);
+    if (isProcessing || !selectedCourseId || !selectedSemester || !selectedLevel) return;
+    addFilesToQueue(Array.from(e.dataTransfer.files || []));
   };
 
   const handleConversionAccept = async () => {
@@ -303,6 +313,7 @@ export default function RepUpload() {
       file,
       title: generateTitle(file.name, courseCode),
       status: "pending" as const,
+      progress: 0,
     }));
 
     setFileQueue((prev) => [...prev, ...newItems]);
@@ -333,6 +344,14 @@ export default function RepUpload() {
   ) => {
     setFileQueue((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status, error } : item)),
+    );
+  };
+
+  const updateItemProgress = (id: string, progress: number) => {
+    setFileQueue((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, progress: Math.max(0, Math.min(100, progress)) } : item,
+      ),
     );
   };
 
@@ -372,45 +391,42 @@ export default function RepUpload() {
       return;
     }
 
-    setUploadProgress({
-      completed: 0,
-      total: fileQueue.length * uploadTargets.length,
-    });
+    const uploadableItems = fileQueue.filter((item) => item.status !== "success");
+    setUploadProgress({ completed: 0, total: uploadableItems.length * uploadTargets.length });
 
     let successCount = 0;
     let errorCount = 0;
+    let cursor = 0;
+    const concurrency = Math.min(3, uploadableItems.length);
 
-    for (const item of fileQueue) {
-      if (item.status === "success") {
-        setUploadProgress((prev) => ({
-          ...prev,
-          completed: prev.completed + 1,
-        }));
-        continue;
-      }
-
+    const processItem = async (item: FileUploadItem) => {
+      let progressTimer: ReturnType<typeof setInterval> | undefined;
       try {
         let fileToUpload = item.file;
+        updateItemProgress(item.id, 5);
 
-        // Convert non-PDF files
         if (item.file.type !== "application/pdf") {
           updateItemStatus(item.id, "converting");
+          updateItemProgress(item.id, 15);
           const converted = await convertToPdf(item.file);
-          if (!converted) {
-            updateItemStatus(item.id, "error", "Conversion failed");
-            errorCount++;
-            setUploadProgress((prev) => ({
-              ...prev,
-              completed: prev.completed + 1,
-            }));
-            continue;
-          }
+          if (!converted) throw new Error("Conversion failed");
           fileToUpload = converted;
+          updateItemProgress(item.id, 30);
         }
 
         updateItemStatus(item.id, "uploading");
+        progressTimer = setInterval(() => {
+          setFileQueue((prev) =>
+            prev.map((queued) =>
+              queued.id === item.id && queued.progress < 90
+                ? { ...queued, progress: queued.progress + Math.random() * 8 + 2 }
+                : queued,
+            ),
+          );
+        }, 350);
 
         let itemSucceeded = false;
+        let completedTargets = 0;
         for (const target of uploadTargets) {
           const success = await uploadNote(
             target.courseId!,
@@ -422,61 +438,46 @@ export default function RepUpload() {
             target.id || undefined,
             selectedMaterialType,
           );
-
+          completedTargets += 1;
+          updateItemProgress(item.id, 30 + (completedTargets / uploadTargets.length) * 65);
           if (success) {
             itemSucceeded = true;
             successCount++;
           } else {
             errorCount++;
           }
-          setUploadProgress((prev) => ({
-            ...prev,
-            completed: prev.completed + 1,
-          }));
+          setUploadProgress((prev) => ({ ...prev, completed: prev.completed + 1 }));
         }
 
-        if (itemSucceeded) {
-          updateItemStatus(item.id, "success");
-        } else {
-          updateItemStatus(item.id, "error", "Upload failed");
-        }
+        if (!itemSucceeded) throw new Error("Upload failed");
+        updateItemStatus(item.id, "success");
+        updateItemProgress(item.id, 100);
       } catch (err) {
-        updateItemStatus(
-          item.id,
-          "error",
-          err instanceof Error ? err.message : "Unknown error",
-        );
+        updateItemStatus(item.id, "error", err instanceof Error ? err.message : "Unknown error");
         errorCount++;
+      } finally {
+        if (progressTimer) clearInterval(progressTimer);
       }
+    };
 
-      if (uploadTargets.length === 0) {
-        setUploadProgress((prev) => ({
-          ...prev,
-          completed: prev.completed + 1,
-        }));
-      }
-    }
+    await Promise.all(
+      Array.from({ length: concurrency }, async () => {
+        while (cursor < uploadableItems.length) {
+          const item = uploadableItems[cursor++];
+          await processItem(item);
+        }
+      }),
+    );
 
     setIsProcessing(false);
 
     if (successCount > 0 && errorCount === 0) {
-      toast.success(
-        `Successfully uploaded ${successCount} file${successCount > 1 ? "s" : ""}!`,
-      );
-      // Clear successful items after a delay
-      setTimeout(() => {
-        setFileQueue((prev) =>
-          prev.filter((item) => item.status !== "success"),
-        );
-      }, 2000);
-    } else if (successCount > 0 && errorCount > 0) {
-      toast.warning(
-        `Uploaded ${successCount} file${successCount > 1 ? "s" : ""}, ${errorCount} failed`,
-      );
+      toast.success(`Successfully uploaded ${successCount} file${successCount > 1 ? "s" : ""}!`);
+      setTimeout(() => setFileQueue((prev) => prev.filter((item) => item.status !== "success")), 2000);
+    } else if (successCount > 0) {
+      toast.warning(`Uploaded ${successCount} file${successCount > 1 ? "s" : ""}, ${errorCount} failed`);
     } else if (errorCount > 0) {
-      toast.error(
-        `Failed to upload ${errorCount} file${errorCount > 1 ? "s" : ""}`,
-      );
+      toast.error(`Failed to upload ${errorCount} file${errorCount > 1 ? "s" : ""}`);
     }
   };
 
@@ -855,7 +856,11 @@ export default function RepUpload() {
               {/* File Input */}
               <div className="space-y-2">
                 <Label htmlFor="files">Add Files</Label>
-                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
+                <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDraggingFiles ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                  onDragEnter={(e) => { e.preventDefault(); setIsDraggingFiles(true); }}
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingFiles(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsDraggingFiles(false); }}
+                  onDrop={handleDrop}>
                   <Input
                     id="files"
                     type="file"
@@ -880,7 +885,7 @@ export default function RepUpload() {
                     <div>
                       <p className="font-medium">
                         {selectedCourseId
-                          ? "Click to select files"
+                          ? "Drag & drop PDFs here or click to browse"
                           : "Select a course first"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -1004,6 +1009,8 @@ export default function RepUpload() {
                                     Uploading...
                                   </p>
                                 )}
+                                <Progress value={item.progress} className="mt-2 h-1.5" />
+                                <p className="mt-1 text-xs text-muted-foreground">{Math.round(item.progress)}% · {item.status}</p>
                                 {item.error && (
                                   <p className="text-xs text-red-600 mt-1">
                                     {item.error}
