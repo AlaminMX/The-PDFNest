@@ -48,6 +48,7 @@ interface StandaloneDept {
   slug: string;
   color: string | null;
   icon: string | null;
+  background_image_url?: string | null;
 }
 
 function FacultySelectionContent() {
@@ -66,7 +67,7 @@ function FacultySelectionContent() {
     (async () => {
       const { data } = await supabase
         .from("departments")
-        .select("id, name, slug, color, icon")
+        .select("id, name, slug, color, icon, background_image_url")
         .is("faculty_id", null)
         .eq("is_visible", true)
         .order("display_order", { ascending: true });
@@ -469,6 +470,7 @@ function NotesList({
 
 function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles: any; index: number; onClick: () => void }) {
   const vibrantBg = faculty.color || styles.accentBg;
+  const bgImage = faculty.background_image_url as string | null | undefined;
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -478,19 +480,31 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
     >
       <button
         onClick={onClick}
-        className="w-full text-left p-5 rounded-2xl transition-all duration-200 group aspect-[4/3] flex flex-col justify-between relative overflow-hidden text-white"
+        className="w-full text-left p-5 rounded-2xl transition-all duration-200 group aspect-[4/3] flex flex-col justify-between relative overflow-hidden text-white bg-cover bg-center"
         style={{
           backgroundColor: vibrantBg,
+          backgroundImage: bgImage ? `url(${bgImage})` : undefined,
           boxShadow: `0 10px 30px -10px ${styles.glowColor || "rgba(0,0,0,0.3)"}`,
         }}
       >
-        {/* Subtle radial overlay for depth */}
+        {/* Depth overlays — darker when image is set for legibility */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_60%)]" />
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-transparent to-black/25" />
+        <div
+          className={`absolute inset-0 pointer-events-none ${
+            bgImage
+              ? "bg-gradient-to-t from-black/70 via-black/30 to-black/10"
+              : "bg-gradient-to-br from-transparent to-black/25"
+          }`}
+        />
 
-        <div className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-          {faculty.icon || <Building className="w-6 h-6 text-white" />}
-        </div>
+        {/* Icon only shown when no background image */}
+        {!bgImage && (
+          <div className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+            {faculty.icon || <Building className="w-6 h-6 text-white" />}
+          </div>
+        )}
+        {bgImage && <div className="relative" />}
+
         <div className="relative">
           <h3 className="font-semibold mb-0.5 text-sm leading-tight text-white drop-shadow-md">
             {faculty.name}
