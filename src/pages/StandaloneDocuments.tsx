@@ -27,7 +27,6 @@ type StandaloneDocument = {
   file_path: string;
   file_size: number;
   thumbnail_path: string | null;
-  thumbnail_url?: string | null;
   created_at: string;
 };
 
