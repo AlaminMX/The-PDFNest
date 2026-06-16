@@ -246,7 +246,7 @@ function FacultyGrid({
           .order("display_order", { ascending: true });
 
         if (cancelled) return;
-        const rows = (facData || []) as Faculty[];
+        const rows = (facData || []) as unknown as Faculty[];
 
         // Best-effort: enrich with department counts
         try {

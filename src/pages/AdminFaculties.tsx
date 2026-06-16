@@ -31,6 +31,7 @@ import { Building, Edit, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
+import { TileImageUpload } from "@/components/TileImageUpload";
 
 export default function AdminFaculties() {
   const navigate = useNavigate();
@@ -84,7 +85,7 @@ export default function AdminFaculties() {
         slug: generateSlug(newFaculty.name),
         icon: newFaculty.icon.trim() || null,
         color: newFaculty.color.trim() || null,
-        background_image_url: newFaculty.backgroundImageUrl.trim() || null,
+        background_image_url: newFaculty.backgroundImageUrl || null,
         display_order: maxOrder + 1,
       } as any);
       if (error) throw error;
@@ -110,7 +111,7 @@ export default function AdminFaculties() {
           icon: editingFaculty.icon?.trim() || null,
           color: editingFaculty.color?.trim() || null,
           background_image_url:
-            editingFaculty.backgroundImageUrl?.trim() || null,
+            editingFaculty.backgroundImageUrl || null,
           is_visible: editingFaculty.is_visible,
         } as any)
         .eq("id", editingFaculty.id);
@@ -287,7 +288,7 @@ export default function AdminFaculties() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Icon (emoji)</Label>
+              <Label>Icon (emoji) — optional</Label>
               <Input
                 value={newFaculty.icon}
                 onChange={(e) =>
@@ -295,6 +296,9 @@ export default function AdminFaculties() {
                 }
                 placeholder="e.g. 🏗️"
               />
+              <p className="text-xs text-muted-foreground">
+                Only used when no background image is set.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Color</Label>
@@ -306,19 +310,16 @@ export default function AdminFaculties() {
                 placeholder="e.g. blue"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Background image URL</Label>
-              <Input
-                value={newFaculty.backgroundImageUrl}
-                onChange={(e) =>
-                  setNewFaculty({
-                    ...newFaculty,
-                    backgroundImageUrl: e.target.value,
-                  })
-                }
-                placeholder="https://..."
-              />
-            </div>
+            <TileImageUpload
+              kind="faculty"
+              value={newFaculty.backgroundImageUrl}
+              onChange={(url) =>
+                setNewFaculty({
+                  ...newFaculty,
+                  backgroundImageUrl: url || "",
+                })
+              }
+            />
           </div>
           <DialogFooter>
             <Button
@@ -358,7 +359,7 @@ export default function AdminFaculties() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Icon (emoji)</Label>
+                <Label>Icon (emoji) — optional</Label>
                 <Input
                   value={editingFaculty.icon}
                   onChange={(e) =>
@@ -368,6 +369,9 @@ export default function AdminFaculties() {
                     })
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  Only used when no background image is set.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Color</Label>
@@ -381,18 +385,16 @@ export default function AdminFaculties() {
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Background image URL</Label>
-                <Input
-                  value={editingFaculty.backgroundImageUrl}
-                  onChange={(e) =>
-                    setEditingFaculty({
-                      ...editingFaculty,
-                      backgroundImageUrl: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              <TileImageUpload
+                kind="faculty"
+                value={editingFaculty.backgroundImageUrl}
+                onChange={(url) =>
+                  setEditingFaculty({
+                    ...editingFaculty,
+                    backgroundImageUrl: url || "",
+                  })
+                }
+              />
               <div className="flex items-center gap-2">
                 <Switch
                   checked={editingFaculty.is_visible}

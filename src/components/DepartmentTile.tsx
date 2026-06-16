@@ -9,6 +9,7 @@ interface DepartmentTileProps {
   name: string;
   color: string | null;
   icon: string | null;
+  backgroundImageUrl?: string | null;
   index: number;
   onClick: () => void;
   subtitle?: string;
@@ -19,19 +20,52 @@ export function DepartmentTile({
   name,
   color,
   icon,
+  backgroundImageUrl,
   index,
   onClick,
   subtitle = "View Courses",
 }: DepartmentTileProps) {
   const { theme } = useTheme();
-  
-  // Memoize styles to prevent recalculation
+
   const styles = useMemo(() => getDepartmentStyles(color, index), [color, index]);
   const displayIcon = useMemo(() => getDepartmentIcon(icon, name), [icon, name]);
   const iconGlow = useMemo(() => getIconGlowStyles(styles.hsl), [styles.hsl]);
 
-  // Theme-aware text color
-  const textColorClass = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const hasImage = !!backgroundImageUrl;
+  const textColorClass = hasImage
+    ? "text-white"
+    : theme === "dark"
+      ? "text-white"
+      : "text-gray-900";
+
+  if (hasImage) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.06 }}
+      >
+        <button
+          onClick={onClick}
+          className="w-full text-left p-5 rounded-xl transition-all duration-300 group border border-white/10 relative overflow-hidden bg-cover bg-center min-h-[88px] flex items-center"
+          style={{
+            backgroundImage: `url(${backgroundImageUrl})`,
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/15 pointer-events-none" />
+          <div className="relative flex items-center gap-4 w-full">
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-semibold mb-0.5 truncate ${textColorClass} drop-shadow-md`}>
+                {name}
+              </h3>
+              <p className="text-xs text-white/80">{subtitle}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/70 group-hover:translate-x-0.5 transition-all duration-200" />
+          </div>
+        </button>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -53,7 +87,6 @@ export function DepartmentTile({
         }}
       >
         <div className="flex items-center gap-4">
-          {/* Icon with reduced glow effect */}
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105"
             style={{
@@ -71,7 +104,6 @@ export function DepartmentTile({
             </span>
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <h3 className={`font-semibold mb-0.5 truncate ${textColorClass}`}>
               {name}
@@ -79,7 +111,6 @@ export function DepartmentTile({
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
 
-          {/* Arrow */}
           <ChevronRight
             className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all duration-200"
           />

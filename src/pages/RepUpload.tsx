@@ -784,7 +784,7 @@ export default function RepUpload() {
                       </Label>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Choose departments in your faculty that offer{" "}
-                        {course?.code || "this course"}.
+                        {courses.find((c) => c.id === selectedCourseId)?.code || "this course"}.
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-2">
@@ -842,7 +842,7 @@ export default function RepUpload() {
                               <span className="block text-xs text-muted-foreground">
                                 {option.courseId
                                   ? `${option.courseCode} — ${option.courseName}`
-                                  : `No matching ${course?.code || "course"} course — click to create it here`}
+                                  : `No matching ${courses.find((c) => c.id === selectedCourseId)?.code || "course"} course — click to create it here`}
                               </span>
                             </span>
                           </div>
