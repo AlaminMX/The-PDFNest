@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useFaculties } from "@/hooks/useFaculties";
 import { useMonthlyLeaderboard } from "@/hooks/useContributorStats";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -52,6 +53,7 @@ interface StandaloneDept {
 function FacultySelectionContent() {
   const navigate = useNavigate();
   const { faculties, loading: facLoading } = useFaculties();
+  const { settings } = useAppSettings();
   const visibleFaculties = faculties.filter((f) => f.is_visible);
   const [searchOpen, setSearchOpen] = useState(false);
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
@@ -222,13 +224,17 @@ function FacultySelectionContent() {
           {/* Standalone (no-faculty) departments */}
           {standaloneDepts.length > 0 && (
             <>
-              <div className="my-6 flex items-center gap-3">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-border" />
-                <span className="shrink-0 rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  New Departments
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-border" />
-              </div>
+              {settings.new_departments_label_enabled ? (
+                <div className="my-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-border" />
+                  <span className="shrink-0 rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    {settings.new_departments_label}
+                  </span>
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-border" />
+                </div>
+              ) : (
+                <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+              )}
               <div className="grid grid-cols-2 gap-3">
                 {standaloneDepts.map((dept, index) => {
                   const styles = getDepartmentStyles(dept.color, index);

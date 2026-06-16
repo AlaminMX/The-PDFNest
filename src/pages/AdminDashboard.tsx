@@ -79,6 +79,68 @@ const sidebarItems = [
   { id: "past-questions", label: "Past Questions", icon: FileText, path: "/admin/past-questions" },
 ];
 
+function NewDepartmentsLabelControl() {
+  const { settings, updateSetting } = useAppSettings();
+  const [label, setLabel] = useState(settings.new_departments_label);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLabel(settings.new_departments_label);
+  }, [settings.new_departments_label]);
+
+  const handleToggle = async (checked: boolean) => {
+    setSaving(true);
+    const success = await updateSetting("new_departments_label_enabled", checked ? "true" : "false");
+    toast[success ? "success" : "error"](success ? (checked ? "New departments label enabled" : "New departments label hidden") : "Failed to update setting");
+    setSaving(false);
+  };
+
+  const handleSave = async () => {
+    const trimmed = label.trim() || "New Departments";
+    setSaving(true);
+    const success = await updateSetting("new_departments_label", trimmed);
+    toast[success ? "success" : "error"](success ? "New departments label updated" : "Failed to update label");
+    setSaving(false);
+  };
+
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-2 md:max-w-md">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">New departments separator</p>
+              <p className="text-xs text-muted-foreground">Control the label shown between faculties and standalone departments.</p>
+            </div>
+            <Switch
+              checked={settings.new_departments_label_enabled}
+              onCheckedChange={handleToggle}
+              disabled={saving}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-departments-label">Label text</Label>
+            <Input
+              id="new-departments-label"
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              disabled={saving || !settings.new_departments_label_enabled}
+              maxLength={40}
+            />
+          </div>
+        </div>
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !settings.new_departments_label_enabled || label.trim() === settings.new_departments_label}
+        >
+          Save Label
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function RamadanToggleControl() {
   const { settings, updateSetting } = useAppSettings();
   const [toggling, setToggling] = useState(false);
@@ -494,6 +556,8 @@ export default function AdminDashboard() {
               </div>
             </Card>
           </div>
+
+          <NewDepartmentsLabelControl />
 
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">

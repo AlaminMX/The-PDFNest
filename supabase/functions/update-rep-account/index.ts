@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { repId, email, password, displayName, departmentId } = await req.json();
+    const { repId, email, password, displayName, departmentId, facultyId } = await req.json();
 
     // Input validation - repId is required
     if (!repId || typeof repId !== 'string' || !UUID_REGEX.test(repId)) {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     // Update profile if displayName or departmentId provided
-    const profileUpdate: { display_name?: string; department_id?: string } = {};
+    const profileUpdate: { display_name?: string; department_id?: string | null; faculty_id?: string | null } = {};
     
     if (displayName !== undefined) {
       if (typeof displayName !== 'string' || displayName.trim().length === 0 || displayName.length > 100) {
@@ -153,6 +153,16 @@ Deno.serve(async (req) => {
         );
       }
       profileUpdate.department_id = departmentId;
+    }
+
+    if (facultyId !== undefined) {
+      if (facultyId !== null && (typeof facultyId !== 'string' || !UUID_REGEX.test(facultyId))) {
+        return new Response(
+          JSON.stringify({ error: "Invalid faculty ID format" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      profileUpdate.faculty_id = facultyId;
     }
 
     if (Object.keys(profileUpdate).length > 0) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRepStatus } from "@/hooks/useRepStatus";
+import { supabase } from "@/integrations/supabase/client";
 import { useCourses } from "@/hooks/useCourses";
 import { useLectureNotes } from "@/hooks/useLectureNotes";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +39,14 @@ const SUPPORTED_TYPES = [
 
 const ACCEPT_TYPES = ".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.ppt,.pptx";
 
+interface FacultyDepartmentOption {
+  id: string;
+  name: string;
+  courseId: string | null;
+  courseCode: string | null;
+  courseName: string | null;
+}
+
 interface FileUploadItem {
   id: string;
   file: File;
@@ -66,6 +75,8 @@ export default function RepUpload() {
   const [showConversionDialog, setShowConversionDialog] = useState(false);
   const [pendingNonPdfFiles, setPendingNonPdfFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState({ completed: 0, total: 0 });
+  const [facultyDepartmentOptions, setFacultyDepartmentOptions] = useState<FacultyDepartmentOption[]>([]);
+  const [selectedTargetDepartmentIds, setSelectedTargetDepartmentIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!repLoading && !isRep) {
@@ -79,6 +90,67 @@ export default function RepUpload() {
       setShowDisplayNamePrompt(true);
     }
   }, [displayName, isRep, repLoading]);
+
+  useEffect(() => {
+    if (!departmentId || !selectedCourseId || !selectedLevel || !selectedSemester) {
+      setFacultyDepartmentOptions([]);
+      setSelectedTargetDepartmentIds([]);
+      return;
+    }
+
+    const loadFacultyTargets = async () => {
+      const { data: homeDepartment } = await supabase
+        .from("departments")
+        .select("faculty_id")
+        .eq("id", departmentId)
+        .maybeSingle();
+
+      if (!homeDepartment?.faculty_id) {
+        setFacultyDepartmentOptions([]);
+        setSelectedTargetDepartmentIds([departmentId]);
+        return;
+      }
+
+      const { data: facultyDepartments } = await supabase
+        .from("departments")
+        .select("id, name")
+        .eq("faculty_id", homeDepartment.faculty_id)
+        .eq("is_visible", true)
+        .order("name");
+
+      const departmentIds = (facultyDepartments || []).map((department) => department.id);
+      const selectedCourse = courses.find((course) => course.id === selectedCourseId);
+
+      const { data: matchingCourses } = await supabase
+        .from("courses")
+        .select("id, code, name, department_id")
+        .in("department_id", departmentIds.length ? departmentIds : [departmentId])
+        .eq("level", selectedLevel)
+        .eq("semester", selectedSemester)
+        .ilike("code", selectedCourse?.code || "");
+
+      const courseByDepartment = new Map((matchingCourses || []).map((course: any) => [course.department_id, course]));
+      const options = (facultyDepartments || []).map((department) => {
+        const matchingCourse = courseByDepartment.get(department.id);
+        return {
+          id: department.id,
+          name: department.name,
+          courseId: matchingCourse?.id || null,
+          courseCode: matchingCourse?.code || null,
+          courseName: matchingCourse?.name || null,
+        };
+      });
+
+      setFacultyDepartmentOptions(options);
+      setSelectedTargetDepartmentIds((current) => {
+        const valid = new Set(options.filter((option) => option.courseId).map((option) => option.id));
+        const next = current.filter((id) => valid.has(id));
+        return next.length > 0 ? next : [departmentId];
+      });
+    };
+
+    loadFacultyTargets();
+  }, [departmentId, selectedCourseId, selectedLevel, selectedSemester, courses]);
 
   useEffect(() => {
     if (selectedLevel && !availableLevels.includes(selectedLevel as any)) {
@@ -193,7 +265,16 @@ export default function RepUpload() {
     }
 
     setIsProcessing(true);
-    setUploadProgress({ completed: 0, total: fileQueue.length });
+    const uploadTargets = facultyDepartmentOptions.length > 0
+      ? facultyDepartmentOptions.filter((option) => selectedTargetDepartmentIds.includes(option.id) && option.courseId)
+      : [{ id: departmentId || "", name: departmentName, courseId: selectedCourseId, courseCode: course.code, courseName: course.name }];
+
+    if (uploadTargets.length === 0) {
+      toast.error("Select at least one department with this course available.");
+      return;
+    }
+
+    setUploadProgress({ completed: 0, total: fileQueue.length * uploadTargets.length });
 
     let successCount = 0;
     let errorCount = 0;
@@ -220,32 +301,43 @@ export default function RepUpload() {
           fileToUpload = converted;
         }
 
-        // Upload the file
         updateItemStatus(item.id, 'uploading');
-        const success = await uploadNote(
-          selectedCourseId,
-          course.code,
-          departmentName,
-          fileToUpload,
-          item.title.trim(),
-          displayName,
-          departmentId || undefined,
-          selectedMaterialType
-        );
 
-        if (success) {
+        let itemSucceeded = false;
+        for (const target of uploadTargets) {
+          const success = await uploadNote(
+            target.courseId!,
+            target.courseCode || course.code,
+            target.name || departmentName,
+            fileToUpload,
+            item.title.trim(),
+            displayName,
+            target.id || undefined,
+            selectedMaterialType
+          );
+
+          if (success) {
+            itemSucceeded = true;
+            successCount++;
+          } else {
+            errorCount++;
+          }
+          setUploadProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+        }
+
+        if (itemSucceeded) {
           updateItemStatus(item.id, 'success');
-          successCount++;
         } else {
           updateItemStatus(item.id, 'error', 'Upload failed');
-          errorCount++;
         }
       } catch (err) {
         updateItemStatus(item.id, 'error', err instanceof Error ? err.message : 'Unknown error');
         errorCount++;
       }
 
-      setUploadProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+      if (uploadTargets.length === 0) {
+        setUploadProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+      }
     }
 
     setIsProcessing(false);
@@ -277,7 +369,25 @@ export default function RepUpload() {
   }
 
   const pendingFiles = fileQueue.filter(f => f.status === 'pending');
-  const canUpload = selectedCourseId && selectedSemester && selectedLevel && pendingFiles.length > 0 && !isProcessing;
+  const selectedTargetCount = facultyDepartmentOptions.length > 0 ? selectedTargetDepartmentIds.length : 1;
+  const canUpload = selectedCourseId && selectedSemester && selectedLevel && pendingFiles.length > 0 && selectedTargetCount > 0 && !isProcessing;
+
+  const toggleTargetDepartment = (departmentOption: FacultyDepartmentOption) => {
+    if (!departmentOption.courseId || isProcessing) return;
+    setSelectedTargetDepartmentIds((current) =>
+      current.includes(departmentOption.id)
+        ? current.filter((id) => id !== departmentOption.id)
+        : [...current, departmentOption.id]
+    );
+  };
+
+  const selectAllTargetDepartments = () => {
+    setSelectedTargetDepartmentIds(facultyDepartmentOptions.filter((option) => option.courseId).map((option) => option.id));
+  };
+
+  const selectOwnDepartmentOnly = () => {
+    setSelectedTargetDepartmentIds(departmentId ? [departmentId] : []);
+  };
 
   return (
     <>
@@ -460,6 +570,65 @@ export default function RepUpload() {
                   </SelectContent>
                 </Select>
               </div>
+
+
+
+              {/* Faculty Department Targets */}
+              {facultyDepartmentOptions.length > 0 && (
+                <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Label className="text-base">Departments to receive this upload</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Choose departments in your faculty that offer {course?.code || "this course"}.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={selectAllTargetDepartments} disabled={isProcessing}>
+                        Select all
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={selectOwnDepartmentOnly} disabled={isProcessing}>
+                        Mine only
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {facultyDepartmentOptions.map((option) => {
+                      const checked = selectedTargetDepartmentIds.includes(option.id);
+                      const isHome = option.id === departmentId;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => toggleTargetDepartment(option)}
+                          disabled={!option.courseId || isProcessing}
+                          className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                            checked
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-background hover:border-primary/50"
+                          } ${!option.courseId ? "cursor-not-allowed opacity-55" : ""}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                              {checked && <CheckCircle className="h-3.5 w-3.5" />}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium text-foreground">
+                                {option.name}{isHome ? " (your department)" : ""}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                {option.courseId
+                                  ? `${option.courseCode} — ${option.courseName}`
+                                  : `No matching ${course?.code || "course"} course for this level/semester`}
+                              </span>
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* File Input */}
               <div className="space-y-2">
