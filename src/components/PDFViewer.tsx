@@ -11,7 +11,10 @@ import {
   ZoomOut,
   ExternalLink,
   Loader2,
-  RotateCw
+  RotateCw,
+  Maximize,
+  Minimize,
+  PanelTop
 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
@@ -42,6 +45,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<pdfjs.RenderTask | null>(null);
 
   // Load PDF document - check offline cache first, then network with range requests
@@ -215,6 +219,26 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
+  const handleFitToWidth = () => setScale(1);
+  const handleFitToPage = () => {
+    if (!canvasRef.current || !containerRef.current) return;
+    const canvasHeight = Number.parseFloat(canvasRef.current.style.height || "0");
+    const availableHeight = Math.max(containerRef.current.clientHeight - 32, 1);
+    if (canvasHeight > 0) {
+      setScale((prev) => Math.max(0.5, Math.min(3, prev * (availableHeight / canvasHeight))));
+    }
+  };
+  const handleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await sheetRef.current?.requestFullscreen();
+      }
+    } catch {
+      toast.error("Fullscreen is not supported on this device");
+    }
+  };
 
   const handleDownload = async () => {
     try {
@@ -245,8 +269,9 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
+        ref={sheetRef}
         side="bottom" 
-        className="h-[95vh] rounded-t-3xl p-0 flex flex-col"
+        className="h-[95vh] rounded-t-3xl p-0 flex flex-col fullscreen:h-screen fullscreen:rounded-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
@@ -264,6 +289,12 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleFitToWidth} title="Fit to width">
+              <PanelTop className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleFullscreen} title="Fullscreen">
+              {document.fullscreenElement ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleOpenExternal} title="Open in new tab">
               <ExternalLink className="h-4 w-4" />
             </Button>
@@ -334,6 +365,9 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
                 </Button>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-9 px-2 text-xs" onClick={handleFitToPage}>
+                  Fit page
+                </Button>
                 <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleZoomOut} disabled={scale <= 0.5}>
                   <ZoomOut className="h-4 w-4" />
                 </Button>
