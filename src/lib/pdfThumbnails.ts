@@ -1,0 +1,51 @@
+import * as pdfjs from "pdfjs-dist";
+import { supabase } from "@/integrations/supabase/client";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+export async function renderPdfFirstPageThumbnail(file: File, maxWidth = 420): Promise<Blob> {
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  try {
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxWidth / viewport.width, 1.2);
+    const scaledViewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is not available");
+
+    canvas.width = Math.floor(scaledViewport.width);
+    canvas.height = Math.floor(scaledViewport.height);
+    await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not generate PDF thumbnail"));
+      }, "image/jpeg", 0.86);
+    });
+  } finally {
+    pdf.destroy();
+  }
+}
+
+export async function uploadStandaloneThumbnail(file: File, documentId: string): Promise<string | null> {
+  try {
+    const thumbnail = await renderPdfFirstPageThumbnail(file);
+    const path = `standalone-documents/${documentId}.jpg`;
+    const { error } = await supabase.storage
+      .from("pdf-thumbnails")
+      .upload(path, thumbnail, { contentType: "image/jpeg", upsert: true });
+    if (error) throw error;
+    return path;
+  } catch (error) {
+    console.error("Failed to generate standalone document thumbnail:", error);
+    return null;
+  }
+}
+
+export function getThumbnailPublicUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return supabase.storage.from("pdf-thumbnails").getPublicUrl(path).data.publicUrl;
+}
