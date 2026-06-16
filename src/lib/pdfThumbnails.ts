@@ -32,8 +32,11 @@ export async function renderPdfFirstPageThumbnail(file: File, maxWidth = 420): P
 
 export async function uploadStandaloneThumbnail(file: File, documentId: string): Promise<string | null> {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
     const thumbnail = await renderPdfFirstPageThumbnail(file);
-    const path = `standalone-documents/${documentId}.jpg`;
+    const path = `${user.id}/standalone-documents/${documentId}.jpg`;
     const { error } = await supabase.storage
       .from("pdf-thumbnails")
       .upload(path, thumbnail, { contentType: "image/jpeg", upsert: true });
@@ -45,7 +48,12 @@ export async function uploadStandaloneThumbnail(file: File, documentId: string):
   }
 }
 
-export function getThumbnailPublicUrl(path: string | null | undefined): string | null {
+export async function getThumbnailSignedUrl(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
-  return supabase.storage.from("pdf-thumbnails").getPublicUrl(path).data.publicUrl;
+  const { data, error } = await supabase.storage.from("pdf-thumbnails").createSignedUrl(path, 3600);
+  if (error) {
+    console.error("Failed to sign standalone thumbnail:", error);
+    return null;
+  }
+  return data.signedUrl;
 }

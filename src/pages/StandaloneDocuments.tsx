@@ -14,7 +14,7 @@ import { PDFViewer } from "@/components/PDFViewer";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { supabase } from "@/integrations/supabase/client";
-import { getThumbnailPublicUrl, uploadStandaloneThumbnail } from "@/lib/pdfThumbnails";
+import { getThumbnailSignedUrl, uploadStandaloneThumbnail } from "@/lib/pdfThumbnails";
 
 type SectionSlug = "books" | "journals";
 type StandaloneCategory = "book" | "journal";
@@ -75,7 +75,14 @@ export default function StandaloneDocuments() {
       toast.error("Failed to load documents");
       setDocuments([]);
     } else {
-      setDocuments((data || []) as unknown as StandaloneDocument[]);
+      const rows = (data || []) as unknown as StandaloneDocument[];
+      const rowsWithThumbnails = await Promise.all(
+        rows.map(async (document) => ({
+          ...document,
+          thumbnail_url: await getThumbnailSignedUrl(document.thumbnail_path),
+        })),
+      );
+      setDocuments(rowsWithThumbnails);
     }
     setLoading(false);
   }, [activeSection, currentDept?.id]);
@@ -129,6 +136,9 @@ export default function StandaloneDocuments() {
         );
       }, 350);
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const storagePath = `standalone/${currentDept.id}/${activeSection.category}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from("school_pdfs")
@@ -146,6 +156,7 @@ export default function StandaloneDocuments() {
           title: item.title.trim() || item.file.name.replace(/\.pdf$/i, ""),
           file_path: storagePath,
           file_size: item.file.size,
+          uploaded_by: user.id,
         })
         .select("id")
         .single();
@@ -295,7 +306,7 @@ export default function StandaloneDocuments() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {visibleDocuments.map((document, index) => {
-              const thumbnailUrl = getThumbnailPublicUrl(document.thumbnail_path);
+              const thumbnailUrl = document.thumbnail_url;
               return (
                 <motion.article
                   key={document.id}
