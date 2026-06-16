@@ -166,7 +166,7 @@ function FacultySelectionContent() {
               AFIT Digital Library
             </h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Shared academic materials from course reps across every faculty, department, and level.
+              Shared academic materials from reps across every faculty, department, and level.
             </p>
           </div>
         </motion.section>
