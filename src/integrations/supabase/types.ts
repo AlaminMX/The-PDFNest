@@ -411,6 +411,7 @@ export type Database = {
       departments: {
         Row: {
           allowed_levels: number[] | null
+          background_image_url: string | null
           category_id: string | null
           color: string | null
           created_at: string | null
@@ -424,6 +425,7 @@ export type Database = {
         }
         Insert: {
           allowed_levels?: number[] | null
+          background_image_url?: string | null
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -437,6 +439,7 @@ export type Database = {
         }
         Update: {
           allowed_levels?: number[] | null
+          background_image_url?: string | null
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -467,6 +470,7 @@ export type Database = {
       }
       faculties: {
         Row: {
+          background_image_url: string | null
           color: string | null
           created_at: string | null
           display_order: number | null
@@ -477,6 +481,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          background_image_url?: string | null
           color?: string | null
           created_at?: string | null
           display_order?: number | null
@@ -487,6 +492,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          background_image_url?: string | null
           color?: string | null
           created_at?: string | null
           display_order?: number | null
@@ -1020,6 +1026,53 @@ export type Database = {
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      standalone_documents: {
+        Row: {
+          category: string
+          created_at: string
+          department_id: string
+          file_path: string
+          file_size: number
+          id: string
+          thumbnail_path: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          department_id: string
+          file_path: string
+          file_size?: number
+          id?: string
+          thumbnail_path?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          department_id?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          thumbnail_path?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standalone_documents_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
