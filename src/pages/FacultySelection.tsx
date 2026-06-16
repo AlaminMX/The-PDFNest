@@ -222,7 +222,13 @@ function FacultySelectionContent() {
           {/* Standalone (no-faculty) departments */}
           {standaloneDepts.length > 0 && (
             <>
-              <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-border" />
+                <span className="shrink-0 rounded-full border border-border/60 bg-background px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  New Departments
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-border" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {standaloneDepts.map((dept, index) => {
                   const styles = getDepartmentStyles(dept.color, index);
