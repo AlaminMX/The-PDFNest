@@ -555,7 +555,7 @@ export default function AdminDepartments() {
                 <Label htmlFor="newDeptIcon">
                   Icon
                   <span className="text-xs text-muted-foreground ml-2">
-                    (emoji, e.g., 💻, 🔒)
+                    (emoji — only used when no background image is set)
                   </span>
                 </Label>
                 <Input
@@ -565,6 +565,14 @@ export default function AdminDepartments() {
                   placeholder="Leave empty for auto-assigned"
                 />
               </div>
+
+              <TileImageUpload
+                kind="department"
+                value={newDept.background_image_url}
+                onChange={(url) =>
+                  setNewDept({ ...newDept, background_image_url: url || "" })
+                }
+              />
 
               {/* Category Selector */}
               <div className="space-y-2">
