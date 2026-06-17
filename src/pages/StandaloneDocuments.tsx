@@ -2,11 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Eye, FileText, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Eye, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
@@ -15,6 +25,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { supabase } from "@/integrations/supabase/client";
 import { getThumbnailSignedUrl, uploadStandaloneThumbnail } from "@/lib/pdfThumbnails";
+
 
 type SectionSlug = "books" | "journals";
 type StandaloneCategory = "book" | "journal";
