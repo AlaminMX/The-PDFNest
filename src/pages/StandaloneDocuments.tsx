@@ -74,6 +74,8 @@ export default function StandaloneDocuments() {
   const [pendingDelete, setPendingDelete] = useState<StandaloneDocument | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const pageTitle = activeSection?.label || "Documents";
+
 
   const loadDocuments = useCallback(async () => {
     if (!currentDept?.id || !activeSection) return;
