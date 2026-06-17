@@ -263,12 +263,11 @@ export default function StandaloneDocuments() {
     const doc = pendingDelete;
     setDeletingId(doc.id);
     try {
-      const paths = [doc.file_path, doc.thumbnail_path].filter(Boolean) as string[];
-      // best-effort storage removal; ignore individual missing-file errors
-      await supabase.storage.from("school_pdfs").remove(paths.filter((p) => !p.includes("pdf-thumbnails")));
+      await supabase.storage.from("school_pdfs").remove([doc.file_path]).catch(() => null);
       if (doc.thumbnail_path) {
         await supabase.storage.from("pdf-thumbnails").remove([doc.thumbnail_path]).catch(() => null);
       }
+
       const { error } = await supabase.from("standalone_documents" as any).delete().eq("id", doc.id);
       if (error) throw error;
       setDocuments((current) => current.filter((d) => d.id !== doc.id));
