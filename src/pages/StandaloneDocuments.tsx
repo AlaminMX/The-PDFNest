@@ -405,10 +405,41 @@ export default function StandaloneDocuments() {
                       </p>
                     </div>
                   </button>
-                  <div className="border-t border-border/40 p-3">
-                    <Button className="w-full" size="sm" onClick={() => openDocument(document)}>
-                      <Eye className="mr-2 h-4 w-4" /> Open / View
+                  <div className="border-t border-border/40 p-3 flex items-center gap-2">
+                    <Button className="flex-1" size="sm" variant="default" onClick={() => openDocument(document)}>
+                      <Eye className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">View</span>
                     </Button>
+                    <Button
+                      className="flex-1"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => downloadDocument(document)}
+                      disabled={downloadingId === document.id}
+                    >
+                      {downloadingId === document.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                      ) : (
+                        <Download className="h-4 w-4 sm:mr-2" />
+                      )}
+                      <span className="hidden sm:inline">Download</span>
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                        onClick={() => setPendingDelete(document)}
+                        disabled={deletingId === document.id}
+                        aria-label="Delete document"
+                      >
+                        {deletingId === document.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </motion.article>
               );
@@ -424,7 +455,37 @@ export default function StandaloneDocuments() {
         fileName={viewer?.title || ""}
         fileSize={viewer?.size}
         fileId={viewer?.id}
+        canDelete={isAdmin && !!viewer}
+        isDeleting={!!viewer && deletingId === viewer.id}
+        onDelete={() => {
+          if (!viewer) return;
+          const doc = documents.find((d) => d.id === viewer.id);
+          if (doc) setPendingDelete(doc);
+        }}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!deletingId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void confirmDelete(); }}
+              disabled={!!deletingId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingId ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <SmartBottomNav />
     </div>
   );
