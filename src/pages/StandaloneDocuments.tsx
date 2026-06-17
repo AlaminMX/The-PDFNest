@@ -69,9 +69,11 @@ export default function StandaloneDocuments() {
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [viewer, setViewer] = useState<{ url: string; title: string; size: number; id: string } | null>(null);
+  const [viewer, setViewer] = useState<{ url: string; title: string; size: number; id: string; filePath: string; thumbnailPath: string | null } | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StandaloneDocument | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const pageTitle = activeSection?.label || "Documents";
 
   const loadDocuments = useCallback(async () => {
     if (!currentDept?.id || !activeSection) return;
