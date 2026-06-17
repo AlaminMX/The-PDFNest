@@ -14,7 +14,8 @@ import {
   RotateCw,
   Maximize,
   Minimize,
-  PanelTop
+  PanelTop,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
