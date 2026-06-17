@@ -2,11 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Eye, FileText, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Eye, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
@@ -15,6 +25,7 @@ import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartmentBySlug } from "@/hooks/useDepartmentBySlug";
 import { supabase } from "@/integrations/supabase/client";
 import { getThumbnailSignedUrl, uploadStandaloneThumbnail } from "@/lib/pdfThumbnails";
+
 
 type SectionSlug = "books" | "journals";
 type StandaloneCategory = "book" | "journal";
@@ -58,9 +69,13 @@ export default function StandaloneDocuments() {
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [viewer, setViewer] = useState<{ url: string; title: string; size: number; id: string } | null>(null);
+  const [viewer, setViewer] = useState<{ url: string; title: string; size: number; id: string; filePath: string; thumbnailPath: string | null } | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StandaloneDocument | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const pageTitle = activeSection?.label || "Documents";
+
 
   const loadDocuments = useCallback(async () => {
     if (!currentDept?.id || !activeSection) return;
@@ -208,8 +223,64 @@ export default function StandaloneDocuments() {
       toast.error("Could not open document");
       return;
     }
-    setViewer({ url: data.signedUrl, title: document.title, size: document.file_size, id: document.id });
+    setViewer({
+      url: data.signedUrl,
+      title: document.title,
+      size: document.file_size,
+      id: document.id,
+      filePath: document.file_path,
+      thumbnailPath: document.thumbnail_path,
+    });
   };
+
+  const downloadDocument = async (document: StandaloneDocument) => {
+    setDownloadingId(document.id);
+    try {
+      const { data, error } = await supabase.storage.from("school_pdfs").createSignedUrl(document.file_path, 3600);
+      if (error || !data?.signedUrl) throw new Error("Could not prepare download");
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const fileName = document.title.toLowerCase().endsWith(".pdf") ? document.title : `${document.title}.pdf`;
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const doc = pendingDelete;
+    setDeletingId(doc.id);
+    try {
+      await supabase.storage.from("school_pdfs").remove([doc.file_path]).catch(() => null);
+      if (doc.thumbnail_path) {
+        await supabase.storage.from("pdf-thumbnails").remove([doc.thumbnail_path]).catch(() => null);
+      }
+
+      const { error } = await supabase.from("standalone_documents" as any).delete().eq("id", doc.id);
+      if (error) throw error;
+      setDocuments((current) => current.filter((d) => d.id !== doc.id));
+      if (viewer?.id === doc.id) setViewer(null);
+      toast.success("Document deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
+      setPendingDelete(null);
+    }
+  };
+
 
   const visibleDocuments = useMemo(() => documents, [documents]);
 
@@ -333,10 +404,41 @@ export default function StandaloneDocuments() {
                       </p>
                     </div>
                   </button>
-                  <div className="border-t border-border/40 p-3">
-                    <Button className="w-full" size="sm" onClick={() => openDocument(document)}>
-                      <Eye className="mr-2 h-4 w-4" /> Open / View
+                  <div className="border-t border-border/40 p-3 flex items-center gap-2">
+                    <Button className="flex-1" size="sm" variant="default" onClick={() => openDocument(document)}>
+                      <Eye className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">View</span>
                     </Button>
+                    <Button
+                      className="flex-1"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => downloadDocument(document)}
+                      disabled={downloadingId === document.id}
+                    >
+                      {downloadingId === document.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                      ) : (
+                        <Download className="h-4 w-4 sm:mr-2" />
+                      )}
+                      <span className="hidden sm:inline">Download</span>
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                        onClick={() => setPendingDelete(document)}
+                        disabled={deletingId === document.id}
+                        aria-label="Delete document"
+                      >
+                        {deletingId === document.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </motion.article>
               );
@@ -352,7 +454,37 @@ export default function StandaloneDocuments() {
         fileName={viewer?.title || ""}
         fileSize={viewer?.size}
         fileId={viewer?.id}
+        canDelete={isAdmin && !!viewer}
+        isDeleting={!!viewer && deletingId === viewer.id}
+        onDelete={() => {
+          if (!viewer) return;
+          const doc = documents.find((d) => d.id === viewer.id);
+          if (doc) setPendingDelete(doc);
+        }}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!deletingId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void confirmDelete(); }}
+              disabled={!!deletingId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingId ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <SmartBottomNav />
     </div>
   );

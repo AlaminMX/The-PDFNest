@@ -1,68 +1,61 @@
+# Standalone Documents — delete, split actions, viewer header fix
 
-# Phase B — FYP Hub, Vibrant Faculty Tiles, Admin Notifications
+Scope is limited to the Books/Journals flow under standalone departments and the shared PDF viewer header. Upload flow, hierarchy, and other pages are untouched.
 
-## 1. FYP Hub (replaces School Store + waitlist)
+## 1. Delete documents (admin only)
 
-### Database (single migration)
-- Drop `store_waitlist` table (and related policies).
-- Create `final_year_projects`:
-  - `id`, `user_id` (FK auth.users), `faculty_id` (FK), `department_id` (FK, nullable), `title`, `abstract`, `author_name`, `supervisor_name`, `year` (int), `file_path` (text), `file_size` (bigint), `status` (text, default 'pending': pending/approved/rejected), `reviewed_by`, `review_note`, `reviewed_at`, `created_at`, `updated_at`.
-  - GRANTs to authenticated + service_role; SELECT to anon ONLY for approved rows via policy.
-  - RLS:
-    - Anyone (anon + authenticated) can SELECT where `status='approved'`.
-    - Authenticated users can INSERT their own (status forced to 'pending' via trigger).
-    - Owner can SELECT/UPDATE/DELETE own pending rows.
-    - Admins full access via `has_role`.
-  - `updated_at` trigger.
-- Create storage bucket `project-files` (private). Policies:
-  - Authenticated users can upload to `{auth.uid()}/...`.
-  - Owner + admins can read/delete.
-  - Approved projects: signed URLs issued by client when user is authenticated (no public read).
+In `src/pages/StandaloneDocuments.tsx`:
 
-### Frontend
-- Delete `src/pages/SchoolStore.tsx`, `src/pages/AdminWaitlist.tsx`, `src/components/landing/WaitlistSection.tsx` references in admin/landing if any.
-- Create `src/pages/ProjectsPage.tsx` at `/projects`:
-  - Faculty tabs (uses `useFaculties`) + "All".
-  - Grid of approved project cards: title, author, year, department, supervisor, view/download button.
-  - Floating "+ Submit Project" button → bottom sheet (Drawer on mobile, Dialog on desktop) with form: title, abstract, author, supervisor, year, faculty/department selects, PDF upload.
-  - On submit: upload to `project-files/{uid}/{ts}-{filename}`, insert row, toast "Submitted for review".
-- Create `src/pages/AdminProjects.tsx` at `/admin/projects`:
-  - List pending → approved/rejected tabs.
-  - Approve/Reject buttons with optional note.
-- Routing: replace `/school-store`, `/admin/waitlist` routes; add `/projects`, `/admin/projects` in `App.tsx`.
-- Update sidebar + admin dashboard links: replace "School Store"/"Waitlist" with "Final Year Projects".
-- Update faculty grid school store tile → "Final Year Projects" tile linking to `/projects`.
+- Add a per-card **Delete** button, rendered only when `isAdmin`.
+- On click, open a confirmation dialog (`AlertDialog` from `@/components/ui/alert-dialog`) with copy: *"Are you sure you want to delete this document? This action cannot be undone."*
+- On confirm, run in order:
+  1. `supabase.storage.from("school_pdfs").remove([file_path, thumbnail_path].filter)` — best-effort, ignore individual file-missing errors.
+  2. `supabase.from("standalone_documents").delete().eq("id", doc.id)` — abort on error.
+- Track a `deletingId` state to disable the button and show a spinner; prevents duplicate requests.
+- On success: optimistically remove the row from `documents`, toast success. On error: toast error, no state change.
+- RLS: existing `standalone_documents` admin policy already allows delete; thumbnails bucket policy already allows admin delete. No migration needed.
 
-## 2. Vibrant Faculty Tiles
+## 2. Split View and Download actions
 
-- Update `src/pages/FacultySelection.tsx` faculty card rendering:
-  - Apply faculty `color` via inline `style={{ backgroundColor: faculty.color }}`.
-  - Render `image_url` (if present) as full-bleed background image with dark overlay for legibility.
-  - White text with subtle drop-shadow (`text-white drop-shadow-md`).
-  - Maintain rounded corners (16px), hover scale 1.02, motion fade-in.
-- Keep existing standalone-departments section untouched.
+Replace the single "Open / View" footer button on each card with three actions in one row:
 
-## 3. Admin Realtime Notifications
-
-- Create `src/hooks/useAdminNotifications.ts`:
-  - On mount, if user is admin, subscribe to `postgres_changes` on `community_uploads` INSERT.
-  - Filter `status === 'pending'`; trigger `toast()` + browser `Notification` API (request permission once).
-  - Also subscribe to `final_year_projects` INSERT (pending) for FYP submissions.
-- Mount hook once in `App.tsx` (inside auth-aware wrapper) so admins get alerts globally.
-
-## Technical notes
-
-```text
-Routes added/removed
-  + /projects             (ProjectsPage)
-  + /admin/projects       (AdminProjects)
-  - /school-store
-  - /admin/waitlist
+```
+[ View ]   [ Download ]   [ Delete ]   ← Delete admin-only
 ```
 
-- Migration is destructive: `DROP TABLE store_waitlist`. Confirmed by user previously.
-- Storage bucket `project-files` created via `supabase--storage_create_bucket` (separate call) before migration policies reference it.
-- Sidebar (`AppSidebar`) and any nav referring to School Store will be updated to "Final Year Projects".
-- No edits to memory yet; Phase C will drop the school-store-waitlist memory entry alongside Ramadan removal.
+- **View** — keeps current behavior: signed URL → opens `PDFViewer` modal.
+- **Download** — fetches signed URL, then fetches the blob and triggers an `<a download={originalFileName}>` click. Shows a per-card loading spinner while preparing; toast on failure. Preserves original filename (store `original_file_name` fallback to `title + ".pdf"` — for now use `${title}.pdf` since the column isn't stored; acceptable per current schema).
+- Card thumbnail click continues to open the viewer (View).
+- Buttons use `size="sm"`, icon + label on `sm:` and up, icon-only on mobile to avoid clutter. Min 44px tap target via `h-10`.
 
-After approval I'll execute the migration first (awaiting your confirmation in the migration dialog), then ship the frontend changes.
+## 3. PDFViewer header redesign (fixes Close/Download overlap)
+
+In `src/components/PDFViewer.tsx` header bar:
+
+- New layout (sticky, already is via Sheet header):
+  - **Left:** filename + size (truncate, `min-w-0 flex-1`).
+  - **Right:** action cluster with `gap-3` (12px) on mobile, `gap-4` (16px) on desktop:
+    `[Fit width] [Fullscreen] [Open external] [Download] [Delete?] [Close X]`
+- Close `X` moves from left to the **far right** of the right cluster, separated from Download by Delete (when shown) or by a `w-px h-6 bg-border mx-1` divider when not shown — eliminates accidental clicks.
+- Every action button: `h-10 w-10` (was `h-9 w-9`) for touch targets, `shrink-0`.
+- Wrap the right cluster in `flex items-center gap-3 md:gap-4 shrink-0`.
+- Add optional props `onDelete?: () => void` and `canDelete?: boolean`. When both set, render a destructive-styled Delete button in the header that calls the parent handler (parent owns the confirm dialog and state refresh).
+- Z-index: header already sits above canvas via flex order; no change needed. Confirm via existing fullscreen styling.
+
+`StandaloneDocuments` passes `onDelete`/`canDelete` to `PDFViewer` so admins can also delete from inside the viewer; on success the viewer closes and the list refreshes.
+
+## 4. Verification
+
+After build:
+- Upload a PDF as admin → appears in grid.
+- Click View → PDFViewer opens, no download triggered.
+- Click Download → file saves with `.pdf` name, viewer does not open.
+- Click Delete → confirm dialog → row disappears, storage object removed, toast shown.
+- Repeat for both Books and Journals sections.
+- Open viewer on a narrow mobile width (375px) → filename truncates, all action buttons visible with gaps, no overlap between Download and Close.
+
+## Out of scope
+
+- No DB schema changes (table, policies, and storage policies already support delete).
+- No changes to upload pipeline, hierarchy, or non-standalone pages.
+- No changes to `PDFPreviewModal` (legacy, unused here).

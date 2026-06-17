@@ -14,7 +14,8 @@ import {
   RotateCw,
   Maximize,
   Minimize,
-  PanelTop
+  PanelTop,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import * as pdfjs from "pdfjs-dist";
@@ -30,9 +31,12 @@ interface PDFViewerProps {
   fileName: string;
   fileSize?: number;
   fileId?: string;
+  onDelete?: () => void;
+  canDelete?: boolean;
+  isDeleting?: boolean;
 }
 
-export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId }: PDFViewerProps) {
+export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId, onDelete, canDelete, isDeleting }: PDFViewerProps) {
   const [pdfDoc, setPdfDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -274,32 +278,43 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId 
         className="h-[95vh] rounded-t-3xl p-0 flex flex-col fullscreen:h-screen fullscreen:rounded-none"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-            <div className="min-w-0">
-              <p className="font-medium text-sm truncate">{fileName}</p>
-              {fileSize && (
-                <p className="text-xs text-muted-foreground">
-                  {(fileSize / (1024 * 1024)).toFixed(1)} MB
-                </p>
-              )}
-            </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 sticky top-0 bg-background z-20">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm truncate">{fileName}</p>
+            {fileSize && (
+              <p className="text-xs text-muted-foreground">
+                {(fileSize / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleFitToWidth} title="Fit to width">
+          <div className="flex items-center gap-3 md:gap-4 shrink-0">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 hidden sm:inline-flex" onClick={handleFitToWidth} title="Fit to width">
               <PanelTop className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleFullscreen} title="Fullscreen">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 hidden sm:inline-flex" onClick={handleFullscreen} title="Fullscreen">
               {document.fullscreenElement ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleOpenExternal} title="Open in new tab">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 hidden md:inline-flex" onClick={handleOpenExternal} title="Open in new tab">
               <ExternalLink className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleDownload} title="Download">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={handleDownload} title="Download">
               <Download className="h-4 w-4" />
+            </Button>
+            {canDelete && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={onDelete}
+                disabled={isDeleting}
+                title="Delete"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </Button>
+            )}
+            <div className="w-px h-6 bg-border" aria-hidden />
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={onClose} title="Close">
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </div>
