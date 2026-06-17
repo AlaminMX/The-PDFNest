@@ -45,30 +45,24 @@ export function useNotifications(userId: string | undefined) {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Subscribe to real-time updates
+  // Poll periodically and on tab focus instead of realtime, so notification
+  // events are not broadcast to other authenticated users.
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "user_notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          fetchNotifications();
-        }
-      )
-      .subscribe();
+    const interval = window.setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    const onFocus = () => fetchNotifications();
+    window.addEventListener("focus", onFocus);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
     };
   }, [userId, fetchNotifications]);
+
 
   const markAsRead = useCallback(async (notificationId: string) => {
     // Optimistic update

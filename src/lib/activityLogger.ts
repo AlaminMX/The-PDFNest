@@ -38,20 +38,25 @@ export async function logActivity(
   details?: ActivityDetails
 ): Promise<void> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
 
-    await supabase.from("user_activity_logs").insert({
-      user_id: user.id,
-      activity_type: activityType,
-      details: details || {},
-      user_agent: navigator.userAgent
+    // Route through the edge function so the server stamps the IP/user agent
+    // and validates user identity — clients can no longer insert directly.
+    await supabase.functions.invoke("activity-log", {
+      body: {
+        action: activityType,
+        resource: "/client",
+        status: "OK",
+        context: { details: details || {} },
+      },
     });
   } catch (error) {
     // Silently fail - activity logging should not break the app
     console.error("Failed to log activity:", error);
   }
 }
+
 
 /**
  * Get activity type display name
