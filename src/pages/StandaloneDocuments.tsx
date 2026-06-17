@@ -223,8 +223,65 @@ export default function StandaloneDocuments() {
       toast.error("Could not open document");
       return;
     }
-    setViewer({ url: data.signedUrl, title: document.title, size: document.file_size, id: document.id });
+    setViewer({
+      url: data.signedUrl,
+      title: document.title,
+      size: document.file_size,
+      id: document.id,
+      filePath: document.file_path,
+      thumbnailPath: document.thumbnail_path,
+    });
   };
+
+  const downloadDocument = async (document: StandaloneDocument) => {
+    setDownloadingId(document.id);
+    try {
+      const { data, error } = await supabase.storage.from("school_pdfs").createSignedUrl(document.file_path, 3600);
+      if (error || !data?.signedUrl) throw new Error("Could not prepare download");
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const fileName = document.title.toLowerCase().endsWith(".pdf") ? document.title : `${document.title}.pdf`;
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const doc = pendingDelete;
+    setDeletingId(doc.id);
+    try {
+      const paths = [doc.file_path, doc.thumbnail_path].filter(Boolean) as string[];
+      // best-effort storage removal; ignore individual missing-file errors
+      await supabase.storage.from("school_pdfs").remove(paths.filter((p) => !p.includes("pdf-thumbnails")));
+      if (doc.thumbnail_path) {
+        await supabase.storage.from("pdf-thumbnails").remove([doc.thumbnail_path]).catch(() => null);
+      }
+      const { error } = await supabase.from("standalone_documents" as any).delete().eq("id", doc.id);
+      if (error) throw error;
+      setDocuments((current) => current.filter((d) => d.id !== doc.id));
+      if (viewer?.id === doc.id) setViewer(null);
+      toast.success("Document deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
+      setPendingDelete(null);
+    }
+  };
+
 
   const visibleDocuments = useMemo(() => documents, [documents]);
 
