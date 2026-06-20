@@ -8,6 +8,7 @@ export interface Faculty {
   icon: string | null;
   color: string | null;
   background_image_url?: string | null;
+  background_overlay_opacity?: number | null;
   display_order: number;
   is_visible: boolean;
   created_at: string;
