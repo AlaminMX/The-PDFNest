@@ -52,7 +52,6 @@ const RepProfile = lazy(() => import("./pages/RepProfile"));
 const AdminDepartmentLevels = lazy(() => import("./pages/AdminDepartmentLevels"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
-const AIFeatures = lazy(() => import("./pages/AIFeatures"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CommunityUpload = lazy(() => import("./pages/CommunityUpload"));
 const AdminUploads = lazy(() => import("./pages/AdminUploads"));
@@ -190,7 +189,6 @@ const App = () => (
                 <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
                 <Route path="/user/:userId" element={<PublicProfile />} />
                 <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                <Route path="/ai-features" element={<ProtectedRoute><AIFeatures /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
                 <Route path="/past-questions" element={<PQLevel />} />
