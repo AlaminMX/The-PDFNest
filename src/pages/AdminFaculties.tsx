@@ -203,16 +203,18 @@ export default function AdminFaculties() {
                 className={`overflow-hidden ${!faculty.is_visible ? "opacity-60" : ""}`}
               >
                 <div className="p-4 flex items-center gap-4">
-                  <div
-                    className="w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0"
-                    style={{
-                      backgroundImage: faculty.background_image_url
-                        ? `linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url(${faculty.background_image_url})`
-                        : undefined,
-                    }}
-                  >
-                    {faculty.icon || null}
-                  </div>
+                  {faculty.icon?.trim() && (
+                    <div
+                      className="w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0"
+                      style={{
+                        backgroundImage: faculty.background_image_url
+                          ? `linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url(${faculty.background_image_url})`
+                          : undefined,
+                      }}
+                    >
+                      {faculty.icon.trim()}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold">{faculty.name}</h3>
                     <p className="text-xs text-muted-foreground">

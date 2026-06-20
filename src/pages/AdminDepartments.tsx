@@ -21,7 +21,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { TileImageUpload } from "@/components/TileImageUpload";
-import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
+import { getDepartmentStyles, getIconGlowStyles } from "@/lib/departmentColors";
 import { Reorder, useDragControls } from "framer-motion";
 
 interface EditingDepartment {
@@ -57,8 +57,8 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
   const navigate = useNavigate();
   const dragControls = useDragControls();
   const styles = getDepartmentStyles(dept.color, index);
-  const icon = getDepartmentIcon(dept.icon, dept.name);
-  const iconGlow = getIconGlowStyles(styles.hsl);
+  const icon = dept.icon?.trim();
+  const iconGlow = icon ? getIconGlowStyles(styles.hsl) : null;
 
   return (
     <Reorder.Item
@@ -86,23 +86,25 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
             </div>
 
             {/* Icon Preview */}
-            <div
-              className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: styles.accentBg,
-                boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
-              }}
-            >
-              <span
-                className="text-3xl"
+            {icon && iconGlow && (
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  filter: iconGlow.filter,
-                  textShadow: iconGlow.textShadow,
+                  background: styles.accentBg,
+                  boxShadow: `0 4px 20px ${styles.glowColor}, 0 0 40px ${styles.glowIntense}`,
                 }}
               >
-                {icon}
-              </span>
-            </div>
+                <span
+                  className="text-3xl"
+                  style={{
+                    filter: iconGlow.filter,
+                    textShadow: iconGlow.textShadow,
+                  }}
+                >
+                  {icon}
+                </span>
+              </div>
+            )}
 
             {/* Info */}
             <div className="flex-1 min-w-0">
@@ -128,7 +130,7 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
                   {dept.color || "Auto"}
                 </span>
                 <span>•</span>
-                <span>Icon: {dept.icon || "Auto"}</span>
+                <span>Icon: {dept.icon?.trim() || "None"}</span>
               </div>
             </div>
 
@@ -382,17 +384,15 @@ export default function AdminDepartments() {
   const previewStyles = editingDept 
     ? getDepartmentStyles(editingDept.color, 0)
     : null;
-  const previewIcon = editingDept 
-    ? getDepartmentIcon(editingDept.icon, editingDept.name)
-    : null;
-  const previewGlow = previewStyles 
+  const previewIcon = editingDept?.icon?.trim() || null;
+  const previewGlow = previewStyles && previewIcon
     ? getIconGlowStyles(previewStyles.hsl)
     : null;
 
   // Preview styles for creating
   const createPreviewStyles = getDepartmentStyles(newDept.color || null, orderedDepts.length);
-  const createPreviewIcon = getDepartmentIcon(newDept.icon || null, newDept.name || "New Department");
-  const createPreviewGlow = getIconGlowStyles(createPreviewStyles.hsl);
+  const createPreviewIcon = newDept.icon.trim() || null;
+  const createPreviewGlow = createPreviewIcon ? getIconGlowStyles(createPreviewStyles.hsl) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
@@ -497,23 +497,25 @@ export default function AdminDepartments() {
                 style={{ background: createPreviewStyles.bgLight }}
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: createPreviewStyles.accentBg,
-                      boxShadow: `0 4px 20px ${createPreviewStyles.glowColor}, 0 0 40px ${createPreviewStyles.glowIntense}`,
-                    }}
-                  >
-                    <span
-                      className="text-2xl"
+                  {createPreviewIcon && createPreviewGlow && (
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{
-                        filter: createPreviewGlow.filter,
-                        textShadow: createPreviewGlow.textShadow,
+                        background: createPreviewStyles.accentBg,
+                        boxShadow: `0 4px 20px ${createPreviewStyles.glowColor}, 0 0 40px ${createPreviewStyles.glowIntense}`,
                       }}
                     >
-                      {createPreviewIcon}
-                    </span>
-                  </div>
+                      <span
+                        className="text-2xl"
+                        style={{
+                          filter: createPreviewGlow.filter,
+                          textShadow: createPreviewGlow.textShadow,
+                        }}
+                      >
+                        {createPreviewIcon}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-semibold text-white">
                       {newDept.name || "Department Name"}
@@ -664,23 +666,25 @@ export default function AdminDepartments() {
                   style={{ background: previewStyles.bgLight }}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: previewStyles.accentBg,
-                        boxShadow: `0 4px 20px ${previewStyles.glowColor}, 0 0 40px ${previewStyles.glowIntense}`,
-                      }}
-                    >
-                      <span
-                        className="text-2xl"
+                    {previewIcon && previewGlow && (
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
                         style={{
-                          filter: previewGlow?.filter,
-                          textShadow: previewGlow?.textShadow,
+                          background: previewStyles.accentBg,
+                          boxShadow: `0 4px 20px ${previewStyles.glowColor}, 0 0 40px ${previewStyles.glowIntense}`,
                         }}
                       >
-                        {previewIcon}
-                      </span>
-                    </div>
+                        <span
+                          className="text-2xl"
+                          style={{
+                            filter: previewGlow.filter,
+                            textShadow: previewGlow.textShadow,
+                          }}
+                        >
+                          {previewIcon}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <h4 className="font-semibold text-white">
                         {editingDept.name || "Department Name"}
