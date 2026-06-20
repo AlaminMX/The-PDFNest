@@ -1414,6 +1414,15 @@ export type Database = {
           title: string
         }[]
       }
+      get_tile_upload_bucket_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allowed_mime_types: string[] | null
+          bucket_exists: boolean
+          bucket_id: string
+          missing_mime_types: string[] | null
+        }[]
+      }
       get_rep_public_info: {
         Args: { rep_user_id: string }
         Returns: {

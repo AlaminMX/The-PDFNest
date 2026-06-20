@@ -13,6 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
+import { TILE_UPLOAD_BUCKET, verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
 
 interface Props {
   /** Logical category, used as a folder prefix: tile-assets/<kind>/... */
@@ -74,6 +75,12 @@ export function TileImageUpload({
     }),
     [pendingImage, positionX, positionY, zoom],
   );
+
+  useEffect(() => {
+    verifyTileUploadBucketConfig().catch((error) => {
+      console.error("Tile upload storage startup verification failed", error);
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -153,13 +160,25 @@ export function TileImageUpload({
 
       const extension = outputType === "image/png" ? "png" : outputType === "image/webp" ? "webp" : "jpg";
       const path = `tile-assets/${kind}/${crypto.randomUUID()}.${extension}`;
-      const { error: upErr } = await supabase.storage.from("school_pdfs").upload(path, blob, {
+
+      await verifyTileUploadBucketConfig();
+
+      console.log({
+        bucket: TILE_UPLOAD_BUCKET,
+        contentType: outputType,
+        path,
+      });
+
+      const { error: upErr } = await supabase.storage.from(TILE_UPLOAD_BUCKET).upload(path, blob, {
         contentType: outputType,
         upsert: true,
       });
-      if (upErr) throw upErr;
+      if (upErr) {
+        console.error(upErr);
+        throw upErr;
+      }
 
-      const { data } = supabase.storage.from("school_pdfs").getPublicUrl(path);
+      const { data } = supabase.storage.from(TILE_UPLOAD_BUCKET).getPublicUrl(path);
       onChange(data.publicUrl);
       setEditorOpen(false);
       toast.success("Image uploaded");
