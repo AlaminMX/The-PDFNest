@@ -25,6 +25,7 @@ interface Faculty {
   icon: string | null;
   color: string | null;
   background_image_url?: string | null;
+  background_overlay_opacity?: number | null;
   display_order: number | null;
   is_visible: boolean;
   department_count?: number;
@@ -166,6 +167,8 @@ function FacultyCard({
   const icon = faculty.icon?.trim();
   const backgroundImage = faculty.background_image_url?.trim();
   const [hovered, setHovered] = useState(false);
+  const baseOverlayOpacity = (faculty.background_overlay_opacity ?? 50) / 100;
+  const overlayOpacity = hovered ? Math.min(1, baseOverlayOpacity + 0.1) : baseOverlayOpacity;
 
   return (
     <button
@@ -180,7 +183,7 @@ function FacultyCard({
             ? styles.bgHover
             : styles.bgLight,
         backgroundImage: backgroundImage
-          ? `linear-gradient(${faculty.color ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${hovered ? 0.72 : 0.62}), hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${hovered ? 0.72 : 0.62})` : "rgba(0,0,0,0), rgba(0,0,0,0)"}), url(${backgroundImage})`
+          ? `linear-gradient(${faculty.color ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${overlayOpacity}), hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${overlayOpacity})` : "rgba(0,0,0,0), rgba(0,0,0,0)"}), url(${backgroundImage})`
           : undefined,
         backgroundSize: backgroundImage ? "cover" : undefined,
         backgroundPosition: backgroundImage ? "center" : undefined,
@@ -240,7 +243,7 @@ function FacultyGrid({
         const { data: facData } = await supabase
           .from("faculties")
           .select(
-            "id, name, slug, icon, color, background_image_url, display_order, is_visible",
+            "id, name, slug, icon, color, background_image_url, background_overlay_opacity, display_order, is_visible",
           )
           .eq("is_visible", true)
           .order("display_order", { ascending: true });
