@@ -10,12 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, Sparkles, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
+import { ArrowLeft, Download, Eye, Calendar, Share2, Trash2, Edit2, MoreVertical, FileText, BookOpen, Search, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { DownloadProgress } from "@/components/DownloadProgress";
-import { useSession } from "@/hooks/useSession";
 import { useDownloadManager } from "@/hooks/useDownloadManager";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -72,7 +71,6 @@ function CourseLectureNotesContent() {
     }
     action();
   };
-  const { session, user: sessionUser } = useSession();
   const { downloads, downloadFile, downloadMultiple, cancelDownload, clearCompleted } = useDownloadManager();
   
   const currentDept = departments.find(d => d.slug === deptSlug);
@@ -99,12 +97,6 @@ function CourseLectureNotesContent() {
   const [newTitle, setNewTitle] = useState("");
   const [renaming, setRenaming] = useState(false);
 
-  // AI feature modal states
-  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
-  const [studyGuideModalOpen, setStudyGuideModalOpen] = useState(false);
-  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
-  const [translatorModalOpen, setTranslatorModalOpen] = useState(false);
-  const [chatModalOpen, setChatModalOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<{ id: string; title: string; filePath: string; fileSize?: number } | null>(null);
 
   // PDF Viewer state
