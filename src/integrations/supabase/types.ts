@@ -1392,11 +1392,11 @@ export type Database = {
         Returns: undefined
       }
       approve_community_upload: {
-        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Args: { p_note?: string; p_reviewer_id: string; p_title?: string; p_upload_id: string }
         Returns: undefined
       }
       approve_pq_upload: {
-        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Args: { p_note?: string; p_reviewer_id: string; p_title?: string; p_upload_id: string }
         Returns: undefined
       }
       check_duplicate_upload: {

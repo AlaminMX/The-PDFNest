@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import { getDepartmentStyles, getDepartmentIcon, getIconGlowStyles } from "@/lib/departmentColors";
+import { getDepartmentStyles } from "@/lib/departmentColors";
 import { useMemo } from "react";
 import { useTheme } from "next-themes";
 
@@ -28,8 +28,7 @@ export function DepartmentTile({
   const { theme } = useTheme();
 
   const styles = useMemo(() => getDepartmentStyles(color, index), [color, index]);
-  const displayIcon = useMemo(() => getDepartmentIcon(icon, name), [icon, name]);
-  const iconGlow = useMemo(() => getIconGlowStyles(styles.hsl), [styles.hsl]);
+  const displayIcon = icon?.trim();
 
   const hasImage = !!backgroundImageUrl;
   const textColorClass = hasImage
@@ -87,22 +86,19 @@ export function DepartmentTile({
         }}
       >
         <div className="flex items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105"
-            style={{
-              background: styles.accentBg,
-              boxShadow: `0 2px 10px ${styles.glowColor}`,
-            }}
-          >
-            <span
-              className="text-2xl transition-all duration-300"
+          {displayIcon && (
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105"
               style={{
-                filter: iconGlow.filter,
+                background: styles.accentBg,
+                boxShadow: `0 2px 10px ${styles.glowColor}`,
               }}
             >
-              {displayIcon}
-            </span>
-          </div>
+              <span className="text-2xl transition-all duration-300">
+                {displayIcon}
+              </span>
+            </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <h3 className={`font-semibold mb-0.5 truncate ${textColorClass}`}>

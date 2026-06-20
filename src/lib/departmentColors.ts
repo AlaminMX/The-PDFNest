@@ -414,21 +414,9 @@ const iconKeywords: Record<string, string> = {
   tourism: "🗺️",
 };
 
-export function getDepartmentIcon(iconInput: string | null, departmentName: string): string {
-  // Use provided icon if available
-  if (iconInput && iconInput.trim()) {
-    return iconInput.trim();
-  }
-  
-  // Auto-assign based on department name
-  const nameLower = departmentName.toLowerCase();
-  for (const [keyword, emoji] of Object.entries(iconKeywords)) {
-    if (nameLower.includes(keyword)) {
-      return emoji;
-    }
-  }
-  
-  return "📚"; // Default fallback
+export function getDepartmentIcon(iconInput: string | null): string | null {
+  const trimmedIcon = iconInput?.trim();
+  return trimmedIcon || null;
 }
 
 // Reset used hues (for testing or new sessions)

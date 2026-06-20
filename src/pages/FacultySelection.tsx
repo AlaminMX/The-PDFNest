@@ -471,6 +471,7 @@ function NotesList({
 function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles: any; index: number; onClick: () => void }) {
   const vibrantBg = faculty.color || styles.accentBg;
   const bgImage = faculty.background_image_url as string | null | undefined;
+  const icon = typeof faculty.icon === "string" ? faculty.icon.trim() : "";
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -497,15 +498,13 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
           }`}
         />
 
-        {/* Icon only shown when no background image */}
-        {!bgImage && (
+        {icon && (
           <div className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-            {faculty.icon || <Building className="w-6 h-6 text-white" />}
+            {icon}
           </div>
         )}
-        {bgImage && <div className="relative" />}
 
-        <div className="relative">
+        <div className="relative mt-auto">
           <h3 className="font-semibold mb-0.5 text-sm leading-tight text-white drop-shadow-md">
             {faculty.name}
           </h3>
