@@ -151,32 +151,14 @@ export function TileImageUpload({
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
-      const outputType = pendingImage.type === "image/jpg" ? "image/jpeg" : pendingImage.type;
+      const outputType = normalizeImageMime(pendingImage.type) ?? "image/jpeg";
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, 0.92));
       if (!blob) throw new Error("Could not prepare image for upload.");
 
-      const extension = outputType === "image/png" ? "png" : outputType === "image/webp" ? "webp" : "jpg";
-      const path = `tile-assets/${kind}/${crypto.randomUUID()}.${extension}`;
-
       await verifyTileUploadBucketConfig();
 
-      console.log({
-        bucket: TILE_UPLOAD_BUCKET,
-        contentType: outputType,
-        path,
-      });
-
-      const { error: upErr } = await supabase.storage.from(TILE_UPLOAD_BUCKET).upload(path, blob, {
-        contentType: outputType,
-        upsert: true,
-      });
-      if (upErr) {
-        console.error(upErr);
-        throw upErr;
-      }
-
-      const { data } = supabase.storage.from(TILE_UPLOAD_BUCKET).getPublicUrl(path);
-      onChange(data.publicUrl);
+      const { publicUrl } = await uploadTileImage({ kind, blob, mime: outputType });
+      onChange(publicUrl);
       setEditorOpen(false);
       toast.success("Image uploaded");
     } catch (err: any) {
