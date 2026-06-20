@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { supabase } from "@/integrations/supabase/client";
+
 import { verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
 import { ALLOWED_IMAGE_MIME_TYPES, normalizeImageMime, uploadTileImage } from "@/lib/uploadImage";
 
