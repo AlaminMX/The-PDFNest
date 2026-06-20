@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, FileText, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AIModalType } from "@/pages/Index";
+type AIModalType = "summary" | "study-guide" | "voice" | "translate" | "chat";
 
 interface PDFFile {
   id: string;
