@@ -49,6 +49,7 @@ interface StandaloneDept {
   color: string | null;
   icon: string | null;
   background_image_url?: string | null;
+  background_overlay_opacity?: number | null;
 }
 
 function FacultySelectionContent() {
@@ -67,7 +68,7 @@ function FacultySelectionContent() {
     (async () => {
       const { data } = await supabase
         .from("departments")
-        .select("id, name, slug, color, icon, background_image_url")
+        .select("id, name, slug, color, icon, background_image_url, background_overlay_opacity")
         .is("faculty_id", null)
         .eq("is_visible", true)
         .order("display_order", { ascending: true });
@@ -488,15 +489,19 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
           boxShadow: `0 10px 30px -10px ${styles.glowColor || "rgba(0,0,0,0.3)"}`,
         }}
       >
-        {/* Depth overlays — darker when image is set for legibility */}
+        {/* Depth overlays — color overlay (adjustable opacity) when image is set */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_60%)]" />
-        <div
-          className={`absolute inset-0 pointer-events-none ${
-            bgImage
-              ? "bg-gradient-to-t from-black/70 via-black/30 to-black/10"
-              : "bg-gradient-to-br from-transparent to-black/25"
-          }`}
-        />
+        {bgImage ? (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundColor: faculty.color || "#000000",
+              opacity: (faculty.background_overlay_opacity ?? 50) / 100,
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-transparent to-black/25" />
+        )}
 
         {icon && (
           <div className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
