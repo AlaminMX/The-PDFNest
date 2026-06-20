@@ -18,7 +18,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { Link } from "react-router-dom";
-import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, BookOpen, Volume2, Languages, MessageSquare, GraduationCap, Upload, Users, WifiOff, CloudDownload, CheckCircle, Tag, ChevronDown, Bell } from "lucide-react";
+import { Shield, MoreVertical, Plus, Trash2, LogOut, HelpCircle, Folder, LayoutGrid, LayoutList, FileText, Download, Edit2, Check, Star, X, Sparkles, GraduationCap, Upload, Users, WifiOff, CloudDownload, CheckCircle, Tag, ChevronDown, Bell } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -70,7 +70,6 @@ import {
 import { PDFViewer } from "@/components/PDFViewer";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { StorageIndicator } from "@/components/StorageIndicator";
-import { FilePicker } from "@/components/FilePicker";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
@@ -102,7 +101,6 @@ function DesktopHeaderNav() {
 
 type SortOption = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
-export type AIModalType = 'summary' | 'study-guide' | 'voice' | 'translate' | 'chat' | null;
 
 interface RecentFile {
   id: string;
@@ -125,7 +123,6 @@ function AppSidebar({
   onSignOut,
   onOpenTutorial,
   storageUsed,
-  onOpenAIFeature,
   recentFiles,
   onOpenRecentFile
 
@@ -146,7 +143,7 @@ function AppSidebar({
 
 
 
-}: {categories: any[];selectedCategory: string;onSelectCategory: (id: string) => void;files: any[];newCategoryName: string;onNewCategoryNameChange: (name: string) => void;onAddCategory: () => void;onDeleteCategory: (id: string) => void;isAdmin: boolean;isRep: boolean;repUserId: string | undefined;onSignOut: () => void;onOpenTutorial: () => void;storageUsed: number;onOpenAIFeature: (featureType: AIModalType) => void;recentFiles: RecentFile[];onOpenRecentFile: (fileId: string) => void;}) {
+}: {categories: any[];selectedCategory: string;onSelectCategory: (id: string) => void;files: any[];newCategoryName: string;onNewCategoryNameChange: (name: string) => void;onAddCategory: () => void;onDeleteCategory: (id: string) => void;isAdmin: boolean;isRep: boolean;repUserId: string | undefined;onSignOut: () => void;onOpenTutorial: () => void;storageUsed: number;recentFiles: RecentFile[];onOpenRecentFile: (fileId: string) => void;}) {
   const { open, isMobile, setOpenMobile } = useSidebar();
   const institution = useInstitution();
 
@@ -581,8 +578,6 @@ export default function Index() {
     () => localStorage.getItem("pdfnest-view-mode") as "list" | "grid" || "grid"
   );
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [showFilePicker, setShowFilePicker] = useState(false);
-  const [pendingAIFeature, setPendingAIFeature] = useState<AIModalType>(null);
   const [showChecklist, setShowChecklist] = useState(() => {
     if (!user?.id) return false;
     return !localStorage.getItem(`checklist-dismissed-${user?.id}`);
@@ -721,15 +716,6 @@ export default function Index() {
     setNewCategoryName("");
   };
 
-  const handleOpenAIFeature = (featureType: AIModalType) => {
-    if (files.length === 0) {
-      toast.error("Please upload a PDF file first");
-      return;
-    }
-    setPendingAIFeature(featureType);
-    setShowFilePicker(true);
-  };
-
   const trackRecentFile = (fileId: string, fileName: string) => {
     if (!user?.id) return;
     setRecentFiles((prev) => {
@@ -741,18 +727,6 @@ export default function Index() {
       localStorage.setItem(`recent-files-${user.id}`, JSON.stringify(sliced));
       return sliced;
     });
-  };
-
-  const handleFileSelected = (fileId: string, fileName: string) => {
-    setSelectedFileForAI({ id: fileId, name: fileName });
-    setActiveAIModal(pendingAIFeature);
-    setShowFilePicker(false);
-    setPendingAIFeature(null);
-    trackRecentFile(fileId, fileName);
-    // Mark AI feature as used for checklist
-    if (user?.id) {
-      localStorage.setItem(`ai-used-${user.id}`, 'true');
-    }
   };
 
   const handleOpenPreview = async (file: any) => {
@@ -1026,7 +1000,6 @@ export default function Index() {
           onSignOut={signOut}
           onOpenTutorial={() => setShowTutorial(true)}
           storageUsed={storageUsed}
-          onOpenAIFeature={handleOpenAIFeature}
           recentFiles={recentFiles}
           onOpenRecentFile={handleOpenRecentFile} />
         
@@ -1724,15 +1697,6 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-        {/* File Picker Modal */}
-        <FilePicker
-        open={showFilePicker}
-        onOpenChange={setShowFilePicker}
-        files={filteredFiles}
-        onSelectFile={handleFileSelected}
-        featureType={pendingAIFeature} />
-      
 
         {/* Floating Action Button for quick upload */}
       <FloatingActionButton
