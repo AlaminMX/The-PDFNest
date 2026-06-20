@@ -56,7 +56,7 @@ export function TileImageUpload({
   value,
   onChange,
   label = "Background image",
-  helpText = "Upload a JPG, JPEG, PNG, or WebP image, edit the crop, then use it as the tile background. Leave empty to show the icon instead.",
+  helpText = "Upload any image format supported by your browser, edit the crop, then use it as the tile background. Leave empty to show the icon instead.",
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
