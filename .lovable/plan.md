@@ -1,61 +1,48 @@
-# Standalone Documents — delete, split actions, viewer header fix
+## Root cause
 
-Scope is limited to the Books/Journals flow under standalone departments and the shared PDF viewer header. Upload flow, hierarchy, and other pages are untouched.
-
-## 1. Delete documents (admin only)
-
-In `src/pages/StandaloneDocuments.tsx`:
-
-- Add a per-card **Delete** button, rendered only when `isAdmin`.
-- On click, open a confirmation dialog (`AlertDialog` from `@/components/ui/alert-dialog`) with copy: *"Are you sure you want to delete this document? This action cannot be undone."*
-- On confirm, run in order:
-  1. `supabase.storage.from("school_pdfs").remove([file_path, thumbnail_path].filter)` — best-effort, ignore individual file-missing errors.
-  2. `supabase.from("standalone_documents").delete().eq("id", doc.id)` — abort on error.
-- Track a `deletingId` state to disable the button and show a spinner; prevents duplicate requests.
-- On success: optimistically remove the row from `documents`, toast success. On error: toast error, no state change.
-- RLS: existing `standalone_documents` admin policy already allows delete; thumbnails bucket policy already allows admin delete. No migration needed.
-
-## 2. Split View and Download actions
-
-Replace the single "Open / View" footer button on each card with three actions in one row:
+`TileImageUpload` uploads to the `school_pdfs` bucket (see `src/lib/tileUploadStorage.ts`: `TILE_UPLOAD_BUCKET = "school_pdfs"`). Confirmed via DB query:
 
 ```
-[ View ]   [ Download ]   [ Delete ]   ← Delete admin-only
+school_pdfs → allowed_mime_types = ['application/pdf']
 ```
 
-- **View** — keeps current behavior: signed URL → opens `PDFViewer` modal.
-- **Download** — fetches signed URL, then fetches the blob and triggers an `<a download={originalFileName}>` click. Shows a per-card loading spinner while preparing; toast on failure. Preserves original filename (store `original_file_name` fallback to `title + ".pdf"` — for now use `${title}.pdf` since the column isn't stored; acceptable per current schema).
-- Card thumbnail click continues to open the viewer (View).
-- Buttons use `size="sm"`, icon + label on `sm:` and up, icon-only on mobile to avoid clutter. Min 44px tap target via `h-10`.
+Supabase Storage rejects every image upload with "MIME type image/... is not supported" because the bucket is locked to PDFs only. Previous fix attempts added an RPC verification + new migration intended to widen the MIME list, but the bucket in the live database still only allows `application/pdf` — so the migration either never ran or was reverted. Mixing tile background images into the same bucket that holds academic PDFs is also a long-term smell (different size limits, different RLS expectations, public/private semantics).
 
-## 3. PDFViewer header redesign (fixes Close/Download overlap)
+## Fix
 
-In `src/components/PDFViewer.tsx` header bar:
+1. **Create a dedicated public bucket `tile-images`** via `supabase--storage_create_bucket` (public, since tile backgrounds render on unauthenticated landing/faculty pages).
+2. **Migration** to:
+   - Set `tile-images.allowed_mime_types = ARRAY['image/jpeg','image/png','image/webp']` and `file_size_limit = 5 MB`.
+   - Add `storage.objects` RLS policies: public `SELECT`, admin-only `INSERT/UPDATE/DELETE` (uses existing `has_role(auth.uid(),'admin')`).
+3. **Point `src/lib/tileUploadStorage.ts`** at the new bucket (`TILE_UPLOAD_BUCKET = "tile-images"`). Keep the `verifyTileUploadBucketConfig` RPC but update its expected bucket name; this surfaces a clear error if the bucket ever drifts again.
+4. **Centralize image upload + validation** in `src/lib/uploadImage.ts`:
+   ```ts
+   export const ALLOWED_IMAGE_TYPES = ["image/jpeg","image/jpg","image/png","image/webp"] as const;
+   export async function uploadTileImage(file: Blob, contentType: string, path: string)
+   ```
+   - Normalizes `image/jpg` → `image/jpeg` before sending to Storage (Supabase's MIME check rejects `image/jpg`).
+   - Passes explicit `contentType` and `upsert: true`.
+5. **Refactor `TileImageUpload.tsx`** to call the new utility for both initial uploads and edited/recropped uploads. Remove duplicate MIME logic. Keep the canvas re-encode pipeline (which always outputs `image/jpeg`, `image/png`, or `image/webp` — never `image/jpg`).
+6. **Leave `school_pdfs` untouched** so the existing PDF flow keeps its strict whitelist.
 
-- New layout (sticky, already is via Sheet header):
-  - **Left:** filename + size (truncate, `min-w-0 flex-1`).
-  - **Right:** action cluster with `gap-3` (12px) on mobile, `gap-4` (16px) on desktop:
-    `[Fit width] [Fullscreen] [Open external] [Download] [Delete?] [Close X]`
-- Close `X` moves from left to the **far right** of the right cluster, separated from Download by Delete (when shown) or by a `w-px h-6 bg-border mx-1` divider when not shown — eliminates accidental clicks.
-- Every action button: `h-10 w-10` (was `h-9 w-9`) for touch targets, `shrink-0`.
-- Wrap the right cluster in `flex items-center gap-3 md:gap-4 shrink-0`.
-- Add optional props `onDelete?: () => void` and `canDelete?: boolean`. When both set, render a destructive-styled Delete button in the header that calls the parent handler (parent owns the confirm dialog and state refresh).
-- Z-index: header already sits above canvas via flex order; no change needed. Confirm via existing fullscreen styling.
+## Verification
 
-`StandaloneDocuments` passes `onDelete`/`canDelete` to `PDFViewer` so admins can also delete from inside the viewer; on success the viewer closes and the list refreshes.
+- Drive the admin Faculties page via Playwright headless against `localhost:8080`:
+  - Restore Supabase session from sandbox env.
+  - For each format (jpg, jpeg, png, webp): generate a tiny test image in Python (PIL), open the faculty edit dialog, upload, click Save, assert the toast is "Image uploaded" and the returned public URL renders (HTTP 200 with matching `content-type`).
+  - Repeat on the Departments admin page.
+- Capture screenshots after each upload to confirm the tile preview shows the new background.
+- Refresh the page and re-assert the tile image still renders (URL persisted in `faculties.background_image_url` / `departments.background_image_url`).
 
-## 4. Verification
+## Files touched
 
-After build:
-- Upload a PDF as admin → appears in grid.
-- Click View → PDFViewer opens, no download triggered.
-- Click Download → file saves with `.pdf` name, viewer does not open.
-- Click Delete → confirm dialog → row disappears, storage object removed, toast shown.
-- Repeat for both Books and Journals sections.
-- Open viewer on a narrow mobile width (375px) → filename truncates, all action buttons visible with gaps, no overlap between Download and Close.
+- `supabase/migrations/<new>_tile_images_bucket.sql` (new)
+- `src/lib/tileUploadStorage.ts` (bucket name + expected MIME list)
+- `src/lib/uploadImage.ts` (new centralized utility)
+- `src/components/TileImageUpload.tsx` (use utility, normalize jpg→jpeg)
+- New bucket `tile-images` via `supabase--storage_create_bucket`
 
 ## Out of scope
 
-- No DB schema changes (table, policies, and storage policies already support delete).
-- No changes to upload pipeline, hierarchy, or non-standalone pages.
-- No changes to `PDFPreviewModal` (legacy, unused here).
+- No change to existing `school_pdfs` policies or contents.
+- No change to PDF upload flows, RLS for academic content, or unrelated admin pages.
