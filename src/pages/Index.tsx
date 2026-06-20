@@ -70,11 +70,6 @@ import {
 import { PDFViewer } from "@/components/PDFViewer";
 import { NavigationTutorial } from "@/components/NavigationTutorial";
 import { StorageIndicator } from "@/components/StorageIndicator";
-import { PDFSummaryModal } from "@/components/PDFSummaryModal";
-import { StudyGuideModal } from "@/components/StudyGuideModal";
-import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
-import { TranslatorModal } from "@/components/TranslatorModal";
-import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { FilePicker } from "@/components/FilePicker";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
@@ -1749,52 +1744,6 @@ export default function Index() {
                               </DropdownMenuSubContent>
                              </DropdownMenuSub>
                             <DropdownMenuSeparator />
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" />
-                                </svg>
-                                AI Features
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="z-50 bg-popover">
-                                <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('summary');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                  📄 Summarize
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('study-guide');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                  📚 Study Guide
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('voice');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                  🔊 Voice Reader
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('translate');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                  🌐 Translate
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('chat');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                  💬 Chat with PDF
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => deleteFile(file.id, file.storage_path)} className="text-destructive">
                               <Trash2 className="w-3 h-3 mr-2" />
                               Delete
@@ -1894,43 +1843,7 @@ export default function Index() {
         featureType={pendingAIFeature} />
       
 
-        {/* AI Feature Modals */}
-        <PDFSummaryModal
-        open={activeAIModal === 'summary'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''} />
-      
-
-      <StudyGuideModal
-        open={activeAIModal === 'study-guide'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''} />
-      
-
-      <PDFAudioPlayer
-        open={activeAIModal === 'voice'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''} />
-      
-
-      <TranslatorModal
-        open={activeAIModal === 'translate'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''} />
-      
-
-      <PDFChatInterface
-        open={activeAIModal === 'chat'}
-        onOpenChange={(open) => !open && setActiveAIModal(null)}
-        fileId={selectedFileForAI?.id || ''}
-        fileName={selectedFileForAI?.name || ''} />
-      
-
-      {/* Floating Action Button for quick upload */}
+        {/* Floating Action Button for quick upload */}
       <FloatingActionButton
         onUpload={() => document.getElementById("file-input")?.click()} />
 
