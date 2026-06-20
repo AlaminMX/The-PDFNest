@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -33,6 +34,7 @@ interface EditingDepartment {
   category_id: string | null;
   faculty_id: string | null;
   background_image_url: string | null;
+  background_overlay_opacity: number;
 }
 
 interface NewDepartment {
@@ -42,6 +44,7 @@ interface NewDepartment {
   category_id: string;
   faculty_id: string;
   background_image_url: string;
+  background_overlay_opacity: number;
 }
 
 interface DepartmentItemProps {
@@ -193,7 +196,7 @@ export default function AdminDepartments() {
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "" });
+  const [newDept, setNewDept] = useState<NewDepartment>({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "", background_overlay_opacity: 50 });
   const [creating, setCreating] = useState(false);
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -222,6 +225,7 @@ export default function AdminDepartments() {
       category_id: dept.category_id || null,
       faculty_id: dept.faculty_id || null,
       background_image_url: dept.background_image_url || null,
+      background_overlay_opacity: dept.background_overlay_opacity ?? 50,
     });
   };
 
@@ -261,6 +265,7 @@ export default function AdminDepartments() {
           category_id: editingDept.category_id || null,
           faculty_id: editingDept.faculty_id || null,
           background_image_url: editingDept.background_image_url || null,
+          background_overlay_opacity: editingDept.background_overlay_opacity,
         } as any)
         .eq("id", editingDept.id);
 
@@ -311,13 +316,14 @@ export default function AdminDepartments() {
           category_id: newDept.category_id?.trim() || null,
           faculty_id: newDept.faculty_id?.trim() || null,
           background_image_url: newDept.background_image_url || null,
+          background_overlay_opacity: newDept.background_overlay_opacity,
         } as any);
 
       if (error) throw error;
 
       toast.success("Department created successfully");
       setShowCreateDialog(false);
-      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "" });
+      setNewDept({ name: "", color: "", icon: "", category_id: "", faculty_id: "", background_image_url: "", background_overlay_opacity: 50 });
       refreshDepartments();
     } catch (error: any) {
       console.error("Error creating department:", error);
@@ -493,11 +499,25 @@ export default function AdminDepartments() {
                 Live Preview
               </Label>
               <div
-                className="p-4 rounded-xl"
-                style={{ background: createPreviewStyles.bgLight }}
+                className="p-4 rounded-xl relative overflow-hidden min-h-[72px] bg-cover bg-center"
+                style={{
+                  background: newDept.background_image_url ? undefined : createPreviewStyles.bgLight,
+                  backgroundImage: newDept.background_image_url ? `url(${newDept.background_image_url})` : undefined,
+                  backgroundSize: newDept.background_image_url ? "cover" : undefined,
+                  backgroundPosition: newDept.background_image_url ? "center" : undefined,
+                }}
               >
-                <div className="flex items-center gap-3">
-                  {createPreviewIcon && createPreviewGlow && (
+                {newDept.background_image_url && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundColor: newDept.color || "#000000",
+                      opacity: newDept.background_overlay_opacity / 100,
+                    }}
+                  />
+                )}
+                <div className="flex items-center gap-3 relative">
+                  {!newDept.background_image_url && createPreviewIcon && createPreviewGlow && (
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{
@@ -520,7 +540,7 @@ export default function AdminDepartments() {
                     <h4 className="font-semibold text-white">
                       {newDept.name || "Department Name"}
                     </h4>
-                    <p className="text-xs text-muted-foreground">View Courses</p>
+                    <p className="text-xs text-white/80">View Courses</p>
                   </div>
                 </div>
               </div>
@@ -575,6 +595,30 @@ export default function AdminDepartments() {
                   setNewDept({ ...newDept, background_image_url: url || "" })
                 }
               />
+
+              {newDept.background_image_url && (
+                <div className="space-y-2">
+                  <Label>
+                    Color overlay strength
+                    <span className="text-xs text-muted-foreground ml-2">
+                      0% = pure image &nbsp;·&nbsp; 100% = pure color
+                    </span>
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={[newDept.background_overlay_opacity]}
+                      min={0}
+                      max={100}
+                      step={1}
+                      onValueChange={([next]) => setNewDept({ ...newDept, background_overlay_opacity: next })}
+                      className="flex-1"
+                    />
+                    <span className="w-10 text-right text-sm tabular-nums text-muted-foreground">
+                      {newDept.background_overlay_opacity}%
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Category Selector */}
               <div className="space-y-2">
@@ -662,11 +706,25 @@ export default function AdminDepartments() {
                   Live Preview
                 </Label>
                 <div
-                  className="p-4 rounded-xl"
-                  style={{ background: previewStyles.bgLight }}
+                  className="p-4 rounded-xl relative overflow-hidden min-h-[72px] bg-cover bg-center"
+                  style={{
+                    background: editingDept.background_image_url ? undefined : previewStyles.bgLight,
+                    backgroundImage: editingDept.background_image_url ? `url(${editingDept.background_image_url})` : undefined,
+                    backgroundSize: editingDept.background_image_url ? "cover" : undefined,
+                    backgroundPosition: editingDept.background_image_url ? "center" : undefined,
+                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    {previewIcon && previewGlow && (
+                  {editingDept.background_image_url && (
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundColor: editingDept.color || "#000000",
+                        opacity: editingDept.background_overlay_opacity / 100,
+                      }}
+                    />
+                  )}
+                  <div className="flex items-center gap-3 relative">
+                    {!editingDept.background_image_url && previewIcon && previewGlow && (
                       <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center"
                         style={{
@@ -689,7 +747,7 @@ export default function AdminDepartments() {
                       <h4 className="font-semibold text-white">
                         {editingDept.name || "Department Name"}
                       </h4>
-                      <p className="text-xs text-muted-foreground">View Courses</p>
+                      <p className="text-xs text-white/80">View Courses</p>
                     </div>
                   </div>
                 </div>
@@ -744,6 +802,30 @@ export default function AdminDepartments() {
                     setEditingDept({ ...editingDept, background_image_url: url })
                   }
                 />
+
+                {editingDept.background_image_url && (
+                  <div className="space-y-2">
+                    <Label>
+                      Color overlay strength
+                      <span className="text-xs text-muted-foreground ml-2">
+                        0% = pure image &nbsp;·&nbsp; 100% = pure color
+                      </span>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[editingDept.background_overlay_opacity]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={([next]) => setEditingDept({ ...editingDept, background_overlay_opacity: next })}
+                        className="flex-1"
+                      />
+                      <span className="w-10 text-right text-sm tabular-nums text-muted-foreground">
+                        {editingDept.background_overlay_opacity}%
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2">
                   <Label htmlFor="deptVisible">Visible to users in signup/selection dropdowns</Label>
