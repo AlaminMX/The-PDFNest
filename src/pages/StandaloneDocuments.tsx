@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -282,8 +282,6 @@ export default function StandaloneDocuments() {
   };
 
 
-  const visibleDocuments = useMemo(() => documents, [documents]);
-
   if (!activeSection) {
     navigate(deptSlug ? `/afit-pdfs/dept/${deptSlug}` : "/afit-pdfs", { replace: true });
     return null;
@@ -369,7 +367,7 @@ export default function StandaloneDocuments() {
               <div key={index} className="aspect-[3/4] animate-pulse rounded-2xl bg-muted/30" />
             ))}
           </div>
-        ) : visibleDocuments.length === 0 ? (
+        ) : documents.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center">
             <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <h2 className="font-semibold">No {pageTitle.toLowerCase()} yet</h2>
@@ -377,7 +375,7 @@ export default function StandaloneDocuments() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {visibleDocuments.map((document, index) => {
+            {documents.map((document, index) => {
               const thumbnailUrl = document.thumbnail_url;
               return (
                 <motion.article
