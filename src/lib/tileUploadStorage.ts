@@ -1,7 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export const TILE_UPLOAD_BUCKET = "school_pdfs";
-export const REQUIRED_TILE_IMAGE_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const;
+// We reuse the public `avatars` bucket for tile background images because the
+// workspace policy blocks creating new public buckets. Files live under the
+// `tile-assets/<kind>/...` prefix and are gated by admin-only RLS policies on
+// storage.objects (see migration 2026-06-20).
+export const TILE_UPLOAD_BUCKET = "avatars";
+export const TILE_UPLOAD_FOLDER = "tile-assets";
 
 type TileUploadBucketConfig = {
   bucket_id: string;
@@ -12,31 +16,13 @@ type TileUploadBucketConfig = {
 
 export async function verifyTileUploadBucketConfig() {
   const { data, error } = await supabase.rpc("get_tile_upload_bucket_config");
-
   if (error) {
     console.error("Tile upload bucket configuration check failed", error);
     return null;
   }
-
   const config = Array.isArray(data) ? (data[0] as TileUploadBucketConfig | undefined) : null;
-
-  console.info("Tile upload bucket configuration", {
-    bucket: TILE_UPLOAD_BUCKET,
-    allowedMimeTypes: config?.allowed_mime_types ?? null,
-    missingMimeTypes: config?.missing_mime_types ?? null,
-    bucketExists: config?.bucket_exists ?? false,
-  });
-
   if (!config?.bucket_exists) {
-    throw new Error(`Storage bucket "${TILE_UPLOAD_BUCKET}" is missing. Please run the latest Supabase migrations.`);
+    throw new Error(`Storage bucket "${TILE_UPLOAD_BUCKET}" is missing.`);
   }
-
-  const missingMimeTypes = config.missing_mime_types || [];
-  if (missingMimeTypes.length > 0) {
-    throw new Error(
-      `Storage bucket "${TILE_UPLOAD_BUCKET}" is missing required image MIME types: ${missingMimeTypes.join(", ")}. Please run the latest Supabase migrations.`,
-    );
-  }
-
   return config;
 }

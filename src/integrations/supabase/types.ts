@@ -1423,6 +1423,15 @@ export type Database = {
           id: string
         }[]
       }
+      get_tile_upload_bucket_config: {
+        Args: never
+        Returns: {
+          allowed_mime_types: string[]
+          bucket_exists: boolean
+          bucket_id: string
+          missing_mime_types: string[]
+        }[]
+      }
       get_user_profile_summary: {
         Args: { p_user_id: string }
         Returns: {

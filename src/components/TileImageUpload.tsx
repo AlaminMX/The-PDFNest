@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { supabase } from "@/integrations/supabase/client";
-import { TILE_UPLOAD_BUCKET, verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
+
+import { verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
+import { ALLOWED_IMAGE_MIME_TYPES, normalizeImageMime, uploadTileImage } from "@/lib/uploadImage";
 
 interface Props {
   /** Logical category, used as a folder prefix: tile-assets/<kind>/... */
@@ -27,14 +28,13 @@ interface Props {
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const EDITED_IMAGE_WIDTH = 1200;
 const EDITED_IMAGE_HEIGHT = 800;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const;
-const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_TYPES)[number]> = {
+const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_MIME_TYPES)[number]> = {
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
 };
-const IMAGE_ACCEPT = `${ALLOWED_IMAGE_TYPES.join(",")},.jpeg,.jpg,.png,.webp`;
+const IMAGE_ACCEPT = `${ALLOWED_IMAGE_MIME_TYPES.join(",")},.jpeg,.jpg,.png,.webp`;
 
 type PendingImage = {
   name: string;
@@ -103,10 +103,7 @@ export function TileImageUpload({
 
   const getSupportedImageType = (file: File) => {
     const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
-    const normalizedType = file.type === "image/jpg" ? "image/jpeg" : file.type;
-    return ALLOWED_IMAGE_TYPES.includes(normalizedType as any)
-      ? normalizedType
-      : IMAGE_EXTENSION_TO_MIME[extension] || null;
+    return normalizeImageMime(file.type) || IMAGE_EXTENSION_TO_MIME[extension] || null;
   };
 
   const handleFile = (file: File) => {
@@ -154,32 +151,14 @@ export function TileImageUpload({
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
-      const outputType = pendingImage.type === "image/jpg" ? "image/jpeg" : pendingImage.type;
+      const outputType = normalizeImageMime(pendingImage.type) ?? "image/jpeg";
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, 0.92));
       if (!blob) throw new Error("Could not prepare image for upload.");
 
-      const extension = outputType === "image/png" ? "png" : outputType === "image/webp" ? "webp" : "jpg";
-      const path = `tile-assets/${kind}/${crypto.randomUUID()}.${extension}`;
-
       await verifyTileUploadBucketConfig();
 
-      console.log({
-        bucket: TILE_UPLOAD_BUCKET,
-        contentType: outputType,
-        path,
-      });
-
-      const { error: upErr } = await supabase.storage.from(TILE_UPLOAD_BUCKET).upload(path, blob, {
-        contentType: outputType,
-        upsert: true,
-      });
-      if (upErr) {
-        console.error(upErr);
-        throw upErr;
-      }
-
-      const { data } = supabase.storage.from(TILE_UPLOAD_BUCKET).getPublicUrl(path);
-      onChange(data.publicUrl);
+      const { publicUrl } = await uploadTileImage({ kind, blob, mime: outputType });
+      onChange(publicUrl);
       setEditorOpen(false);
       toast.success("Image uploaded");
     } catch (err: any) {
