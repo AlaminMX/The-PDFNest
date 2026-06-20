@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export default function AdminFaculties() {
     icon: "",
     color: "",
     backgroundImageUrl: "",
+    backgroundOverlayOpacity: 50,
   });
   const [creating, setCreating] = useState(false);
 
@@ -86,12 +88,13 @@ export default function AdminFaculties() {
         icon: newFaculty.icon.trim() || null,
         color: newFaculty.color.trim() || null,
         background_image_url: newFaculty.backgroundImageUrl || null,
+        background_overlay_opacity: newFaculty.backgroundOverlayOpacity,
         display_order: maxOrder + 1,
       } as any);
       if (error) throw error;
       toast.success("Faculty created");
       setShowCreateDialog(false);
-      setNewFaculty({ name: "", icon: "", color: "", backgroundImageUrl: "" });
+      setNewFaculty({ name: "", icon: "", color: "", backgroundImageUrl: "", backgroundOverlayOpacity: 50 });
       refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed to create faculty");
@@ -112,6 +115,7 @@ export default function AdminFaculties() {
           color: editingFaculty.color?.trim() || null,
           background_image_url:
             editingFaculty.backgroundImageUrl || null,
+          background_overlay_opacity: editingFaculty.backgroundOverlayOpacity,
           is_visible: editingFaculty.is_visible,
         } as any)
         .eq("id", editingFaculty.id);
@@ -205,14 +209,23 @@ export default function AdminFaculties() {
                 <div className="p-4 flex items-center gap-4">
                   {faculty.icon?.trim() && (
                     <div
-                      className="w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0"
+                      className="relative w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0 overflow-hidden"
                       style={{
                         backgroundImage: faculty.background_image_url
-                          ? `linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url(${faculty.background_image_url})`
+                          ? `url(${faculty.background_image_url})`
                           : undefined,
                       }}
                     >
-                      {faculty.icon.trim()}
+                      {faculty.background_image_url && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            backgroundColor: faculty.color || "#000000",
+                            opacity: (faculty.background_overlay_opacity ?? 50) / 100,
+                          }}
+                        />
+                      )}
+                      <span className="relative">{faculty.icon.trim()}</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -246,6 +259,8 @@ export default function AdminFaculties() {
                           is_visible: faculty.is_visible,
                           backgroundImageUrl:
                             faculty.background_image_url || "",
+                          backgroundOverlayOpacity:
+                            faculty.background_overlay_opacity ?? 50,
                         })
                       }
                       className="gap-1.5"
@@ -279,6 +294,34 @@ export default function AdminFaculties() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {(newFaculty.backgroundImageUrl || newFaculty.name) && (
+              <div
+                className="p-4 rounded-xl relative overflow-hidden min-h-[72px] bg-cover bg-center border border-border"
+                style={{
+                  backgroundImage: newFaculty.backgroundImageUrl ? `url(${newFaculty.backgroundImageUrl})` : undefined,
+                  backgroundSize: newFaculty.backgroundImageUrl ? "cover" : undefined,
+                  backgroundPosition: newFaculty.backgroundImageUrl ? "center" : undefined,
+                }}
+              >
+                {newFaculty.backgroundImageUrl && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundColor: newFaculty.color || "#000000",
+                      opacity: newFaculty.backgroundOverlayOpacity / 100,
+                    }}
+                  />
+                )}
+                <div className="relative flex items-center gap-3">
+                  {newFaculty.icon.trim() && !newFaculty.backgroundImageUrl && (
+                    <span className="text-2xl">{newFaculty.icon.trim()}</span>
+                  )}
+                  <h4 className={`font-semibold ${newFaculty.backgroundImageUrl ? "text-white" : ""}`}>
+                    {newFaculty.name || "Faculty Name"}
+                  </h4>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Name *</Label>
               <Input
@@ -322,6 +365,31 @@ export default function AdminFaculties() {
                 })
               }
             />
+            {newFaculty.backgroundImageUrl && (
+              <div className="space-y-2">
+                <Label>
+                  Color overlay strength
+                  <span className="text-xs text-muted-foreground ml-2">
+                    0% = pure image &nbsp;·&nbsp; 100% = pure color
+                  </span>
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Slider
+                    value={[newFaculty.backgroundOverlayOpacity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([next]) =>
+                      setNewFaculty({ ...newFaculty, backgroundOverlayOpacity: next })
+                    }
+                    className="flex-1"
+                  />
+                  <span className="w-10 text-right text-sm tabular-nums text-muted-foreground">
+                    {newFaculty.backgroundOverlayOpacity}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -348,6 +416,36 @@ export default function AdminFaculties() {
           </DialogHeader>
           {editingFaculty && (
             <div className="space-y-4 py-2">
+              {(editingFaculty.backgroundImageUrl || editingFaculty.name) && (
+                <div
+                  className="p-4 rounded-xl relative overflow-hidden min-h-[72px] bg-cover bg-center border border-border"
+                  style={{
+                    backgroundImage: editingFaculty.backgroundImageUrl
+                      ? `url(${editingFaculty.backgroundImageUrl})`
+                      : undefined,
+                    backgroundSize: editingFaculty.backgroundImageUrl ? "cover" : undefined,
+                    backgroundPosition: editingFaculty.backgroundImageUrl ? "center" : undefined,
+                  }}
+                >
+                  {editingFaculty.backgroundImageUrl && (
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundColor: editingFaculty.color || "#000000",
+                        opacity: editingFaculty.backgroundOverlayOpacity / 100,
+                      }}
+                    />
+                  )}
+                  <div className="relative flex items-center gap-3">
+                    {editingFaculty.icon?.trim() && !editingFaculty.backgroundImageUrl && (
+                      <span className="text-2xl">{editingFaculty.icon.trim()}</span>
+                    )}
+                    <h4 className={`font-semibold ${editingFaculty.backgroundImageUrl ? "text-white" : ""}`}>
+                      {editingFaculty.name || "Faculty Name"}
+                    </h4>
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -397,6 +495,31 @@ export default function AdminFaculties() {
                   })
                 }
               />
+              {editingFaculty.backgroundImageUrl && (
+                <div className="space-y-2">
+                  <Label>
+                    Color overlay strength
+                    <span className="text-xs text-muted-foreground ml-2">
+                      0% = pure image &nbsp;·&nbsp; 100% = pure color
+                    </span>
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={[editingFaculty.backgroundOverlayOpacity]}
+                      min={0}
+                      max={100}
+                      step={1}
+                      onValueChange={([next]) =>
+                        setEditingFaculty({ ...editingFaculty, backgroundOverlayOpacity: next })
+                      }
+                      className="flex-1"
+                    />
+                    <span className="w-10 text-right text-sm tabular-nums text-muted-foreground">
+                      {editingFaculty.backgroundOverlayOpacity}%
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Switch
                   checked={editingFaculty.is_visible}
