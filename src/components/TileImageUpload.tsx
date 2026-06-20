@@ -103,10 +103,7 @@ export function TileImageUpload({
 
   const getSupportedImageType = (file: File) => {
     const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
-    const normalizedType = file.type === "image/jpg" ? "image/jpeg" : file.type;
-    return ALLOWED_IMAGE_TYPES.includes(normalizedType as any)
-      ? normalizedType
-      : IMAGE_EXTENSION_TO_MIME[extension] || null;
+    return normalizeImageMime(file.type) || IMAGE_EXTENSION_TO_MIME[extension] || null;
   };
 
   const handleFile = (file: File) => {
