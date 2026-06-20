@@ -85,6 +85,7 @@ function AFITPDFsContent() {
                   color={(dept as any).color}
                   icon={(dept as any).icon}
                   backgroundImageUrl={(dept as any).background_image_url}
+                  overlayOpacity={(dept as any).background_overlay_opacity}
                   index={index}
                   onClick={() => navigate(`/afit-pdfs/${facultySlug}/${dept.slug}`)}
                 />
