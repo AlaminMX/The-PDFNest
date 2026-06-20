@@ -13,7 +13,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
-import { TILE_UPLOAD_BUCKET, verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
+import { verifyTileUploadBucketConfig } from "@/lib/tileUploadStorage";
+import { ALLOWED_IMAGE_MIME_TYPES, normalizeImageMime, uploadTileImage } from "@/lib/uploadImage";
 
 interface Props {
   /** Logical category, used as a folder prefix: tile-assets/<kind>/... */
