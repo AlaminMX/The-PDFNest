@@ -10,6 +10,7 @@ interface DepartmentTileProps {
   color: string | null;
   icon: string | null;
   backgroundImageUrl?: string | null;
+  overlayOpacity?: number | null;
   index: number;
   onClick: () => void;
   subtitle?: string;
@@ -21,6 +22,7 @@ export function DepartmentTile({
   color,
   icon,
   backgroundImageUrl,
+  overlayOpacity,
   index,
   onClick,
   subtitle = "View Courses",
@@ -51,7 +53,13 @@ export function DepartmentTile({
             backgroundImage: `url(${backgroundImageUrl})`,
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/15 pointer-events-none" />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundColor: color || "#000000",
+              opacity: (overlayOpacity ?? 50) / 100,
+            }}
+          />
           <div className="relative flex items-center gap-4 w-full">
             <div className="flex-1 min-w-0">
               <h3 className={`font-semibold mb-0.5 truncate ${textColorClass} drop-shadow-md`}>
