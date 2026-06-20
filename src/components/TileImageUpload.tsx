@@ -28,14 +28,13 @@ interface Props {
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const EDITED_IMAGE_WIDTH = 1200;
 const EDITED_IMAGE_HEIGHT = 800;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const;
-const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_TYPES)[number]> = {
+const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_MIME_TYPES)[number]> = {
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
 };
-const IMAGE_ACCEPT = `${ALLOWED_IMAGE_TYPES.join(",")},.jpeg,.jpg,.png,.webp`;
+const IMAGE_ACCEPT = `${ALLOWED_IMAGE_MIME_TYPES.join(",")},.jpeg,.jpg,.png,.webp`;
 
 type PendingImage = {
   name: string;
