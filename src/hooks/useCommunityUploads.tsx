@@ -139,19 +139,28 @@ export function useCommunityUploads({
 
   useEffect(() => { fetchUploads(); }, [fetchUploads]);
 
-  const approveUpload = async (uploadId: string, note?: string) => {
+  const approveUpload = async (uploadId: string, note?: string, finalTitle?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const upload = uploads.find(u => u.id === uploadId);
     const isPQ = !!upload?.pq_course_id;
+    const trimmedTitle = finalTitle?.trim();
+    if (finalTitle !== undefined && !trimmedTitle) {
+      throw new Error("Final document title is required");
+    }
 
     const { error } = await supabase.rpc(
       isPQ ? "approve_pq_upload" : "approve_community_upload",
-      { p_upload_id: uploadId, p_reviewer_id: user.id, p_note: note || null }
+      {
+        p_upload_id: uploadId,
+        p_reviewer_id: user.id,
+        p_note: note || null,
+        p_title: trimmedTitle || null,
+      } as any
     );
     if (error) throw error;
-    logActivity("upload_approved", { title: upload?.title || uploadId });
+    logActivity("upload_approved", { title: trimmedTitle || upload?.title || uploadId });
     await fetchUploads();
   };
 

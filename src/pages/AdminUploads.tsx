@@ -61,7 +61,7 @@ function PreviewButton({ filePath }: { filePath: string }) {
 interface ReviewDialogProps {
   upload: CommunityUpload | null;
   action: "approve" | "reject" | null;
-  onConfirm: (note: string) => void;
+  onConfirm: (note: string, finalTitle?: string) => void;
   onCancel: () => void;
   loading: boolean;
 }
@@ -81,9 +81,11 @@ function getAutoApprovalMessage(uploaderName: string): string {
 
 function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDialogProps) {
   const [note, setNote] = useState("");
+  const [finalTitle, setFinalTitle] = useState("");
 
   useEffect(() => {
-    if (!upload) { setNote(""); return; }
+    if (!upload) { setNote(""); setFinalTitle(""); return; }
+    setFinalTitle(upload.title || upload.original_file_name || "");
     if (action === "approve") {
       setNote(getAutoApprovalMessage(upload.uploader_name || "contributor"));
     } else {
@@ -92,6 +94,9 @@ function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDi
   }, [upload, action]);
 
   if (!upload || !action) return null;
+
+  const trimmedFinalTitle = finalTitle.trim();
+  const titleChanged = trimmedFinalTitle && trimmedFinalTitle !== upload.title;
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
@@ -114,6 +119,29 @@ function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDi
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          {action === "approve" && (
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Original uploaded filename</Label>
+                <p className="break-all text-sm font-medium">{upload.original_file_name || upload.title}</p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="final-document-title" className="text-sm">Final Document Title</Label>
+                <Input
+                  id="final-document-title"
+                  value={finalTitle}
+                  onChange={(e) => setFinalTitle(e.target.value)}
+                  placeholder="Enter the title students will see"
+                  disabled={loading}
+                />
+              </div>
+              <div className="rounded-md bg-background p-2 text-sm">
+                <span className="text-muted-foreground">Published as: </span>
+                <span className="font-semibold">{trimmedFinalTitle || "Title required"}</span>
+                {titleChanged && <Badge variant="secondary" className="ml-2">Renamed</Badge>}
+              </div>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="review-note" className="text-sm">
               {action === "reject" ? "Reason (recommended)" : "Note (optional)"}
@@ -134,8 +162,8 @@ function ReviewDialog({ upload, action, onConfirm, onCancel, loading }: ReviewDi
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onCancel} disabled={loading}>Cancel</Button>
           <Button
-            onClick={() => onConfirm(note)}
-            disabled={loading}
+            onClick={() => onConfirm(note, action === "approve" ? trimmedFinalTitle : undefined)}
+            disabled={loading || (action === "approve" && !trimmedFinalTitle)}
             variant={action === "approve" ? "default" : "destructive"}
           >
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -177,12 +205,12 @@ export default function AdminUploads() {
     setReviewAction(action);
   };
 
-  const handleConfirmReview = async (note: string) => {
-    if (!reviewTarget || !reviewAction) return;
+  const handleConfirmReview = async (note: string, finalTitle?: string) => {
+    if (!reviewTarget || !reviewAction || reviewLoading) return;
     setReviewLoading(true);
     try {
       if (reviewAction === "approve") {
-        await approveUpload(reviewTarget.id, note);
+        await approveUpload(reviewTarget.id, note, finalTitle);
         toast.success(reviewTarget.pq_course_id
           ? "Upload approved and added to past questions!"
           : "Upload approved and added to lecture notes!");
