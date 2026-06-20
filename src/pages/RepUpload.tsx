@@ -385,6 +385,13 @@ export default function RepUpload() {
             },
           ];
 
+    console.debug("RepUpload selected upload targets", uploadTargets.map((target) => ({
+      departmentId: target.id,
+      departmentName: target.name,
+      courseId: target.courseId,
+      courseCode: target.courseCode,
+    })));
+
     if (uploadTargets.length === 0) {
       toast.error("Select at least one department with this course available.");
       setIsProcessing(false);
@@ -428,6 +435,10 @@ export default function RepUpload() {
         let itemSucceeded = false;
         let completedTargets = 0;
         for (const target of uploadTargets) {
+          console.debug("RepUpload uploading target", {
+            targetDepartmentId: target.id,
+            targetCourseId: target.courseId,
+          });
           const success = await uploadNote(
             target.courseId!,
             target.courseCode || course.code,
@@ -437,6 +448,7 @@ export default function RepUpload() {
             displayName,
             target.id || undefined,
             selectedMaterialType,
+            departmentName,
           );
           completedTargets += 1;
           updateItemProgress(item.id, 30 + (completedTargets / uploadTargets.length) * 65);
