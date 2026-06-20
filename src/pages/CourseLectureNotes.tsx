@@ -48,11 +48,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PDFSummaryModal } from "@/components/PDFSummaryModal";
-import { StudyGuideModal } from "@/components/StudyGuideModal";
-import { PDFAudioPlayer } from "@/components/PDFAudioPlayer";
-import { TranslatorModal } from "@/components/TranslatorModal";
-import { PDFChatInterface } from "@/components/PDFChatInterface";
 import { PDFViewer } from "@/components/PDFViewer";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { buildBrowsePath } from "@/lib/browseNavigation";
@@ -272,29 +267,6 @@ function CourseLectureNotesContent() {
       setNoteToRename(null);
       setNewTitle("");
     }
-  };
-
-  const handleAIAction = (action: string, note: { id: string; title: string; filePath: string }) => {
-    requireAuth(() => {
-    setSelectedNote(note);
-    switch (action) {
-      case 'summary':
-        setSummaryModalOpen(true);
-        break;
-      case 'study-guide':
-        setStudyGuideModalOpen(true);
-        break;
-      case 'voice':
-        setVoiceModalOpen(true);
-        break;
-      case 'translate':
-        setTranslatorModalOpen(true);
-        break;
-      case 'chat':
-        setChatModalOpen(true);
-        break;
-    }
-    });
   };
 
   if (loading) {
@@ -613,30 +585,6 @@ function CourseLectureNotesContent() {
                     </DropdownMenuItem>
                     
                     <DropdownMenuSeparator />
-                    
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        AI Features
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem onClick={() => handleAIAction('summary', { id: note.id, title: note.title, filePath: note.file_path })}>
-                          Summarize
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAIAction('study-guide', { id: note.id, title: note.title, filePath: note.file_path })}>
-                          Study Guide
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAIAction('voice', { id: note.id, title: note.title, filePath: note.file_path })}>
-                          Voice Reader
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAIAction('translate', { id: note.id, title: note.title, filePath: note.file_path })}>
-                          Translate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAIAction('chat', { id: note.id, title: note.title, filePath: note.file_path })}>
-                          Chat with PDF
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
 
                     {user?.id === note.uploaded_by && (
                       <>
@@ -752,42 +700,6 @@ function CourseLectureNotesContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* AI Feature Modals */}
-      {selectedNote && (
-        <>
-          <PDFSummaryModal
-            open={summaryModalOpen}
-            onOpenChange={setSummaryModalOpen}
-            fileId={selectedNote.id}
-            fileName={selectedNote.title}
-          />
-          <StudyGuideModal
-            open={studyGuideModalOpen}
-            onOpenChange={setStudyGuideModalOpen}
-            fileId={selectedNote.id}
-            fileName={selectedNote.title}
-          />
-          <PDFAudioPlayer
-            open={voiceModalOpen}
-            onOpenChange={setVoiceModalOpen}
-            fileId={selectedNote.id}
-            fileName={selectedNote.title}
-          />
-          <TranslatorModal
-            open={translatorModalOpen}
-            onOpenChange={setTranslatorModalOpen}
-            fileId={selectedNote.id}
-            fileName={selectedNote.title}
-          />
-          <PDFChatInterface
-            open={chatModalOpen}
-            onOpenChange={setChatModalOpen}
-            fileId={selectedNote.id}
-            fileName={selectedNote.title}
-          />
-        </>
-      )}
 
       {/* PDF Viewer */}
       <GuestAuthPrompt
