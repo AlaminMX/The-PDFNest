@@ -96,18 +96,6 @@ function DesktopHeaderNav() {
         
         Profile
       </NavLink>
-      <NavLink
-        to="/ai-features"
-        className={({ isActive }) =>
-        `${baseLinkClass} ${
-        isActive ?
-        "text-primary bg-primary/10" :
-        "text-muted-foreground hover:text-foreground hover:bg-muted"}`
-
-        }>
-        
-        AI Features
-      </NavLink>
     </nav>);
 
 }
@@ -592,8 +580,6 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<"list" | "grid">(
     () => localStorage.getItem("pdfnest-view-mode") as "list" | "grid" || "grid"
   );
-  const [activeAIModal, setActiveAIModal] = useState<AIModalType>(null);
-  const [selectedFileForAI, setSelectedFileForAI] = useState<{id: string;name: string;} | null>(null);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [pendingAIFeature, setPendingAIFeature] = useState<AIModalType>(null);
@@ -1424,55 +1410,6 @@ export default function Index() {
                                   </button>
                                </>
                         }
-                             <DropdownMenu>
-                               <DropdownMenuTrigger asChild>
-                                 <button
-                              className="p-2 hover:bg-accent rounded-lg flex-shrink-0"
-                              title="AI Features">
-                              
-                                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                     <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,17V16H9V14H13V13H10A1,1 0 0,1 9,12V9A1,1 0 0,1 10,8H14V9H12V11H15V14H11V17Z" />
-                                   </svg>
-                                 </button>
-                               </DropdownMenuTrigger>
-                               <DropdownMenuContent align="end" className="z-50 bg-popover">
-                                  <DropdownMenuItem onClick={() => {
-                              setSelectedFileForAI({ id: file.id, name: file.name });
-                              setActiveAIModal('summary');
-                              trackRecentFile(file.id, file.name);
-                            }}>
-                                    📄 Summarize
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                              setSelectedFileForAI({ id: file.id, name: file.name });
-                              setActiveAIModal('study-guide');
-                              trackRecentFile(file.id, file.name);
-                            }}>
-                                    📚 Study Guide
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                              setSelectedFileForAI({ id: file.id, name: file.name });
-                              setActiveAIModal('voice');
-                              trackRecentFile(file.id, file.name);
-                            }}>
-                                    🔊 Voice Reader
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                              setSelectedFileForAI({ id: file.id, name: file.name });
-                              setActiveAIModal('translate');
-                              trackRecentFile(file.id, file.name);
-                            }}>
-                                    🌐 Translate
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
-                              setSelectedFileForAI({ id: file.id, name: file.name });
-                              setActiveAIModal('chat');
-                              trackRecentFile(file.id, file.name);
-                            }}>
-                                    💬 Chat with PDF
-                                  </DropdownMenuItem>
-                               </DropdownMenuContent>
-                             </DropdownMenu>
                           </div>
 
                           <DropdownMenu>
@@ -1540,52 +1477,6 @@ export default function Index() {
                                  {file.isOfflineAvailable ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <CloudDownload className="w-4 h-4 mr-2" />}
                                  {file.isOfflineAvailable ? "Saved Offline" : "Save Offline"}
                                </DropdownMenuItem>
-                               <DropdownMenuSeparator />
-                               <DropdownMenuSub>
-                                 <DropdownMenuSubTrigger>
-                                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                     <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" />
-                                   </svg>
-                                   AI Features
-                                 </DropdownMenuSubTrigger>
-                                 <DropdownMenuSubContent className="z-50 bg-popover">
-                                    <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('summary');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                      📄 Summarize
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('study-guide');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                      📚 Study Guide
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('voice');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                      🔊 Voice Reader
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('translate');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                      🌐 Translate
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                setSelectedFileForAI({ id: file.id, name: file.name });
-                                setActiveAIModal('chat');
-                                trackRecentFile(file.id, file.name);
-                              }}>
-                                      💬 Chat with PDF
-                                    </DropdownMenuItem>
-                                 </DropdownMenuSubContent>
-                               </DropdownMenuSub>
                             </DropdownMenuContent>
                           </DropdownMenu>
 
