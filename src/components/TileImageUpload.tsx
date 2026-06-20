@@ -26,8 +26,14 @@ interface Props {
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 const EDITED_IMAGE_WIDTH = 1200;
 const EDITED_IMAGE_HEIGHT = 800;
-const IMAGE_ACCEPT = "image/*,.avif,.bmp,.gif,.heic,.heif,.ico,.jfif,.jpeg,.jpg,.png,.svg,.tif,.tiff,.webp";
-const IMAGE_EXTENSIONS = new Set(IMAGE_ACCEPT.split(",").filter((item) => item.startsWith(".")));
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const;
+const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_TYPES)[number]> = {
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
+const IMAGE_ACCEPT = `${ALLOWED_IMAGE_TYPES.join(",")},.jpeg,.jpg,.png,.webp`;
 
 type PendingImage = {
   name: string;
@@ -88,10 +94,18 @@ export function TileImageUpload({
     setEditorOpen(true);
   };
 
-  const handleFile = (file: File) => {
+  const getSupportedImageType = (file: File) => {
     const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
-    if (!file.type.startsWith("image/") && !IMAGE_EXTENSIONS.has(extension)) {
-      toast.error("Please choose an image file");
+    const normalizedType = file.type === "image/jpg" ? "image/jpeg" : file.type;
+    return ALLOWED_IMAGE_TYPES.includes(normalizedType as any)
+      ? normalizedType
+      : IMAGE_EXTENSION_TO_MIME[extension] || null;
+  };
+
+  const handleFile = (file: File) => {
+    const supportedType = getSupportedImageType(file);
+    if (!supportedType) {
+      toast.error("Please choose a JPG, JPEG, PNG, or WebP image");
       return;
     }
     if (file.size > MAX_BYTES) {
@@ -102,7 +116,7 @@ export function TileImageUpload({
     const objectUrl = URL.createObjectURL(file);
     openEditor({
       name: file.name,
-      type: file.type,
+      type: supportedType,
       source: objectUrl,
       objectUrl,
     });
@@ -133,13 +147,15 @@ export function TileImageUpload({
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+      const outputType = pendingImage.type === "image/jpg" ? "image/jpeg" : pendingImage.type;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, 0.92));
       if (!blob) throw new Error("Could not prepare image for upload.");
 
-      const path = `tile-assets/${kind}/${crypto.randomUUID()}.jpg`;
+      const extension = outputType === "image/png" ? "png" : outputType === "image/webp" ? "webp" : "jpg";
+      const path = `tile-assets/${kind}/${crypto.randomUUID()}.${extension}`;
       const { error: upErr } = await supabase.storage.from("school_pdfs").upload(path, blob, {
-        contentType: "image/jpeg",
-        upsert: false,
+        contentType: outputType,
+        upsert: true,
       });
       if (upErr) throw upErr;
 
