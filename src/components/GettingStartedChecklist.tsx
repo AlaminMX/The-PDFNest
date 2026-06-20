@@ -15,7 +15,6 @@ interface ChecklistItem {
 const CHECKLIST_ITEMS: ChecklistItem[] = [
   { id: "upload", label: "Upload your first PDF", icon: Upload, description: "Drag & drop or click to upload" },
   { id: "category", label: "Create a category", icon: Folder, description: "Organize your files" },
-  { id: "ai", label: "Try an AI feature", icon: Sparkles, description: "Summarize, translate, or chat" },
   { id: "favorite", label: "Star a file", icon: Star, description: "Quick access to important docs" },
 ];
 
