@@ -144,7 +144,8 @@ export function useLectureNotes(courseId?: string) {
     title: string,
     displayName: string,
     departmentId?: string,
-    materialType: string = "lecture_note"
+    materialType: string = "lecture_note",
+    storageDepartmentName?: string
   ) => {
     try {
       setUploading(true);
@@ -174,7 +175,16 @@ export function useLectureNotes(courseId?: string) {
       // Generate file path
       const fileExt = "pdf";
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${departmentName}/${courseCode}/lecture_notes/${fileName}`;
+      const storageFolderDepartmentName = storageDepartmentName || departmentName;
+      const filePath = `${storageFolderDepartmentName}/${courseCode}/lecture_notes/${fileName}`;
+      console.debug("uploadNote target", {
+        targetDepartmentId: departmentId,
+        targetDepartmentName: departmentName,
+        targetCourseId: courseId,
+        targetCourseCode: courseCode,
+        storageFolderDepartmentName,
+        materialType,
+      });
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
@@ -205,19 +215,21 @@ export function useLectureNotes(courseId?: string) {
         }
       }
 
-      // Insert into database with material_type and level
-      const { error: insertError } = await supabase
-        .from("lecture_notes")
-        .insert({
-          course_id: courseId,
-          uploaded_by: user.id,
-          uploaded_by_display: displayName,
-          file_path: filePath,
-          title: finalTitle,
-          file_size: file.size,
-          material_type: materialType,
-          level: courseData?.level ?? 100,
-        });
+      const insertPayload = {
+        p_course_id: courseId,
+        p_file_path: filePath,
+        p_title: finalTitle,
+        p_file_size: file.size,
+        p_uploaded_by_display: displayName,
+        p_material_type: materialType,
+        p_level: courseData?.level ?? 100,
+      };
+      console.debug("uploadNote insert payload", insertPayload);
+
+      const { error: insertError } = await supabase.rpc(
+        "create_rep_lecture_note" as any,
+        insertPayload as any,
+      );
 
       if (insertError) throw insertError;
 
@@ -233,7 +245,7 @@ export function useLectureNotes(courseId?: string) {
           body: {
             departmentId,
             courseCode,
-            noteTitle: title,
+            noteTitle: finalTitle,
             uploadedBy: displayName,
           },
         }).catch((err) => {
