@@ -1392,11 +1392,11 @@ export type Database = {
         Returns: undefined
       }
       approve_community_upload: {
-        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Args: { p_note?: string; p_reviewer_id: string; p_title?: string; p_upload_id: string }
         Returns: undefined
       }
       approve_pq_upload: {
-        Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
+        Args: { p_note?: string; p_reviewer_id: string; p_title?: string; p_upload_id: string }
         Returns: undefined
       }
       check_duplicate_upload: {
@@ -1412,6 +1412,15 @@ export type Database = {
           original_file_name: string
           status: string
           title: string
+        }[]
+      }
+      get_tile_upload_bucket_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allowed_mime_types: string[] | null
+          bucket_exists: boolean
+          bucket_id: string
+          missing_mime_types: string[] | null
         }[]
       }
       get_rep_public_info: {

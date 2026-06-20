@@ -280,3 +280,8 @@ WITH CHECK (
       AND rep_dept.faculty_id = target_dept.faculty_id
   )
 );
+
+-- Ensure PostgREST can execute the updated overloads and refreshes its schema cache.
+GRANT EXECUTE ON FUNCTION public.approve_community_upload(uuid, uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.approve_pq_upload(uuid, uuid, text, text) TO authenticated;
+NOTIFY pgrst, 'reload schema';
