@@ -117,6 +117,16 @@ Deno.serve(async (req) => {
         `)
         .ilike("title", wildcardQuery)
         .limit(5),
+
+      // 5. Standalone documents (books & journals)
+      supabase
+        .from("standalone_documents")
+        .select(`
+          id, title, category, department_id,
+          departments!inner(slug, name)
+        `)
+        .ilike("title", wildcardQuery)
+        .limit(10),
     ]);
 
     // Transform courses
