@@ -157,10 +157,11 @@ function FacultySelectionContent() {
             <motion.img
               src={afitLogo}
               alt="Air Force Institute of Technology"
-              className="w-50 h-50 md:w-24 md:h-24 mx-auto mb-4 drop-shadow-[0_4px_20px_hsl(var(--primary)/0.25)]"
+              className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 drop-shadow-[0_4px_20px_hsl(var(--primary)/0.25)]"
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.4 }}
+              style="width: 200px; height: 200px"
             />
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-medium tracking-wider uppercase mb-3">
               <Sparkles className="w-3 h-3" />
