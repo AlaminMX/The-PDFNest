@@ -412,6 +412,7 @@ export type Database = {
         Row: {
           allowed_levels: number[] | null
           background_image_url: string | null
+          background_overlay_opacity: number
           category_id: string | null
           color: string | null
           created_at: string | null
@@ -426,6 +427,7 @@ export type Database = {
         Insert: {
           allowed_levels?: number[] | null
           background_image_url?: string | null
+          background_overlay_opacity?: number
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -440,6 +442,7 @@ export type Database = {
         Update: {
           allowed_levels?: number[] | null
           background_image_url?: string | null
+          background_overlay_opacity?: number
           category_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -471,6 +474,7 @@ export type Database = {
       faculties: {
         Row: {
           background_image_url: string | null
+          background_overlay_opacity: number
           color: string | null
           created_at: string | null
           display_order: number | null
@@ -482,6 +486,7 @@ export type Database = {
         }
         Insert: {
           background_image_url?: string | null
+          background_overlay_opacity?: number
           color?: string | null
           created_at?: string | null
           display_order?: number | null
@@ -493,6 +498,7 @@ export type Database = {
         }
         Update: {
           background_image_url?: string | null
+          background_overlay_opacity?: number
           color?: string | null
           created_at?: string | null
           display_order?: number | null
