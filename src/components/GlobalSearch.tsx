@@ -210,6 +210,46 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           </>
         )}
 
+        {/* Standalone Books & Journals */}
+        {results.standaloneDocuments.length > 0 && (
+          <>
+            {(results.courses.length > 0 ||
+              results.pqCourses.length > 0 ||
+              results.lectureNotes.length > 0 ||
+              results.pastQuestions.length > 0) && <CommandSeparator />}
+            <CommandGroup heading="Books & Journals">
+              {results.standaloneDocuments.map((s) => {
+                const Icon = s.category === "book" ? BookOpen : Library;
+                const iconColor = s.category === "book" ? "text-emerald-500" : "text-violet-500";
+                return (
+                  <CommandItem
+                    key={`standalone-${s.id}`}
+                    value={`SDOC ${s.title} ${s.department_name}`}
+                    onSelect={() => {
+                      if (s.department_slug) {
+                        navigate(
+                          `/afit-pdfs/dept/${s.department_slug}/${s.category === "book" ? "books" : "journals"}`
+                        );
+                      }
+                      close();
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Icon className={`mr-2 h-4 w-4 shrink-0 ${iconColor}`} />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium text-sm truncate">{s.title}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {s.category === "book" ? "Book" : "Journal"} · {s.department_name}
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </>
+        )}
+
+
         {/* Hint when empty */}
         {query.trim().length < 2 && (
           <div className="py-8 text-center text-muted-foreground">
