@@ -41,14 +41,24 @@ export interface PastQuestionResult {
   semester: string;
 }
 
+export interface StandaloneDocumentResult {
+  id: string;
+  title: string;
+  category: "book" | "journal";
+  department_id: string;
+  department_slug: string;
+  department_name: string;
+}
+
 export interface SearchResults {
   courses: CourseResult[];
   pqCourses: PQCourseResult[];
   lectureNotes: LectureNoteResult[];
   pastQuestions: PastQuestionResult[];
+  standaloneDocuments: StandaloneDocumentResult[];
 }
 
-const EMPTY: SearchResults = { courses: [], pqCourses: [], lectureNotes: [], pastQuestions: [] };
+const EMPTY: SearchResults = { courses: [], pqCourses: [], lectureNotes: [], pastQuestions: [], standaloneDocuments: [] };
 
 export function useGlobalSearch() {
   const [query, setQuery] = useState("");
