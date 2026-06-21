@@ -298,6 +298,42 @@ export default function StandaloneDocuments() {
     }
   };
 
+  const openRename = (doc: StandaloneDocument) => {
+    setRenameTarget(doc);
+    setRenameValue(doc.title);
+  };
+
+  const submitRename = async () => {
+    if (!renameTarget) return;
+    const next = renameValue.trim();
+    if (!next) {
+      toast.error("Title cannot be empty");
+      return;
+    }
+    if (next === renameTarget.title) {
+      setRenameTarget(null);
+      return;
+    }
+    setRenaming(true);
+    try {
+      const { error } = await supabase
+        .from("standalone_documents" as any)
+        .update({ title: next })
+        .eq("id", renameTarget.id);
+      if (error) throw error;
+      setDocuments((current) => current.map((d) => (d.id === renameTarget.id ? { ...d, title: next } : d)));
+      if (viewer?.id === renameTarget.id) setViewer({ ...viewer, title: next });
+      toast.success("Renamed");
+      setRenameTarget(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Rename failed");
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+
+
 
   if (!activeSection) {
     navigate(deptSlug ? `/afit-pdfs/dept/${deptSlug}` : "/afit-pdfs", { replace: true });
