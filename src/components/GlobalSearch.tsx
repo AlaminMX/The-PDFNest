@@ -44,7 +44,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     results.courses.length > 0 ||
     results.pqCourses.length > 0 ||
     results.lectureNotes.length > 0 ||
-    results.pastQuestions.length > 0;
+    results.pastQuestions.length > 0 ||
+    results.standaloneDocuments.length > 0;
 
   const navigateToCourse = (c: {
     code: string;
