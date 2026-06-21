@@ -81,9 +81,18 @@ export default function StandaloneDocuments() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<StandaloneDocument | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renameTarget, setRenameTarget] = useState<StandaloneDocument | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const pageTitle = activeSection?.label || "Documents";
 
+  const filteredDocuments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return documents;
+    return documents.filter((d) => d.title.toLowerCase().includes(q));
+  }, [documents, searchQuery]);
 
   const loadDocuments = useCallback(async () => {
     if (!currentDept?.id || !activeSection) return;
