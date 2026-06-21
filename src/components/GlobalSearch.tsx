@@ -9,7 +9,7 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
-import { BookOpen, FileText, ScrollText, Loader2, Search } from "lucide-react";
+import { BookOpen, FileText, Library, ScrollText, Loader2, Search } from "lucide-react";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 
 interface GlobalSearchProps {
