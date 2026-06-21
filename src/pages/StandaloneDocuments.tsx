@@ -414,6 +414,25 @@ export default function StandaloneDocuments() {
           </section>
         )}
 
+        <div className="mb-5 relative max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={`Search ${pageTitle.toLowerCase()} by title…`}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
@@ -426,9 +445,17 @@ export default function StandaloneDocuments() {
             <h2 className="font-semibold">No {pageTitle.toLowerCase()} yet</h2>
             <p className="mt-1 text-sm text-muted-foreground">Admin-uploaded PDFs will appear here as thumbnail cards.</p>
           </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+            <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+            <h2 className="font-semibold">No matches</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No {pageTitle.toLowerCase()} match “{searchQuery}”. Try another keyword.
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {documents.map((document, index) => {
+            {filteredDocuments.map((document, index) => {
               const thumbnailUrl = document.thumbnail_url;
               return (
                 <motion.article
@@ -475,20 +502,31 @@ export default function StandaloneDocuments() {
                       <span className="hidden sm:inline">Download</span>
                     </Button>
                     {isAdmin && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                        onClick={() => setPendingDelete(document)}
-                        disabled={deletingId === document.id}
-                        aria-label="Delete document"
-                      >
-                        {deletingId === document.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 w-9 p-0 shrink-0"
+                          onClick={() => openRename(document)}
+                          aria-label="Rename document"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+                          onClick={() => setPendingDelete(document)}
+                          disabled={deletingId === document.id}
+                          aria-label="Delete document"
+                        >
+                          {deletingId === document.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </motion.article>
