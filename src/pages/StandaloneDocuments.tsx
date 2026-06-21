@@ -574,6 +574,39 @@ export default function StandaloneDocuments() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={!!renameTarget} onOpenChange={(open) => !open && !renaming && setRenameTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename {activeSection?.category === "journal" ? "journal" : "book"}</DialogTitle>
+            <DialogDescription>
+              Update the displayed title. The file and URL stay the same.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !renaming) {
+                e.preventDefault();
+                void submitRename();
+              }
+            }}
+            placeholder="Document title"
+            autoFocus
+            disabled={renaming}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={renaming}>
+              Cancel
+            </Button>
+            <Button onClick={() => void submitRename()} disabled={renaming || !renameValue.trim()}>
+              {renaming && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <SmartBottomNav />
     </div>
   );
