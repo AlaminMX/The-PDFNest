@@ -188,8 +188,18 @@ Deno.serve(async (req) => {
       semester: p.pq_courses?.semester,
     }));
 
+    // Transform standalone documents (books & journals)
+    const standaloneDocuments = (standaloneRes.data || []).map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      category: s.category as "book" | "journal",
+      department_id: s.department_id,
+      department_slug: s.departments?.slug,
+      department_name: s.departments?.name,
+    }));
+
     return new Response(
-      JSON.stringify({ courses: courses.slice(0, 10), pqCourses, lectureNotes, pastQuestions }),
+      JSON.stringify({ courses: courses.slice(0, 10), pqCourses, lectureNotes, pastQuestions, standaloneDocuments }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
