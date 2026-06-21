@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     const codeWildcard = courseCodePattern ? `${sanitize(courseCodePattern)}%` : null;
 
     // Run all queries in parallel
-    const [coursesRes, pqCoursesRes, notesRes, pqFilesRes] = await Promise.all([
+    const [coursesRes, pqCoursesRes, notesRes, pqFilesRes, standaloneRes] = await Promise.all([
       // 1. Courses with department info
       supabase
         .from("courses")
