@@ -13,6 +13,7 @@ import { AdminBannerDisplay } from "@/components/AdminBannerDisplay";
 import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 import { ContributorStats } from "@/components/ContributorStats";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -88,6 +89,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function UserProfile() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [savingDept, setSavingDept] = useState(false);
@@ -101,11 +103,19 @@ export default function UserProfile() {
     return null;
   }, []);
 
+  // Redirect only once auth state is definitively known — never redirect
+  // (or render "not found") while the session is still being resolved.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      sessionStorage.setItem("redirectAfterLogin", "/profile");
+      navigate("/auth");
+    }
+  }, [authLoading, user, navigate]);
+
   const { data: profileData, isLoading, refetch } = useQuery({
-    queryKey: ["user-profile"],
+    queryKey: ["user-profile", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { sessionStorage.setItem("redirectAfterLogin", "/profile"); navigate("/auth"); return null; }
+      if (!user) return null;
 
       const { data, error } = await supabase.rpc("get_user_profile_summary", { p_user_id: user.id });
       if (error) throw error;
@@ -139,6 +149,7 @@ export default function UserProfile() {
       }
       return null;
     },
+    enabled: !authLoading && !!user,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     placeholderData: cachedProfile,
@@ -203,6 +214,8 @@ export default function UserProfile() {
     }
   };
 
+  if (authLoading) return <ProfileSkeleton />;
+  if (!user) return null; // redirect effect above is already handling this
   if (isLoading && !profile) return <ProfileSkeleton />;
   if (!profile) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -453,4 +466,4 @@ export default function UserProfile() {
       <SmartBottomNav />
     </div>
   );
-}
+    }
