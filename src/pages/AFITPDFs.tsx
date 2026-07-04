@@ -7,6 +7,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { motion } from "framer-motion";
 import { DepartmentTile } from "@/components/DepartmentTile";
+import { BookLoader } from "@/components/BookLoader";
+import { useImagePreload } from "@/hooks/useImagePreload";
 
 function AFITPDFsContent() {
   const navigate = useNavigate();
@@ -22,6 +24,13 @@ function AFITPDFsContent() {
   );
 
   const loading = deptLoading || facLoading;
+
+  const imageUrls = filteredDepartments.map((dept: any) => dept.background_image_url);
+  const imagesReady = useImagePreload(imageUrls);
+
+  if (!loading && !imagesReady) {
+    return <BookLoader message="Loading departments..." />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -113,4 +122,4 @@ function AFITPDFsContent() {
 
 export default function AFITPDFs() {
   return <AFITPDFsContent />;
-}
+                                      }
