@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Upload, Folder, Sparkles, Star, ChevronDown, ChevronUp, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Confetti } from "@/components/Confetti";
 
 interface ChecklistItem {
   id: string;
@@ -26,14 +25,12 @@ interface GettingStartedChecklistProps {
 
 export function GettingStartedChecklist({ completedItems, onDismiss, userId }: GettingStartedChecklistProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  
+
   const progress = (completedItems.length / CHECKLIST_ITEMS.length) * 100;
   const allComplete = completedItems.length === CHECKLIST_ITEMS.length;
 
   useEffect(() => {
     if (allComplete) {
-      setShowConfetti(true);
       const timer = setTimeout(() => {
         localStorage.setItem(`checklist-dismissed-${userId}`, 'true');
         onDismiss();
@@ -44,7 +41,6 @@ export function GettingStartedChecklist({ completedItems, onDismiss, userId }: G
 
   return (
     <>
-      {showConfetti && <Confetti />}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -141,4 +137,4 @@ export function GettingStartedChecklist({ completedItems, onDismiss, userId }: G
       </motion.div>
     </>
   );
-}
+          }
