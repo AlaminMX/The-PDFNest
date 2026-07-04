@@ -9,7 +9,6 @@ import {
   UserCog,
   Megaphone,
   Activity,
-  Clock,
   ShoppingBag,
   Inbox,
   FileText,
@@ -44,8 +43,7 @@ export function PageHeader({
     { label: "Departments", path: "/admin/departments", icon: Building2 },
     { label: "Reps", path: "/admin/reps", icon: UserCog },
     { label: "Banners", path: "/admin/banners", icon: Megaphone },
-    { label: "Activity", path: "/admin/logs", icon: Activity },
-    { label: "Sessions", path: "/admin/sessions", icon: Clock },
+    { label: "Activity", path: "/admin/activity", icon: Activity },
     { label: "Projects", path: "/admin/projects", icon: ShoppingBag },
     { label: "Uploads", path: "/admin/uploads", icon: Inbox },
     { label: "Past Questions", path: "/admin/past-questions", icon: FileText },
@@ -135,4 +133,4 @@ export function PageHeader({
       </header>
     </>
   );
-}
+                                               }
