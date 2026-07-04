@@ -16,7 +16,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { RamadanDecoration } from "@/components/RamadanDecoration";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -34,8 +33,7 @@ const AdminDepartments = lazy(() => import("./pages/AdminDepartments"));
 const AdminBanners = lazy(() => import("./pages/AdminBanners"));
 const AdminCategories = lazy(() => import("./pages/AdminCategories"));
 const AdminUserDetail = lazy(() => import("./pages/AdminUserDetail"));
-const AdminSessionLogs = lazy(() => import("./pages/AdminSessionLogs"));
-const AdminActivityLogs = lazy(() => import("./pages/AdminActivityLogs"));
+const AdminActivity = lazy(() => import("./pages/AdminActivity"));
 const AFITPDFs = lazy(() => import("./pages/AFITPDFs"));
 const FacultySelection = lazy(() => import("./pages/FacultySelection"));
 const AdminFaculties = lazy(() => import("./pages/AdminFaculties"));
@@ -135,7 +133,6 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <RamadanDecoration />
           <BrowserRouter>
             <RecoveryRedirect />
             <ActivityRouteTracker />
@@ -165,8 +162,7 @@ const App = () => (
                 <Route path="/admin/departments/:deptId/levels" element={<ProtectedRoute><AdminDepartmentLevels /></ProtectedRoute>} />
                 <Route path="/admin/banners" element={<ProtectedRoute><AdminBanners /></ProtectedRoute>} />
                 <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
-                <Route path="/admin/logs" element={<ProtectedRoute><AdminActivityLogs /></ProtectedRoute>} />
-                <Route path="/admin/sessions" element={<ProtectedRoute><AdminSessionLogs /></ProtectedRoute>} />
+                <Route path="/admin/activity" element={<ProtectedRoute><AdminActivity /></ProtectedRoute>} />
                 <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
                 <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
                 <Route path="/admin/projects" element={<ProtectedRoute><AdminProjects /></ProtectedRoute>} />
