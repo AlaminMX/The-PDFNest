@@ -193,45 +193,26 @@ export function useLectureNotes(courseId?: string) {
 
       if (uploadError) throw uploadError;
 
-      // Get the course level for denormalisation
-      const { data: courseData } = await supabase
-        .from("courses")
-        .select("level")
-        .eq("id", courseId)
-        .maybeSingle();
-
-      // Check for same-title in this course — append {2}, {3}, etc.
-      let finalTitle = title;
-      const { data: existingNotes } = await supabase
-        .from("lecture_notes")
-        .select("title")
-        .eq("course_id", courseId);
-      if (existingNotes && existingNotes.length > 0) {
-        const existingTitles = new Set(existingNotes.map((n: any) => n.title.toLowerCase()));
-        if (existingTitles.has(finalTitle.toLowerCase())) {
-          let counter = 2;
-          while (existingTitles.has(`${finalTitle} {${counter}}`.toLowerCase())) counter++;
-          finalTitle = `${finalTitle} {${counter}}`;
-        }
-      }
-
-      const insertPayload = {
-        p_course_id: courseId,
-        p_file_path: filePath,
-        p_title: finalTitle,
-        p_file_size: file.size,
-        p_uploaded_by_display: displayName,
-        p_material_type: materialType,
-        p_level: courseData?.level ?? 100,
-      };
-      console.debug("uploadNote insert payload", insertPayload);
-
-      const { error: insertError } = await supabase.rpc(
-        "create_rep_lecture_note" as any,
-        insertPayload as any,
+      // Insert the lecture note via the secure RPC. It handles duplicate-title
+      // numbering and enforces "rep must be in the same faculty as the target course".
+      const { data: newNoteId, error: insertError } = await supabase.rpc(
+        "rep_upload_lecture_note" as any,
+        {
+          _course_id: courseId,
+          _file_path: filePath,
+          _title: title,
+          _file_size: file.size,
+          _display_name: displayName,
+          _material_type: materialType,
+          _level: null,
+        } as any,
       );
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Roll back the orphaned storage object so we don't accrue garbage.
+        await supabase.storage.from("school_pdfs").remove([filePath]).catch(() => {});
+        throw insertError;
+      }
 
       // Update user storage
       await supabase.rpc("update_user_storage", {
@@ -245,7 +226,7 @@ export function useLectureNotes(courseId?: string) {
           body: {
             departmentId,
             courseCode,
-            noteTitle: finalTitle,
+            noteTitle: title,
             uploadedBy: displayName,
           },
         }).catch((err) => {
@@ -254,18 +235,53 @@ export function useLectureNotes(courseId?: string) {
         });
       }
 
-      toast.success("Lecture note uploaded successfully!");
       await fetchNotes();
-      
-      return true;
+
+      return { success: true, noteId: newNoteId as string | null };
     } catch (err) {
       console.error("Error uploading lecture note:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to upload lecture note";
-      toast.error(errorMessage);
-      return false;
+      return { success: false, error: errorMessage } as const;
     } finally {
       setUploading(false);
     }
+  };
+
+  /**
+   * Copy an existing lecture note into one or more departments, reusing the
+   * underlying storage object. Preserves the original uploader attribution.
+   * Returns per-destination outcomes from the secure RPC.
+   */
+  const copyNote = async (
+    sourceNoteId: string,
+    targetDepartmentIds: string[],
+    target: {
+      level: number;
+      semester: "first" | "second";
+      courseCode: string;
+      courseName: string;
+    },
+    titleOverride?: string,
+  ): Promise<
+    Array<{
+      department_id: string;
+      status: "copied" | "skipped" | "failed";
+      reason?: string;
+      note_id?: string;
+      course_id?: string;
+    }>
+  > => {
+    const { data, error } = await supabase.rpc("rep_copy_lecture_note" as any, {
+      _source_note_id: sourceNoteId,
+      _target_dept_ids: targetDepartmentIds,
+      _target_level: target.level,
+      _target_semester: target.semester,
+      _target_course_code: target.courseCode,
+      _target_course_name: target.courseName,
+      _title_override: titleOverride ?? null,
+    } as any);
+    if (error) throw error;
+    return (data as any[]) || [];
   };
 
   const incrementViews = async (noteId: string) => {
@@ -306,23 +322,32 @@ export function useLectureNotes(courseId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from("school_pdfs")
-        .remove([filePath]);
+      // How many lecture_notes reference this file? If > 1, other copies exist and
+      // we MUST NOT remove the storage object.
+      const { data: refCountData } = await supabase.rpc(
+        "file_path_reference_count" as any,
+        { _file_path: filePath } as any,
+      );
+      const refCount = typeof refCountData === "number" ? refCountData : 1;
 
-      if (storageError) {
-        console.error("Storage delete error:", storageError);
-        // Continue anyway to delete database record
-      }
-
-      // Delete from database
+      // Delete DB row first.
       const { error: deleteError } = await supabase
         .from("lecture_notes")
         .delete()
         .eq("id", noteId);
 
       if (deleteError) throw deleteError;
+
+      // Only remove the storage object when this was the last reference.
+      if (refCount <= 1) {
+        const { error: storageError } = await supabase.storage
+          .from("school_pdfs")
+          .remove([filePath]);
+        if (storageError) {
+          console.error("Storage delete error:", storageError);
+        }
+      }
+
 
       // Update user storage (subtract file size)
       await supabase.rpc("update_user_storage", {
@@ -379,6 +404,7 @@ export function useLectureNotes(courseId?: string) {
     uploading,
     converting,
     uploadNote,
+    copyNote,
     convertToPdf,
     incrementViews,
     getSignedUrl,

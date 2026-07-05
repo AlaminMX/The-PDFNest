@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRepStatus } from "@/hooks/useRepStatus";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +44,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ArrowLeft,
   Upload,
   CheckCircle,
   AlertCircle,
@@ -54,6 +53,7 @@ import {
   FileText,
   Files,
   Plus,
+  RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DisplayNamePrompt } from "@/components/DisplayNamePrompt";
@@ -82,20 +82,32 @@ const ACCEPT_TYPES = ".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.ppt,.pptx";
 interface FacultyDepartmentOption {
   id: string;
   name: string;
-  courseId: string | null;
+  courseId: string | null; // null → course does not exist in this dept yet
   courseCode: string | null;
   courseName: string | null;
+}
+
+type DestStatus = "pending" | "uploading" | "success" | "skipped" | "error";
+
+interface DestinationResult {
+  departmentId: string;
+  departmentName: string;
+  status: DestStatus;
+  error?: string;
 }
 
 interface FileUploadItem {
   id: string;
   file: File;
   title: string;
-  status: "pending" | "converting" | "uploading" | "success" | "error";
+  status: "pending" | "converting" | "uploading" | "success" | "partial" | "error";
   progress: number;
   error?: string;
-  convertedFile?: File;
+  destinations: DestinationResult[]; // populated when upload starts
+  filePath?: string; // set once storage upload finishes
 }
+
+const MAX_PARALLEL_DESTINATIONS = 3;
 
 export default function RepUpload() {
   const navigate = useNavigate();
@@ -121,7 +133,7 @@ export default function RepUpload() {
     selectedLevel,
     selectedSemester || undefined,
   );
-  const { uploadNote, convertToPdf } = useLectureNotes();
+  const { convertToPdf } = useLectureNotes();
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -130,20 +142,22 @@ export default function RepUpload() {
   const [showDisplayNamePrompt, setShowDisplayNamePrompt] = useState(false);
   const [showConversionDialog, setShowConversionDialog] = useState(false);
   const [pendingNonPdfFiles, setPendingNonPdfFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState({
-    completed: 0,
-    total: 0,
-  });
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
-  const [pendingForwardDepartment, setPendingForwardDepartment] =
-    useState<FacultyDepartmentOption | null>(null);
-  const [isCreatingForwardedCourse, setIsCreatingForwardedCourse] =
-    useState(false);
+
   const [facultyDepartmentOptions, setFacultyDepartmentOptions] = useState<
     FacultyDepartmentOption[]
   >([]);
   const [selectedTargetDepartmentIds, setSelectedTargetDepartmentIds] =
     useState<string[]>([]);
+
+  // Batched confirm for auto-creating the course in sibling departments.
+  const [pendingCreateInDepts, setPendingCreateInDepts] = useState<
+    FacultyDepartmentOption[] | null
+  >(null);
+  const [isCreatingCourses, setIsCreatingCourses] = useState(false);
+
+  // Success summary dialog.
+  const [summary, setSummary] = useState<FileUploadItem[] | null>(null);
 
   useEffect(() => {
     if (!repLoading && !isRep) {
@@ -190,61 +204,47 @@ export default function RepUpload() {
         .eq("is_visible", true)
         .order("name");
 
-      const departmentIds = (facultyDepartments || []).map(
-        (department) => department.id,
-      );
-      const selectedCourse = courses.find(
-        (course) => course.id === selectedCourseId,
-      );
+      const departmentIds = (facultyDepartments || []).map((d) => d.id);
+      const selectedCourse = courses.find((c) => c.id === selectedCourseId);
+      const normalizedCode = (selectedCourse?.code || "").trim().toUpperCase();
 
       const { data: matchingCourses } = await supabase
         .from("courses")
         .select("id, code, name, department_id")
-        .in(
-          "department_id",
-          departmentIds.length ? departmentIds : [departmentId],
-        )
-        .eq("level", selectedLevel)
-        .eq("semester", selectedSemester)
-        .ilike("code", selectedCourse?.code || "");
+        .in("department_id", departmentIds.length ? departmentIds : [departmentId])
+        .ilike("code", normalizedCode);
 
       const courseByDepartment = new Map(
-        (matchingCourses || []).map((course: any) => [
-          course.department_id,
-          course,
-        ]),
+        (matchingCourses || []).map((c: any) => [c.department_id, c]),
       );
-      const options = (facultyDepartments || []).map((department) => {
-        const matchingCourse = courseByDepartment.get(department.id);
-        return {
-          id: department.id,
-          name: department.name,
-          courseId: matchingCourse?.id || null,
-          courseCode: matchingCourse?.code || null,
-          courseName: matchingCourse?.name || null,
-        };
-      });
+      const options: FacultyDepartmentOption[] = (facultyDepartments || []).map(
+        (department) => {
+          const matchingCourse = courseByDepartment.get(department.id);
+          return {
+            id: department.id,
+            name: department.name,
+            courseId: matchingCourse?.id || null,
+            courseCode: matchingCourse?.code || null,
+            courseName: matchingCourse?.name || null,
+          };
+        },
+      );
 
       setFacultyDepartmentOptions(options);
       setSelectedTargetDepartmentIds((current) => {
-        const valid = new Set(
-          options
-            .filter((option) => option.courseId)
-            .map((option) => option.id),
-        );
-        const next = current.filter((id) => valid.has(id));
-        return next.length > 0 ? next : [departmentId];
+        // Preserve prior selection where still visible; fallback to home dept.
+        const visible = new Set(options.map((o) => o.id));
+        const kept = current.filter((id) => visible.has(id));
+        return kept.length > 0
+          ? kept
+          : departmentId
+            ? [departmentId]
+            : [];
       });
     };
 
     loadFacultyTargets();
-  }, [
-    departmentId,
-    selectedCourseId,
-    selectedLevel,
-    selectedSemester,
-    courses,
-  ]);
+  }, [departmentId, selectedCourseId, selectedLevel, selectedSemester, courses]);
 
   useEffect(() => {
     if (selectedLevel && !availableLevels.includes(selectedLevel as any)) {
@@ -253,9 +253,7 @@ export default function RepUpload() {
   }, [selectedLevel, availableLevels]);
 
   const generateTitle = useCallback((fileName: string, courseCode: string) => {
-    // Remove file extension and clean up the name
     const baseName = fileName.replace(/\.[^/.]+$/, "");
-    // If it looks like a generic name, use the date format
     if (baseName.toLowerCase().includes("document") || baseName.length < 3) {
       const today = new Date().toLocaleDateString();
       return `Lecture Notes — ${courseCode} — ${today}`;
@@ -263,44 +261,42 @@ export default function RepUpload() {
     return baseName;
   }, []);
 
-  const addFilesToQueue = useCallback((files: File[]) => {
-    if (files.length === 0) return;
+  const addFilesToQueue = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      const course = courses.find((c) => c.id === selectedCourseId);
+      const courseCode = course?.code || "COURSE";
 
-    const course = courses.find((c) => c.id === selectedCourseId);
-    const courseCode = course?.code || "COURSE";
+      const validFiles: File[] = [];
+      const nonPdfFiles: File[] = [];
+      files.forEach((file) => {
+        if (!SUPPORTED_TYPES.includes(file.type)) {
+          toast.error(`Unsupported file type: ${file.name}`);
+          return;
+        }
+        if (file.type === "application/pdf") validFiles.push(file);
+        else nonPdfFiles.push(file);
+      });
 
-    const validFiles: File[] = [];
-    const nonPdfFiles: File[] = [];
-
-    files.forEach((file) => {
-      if (!SUPPORTED_TYPES.includes(file.type)) {
-        toast.error(`Unsupported file type: ${file.name}`);
-        return;
+      if (validFiles.length > 0) {
+        const newItems: FileUploadItem[] = validFiles.map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          title: generateTitle(file.name, courseCode),
+          status: "pending",
+          progress: 0,
+          destinations: [],
+        }));
+        setFileQueue((prev) => [...prev, ...newItems]);
       }
 
-      if (file.type === "application/pdf") {
-        validFiles.push(file);
-      } else {
-        nonPdfFiles.push(file);
+      if (nonPdfFiles.length > 0) {
+        setPendingNonPdfFiles(nonPdfFiles);
+        setShowConversionDialog(true);
       }
-    });
-
-    if (validFiles.length > 0) {
-      const newItems: FileUploadItem[] = validFiles.map((file) => ({
-        id: crypto.randomUUID(),
-        file,
-        title: generateTitle(file.name, courseCode),
-        status: "pending" as const,
-        progress: 0,
-      }));
-      setFileQueue((prev) => [...prev, ...newItems]);
-    }
-
-    if (nonPdfFiles.length > 0) {
-      setPendingNonPdfFiles(nonPdfFiles);
-      setShowConversionDialog(true);
-    }
-  }, [courses, generateTitle, selectedCourseId]);
+    },
+    [courses, generateTitle, selectedCourseId],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     addFilesToQueue(Array.from(e.target.files || []));
@@ -311,25 +307,23 @@ export default function RepUpload() {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingFiles(false);
-    if (isProcessing || !selectedCourseId || !selectedSemester || !selectedLevel) return;
+    if (isProcessing || !selectedCourseId || !selectedSemester || !selectedLevel)
+      return;
     addFilesToQueue(Array.from(e.dataTransfer.files || []));
   };
 
-  const handleConversionAccept = async () => {
+  const handleConversionAccept = () => {
     setShowConversionDialog(false);
-
     const course = courses.find((c) => c.id === selectedCourseId);
     const courseCode = course?.code || "COURSE";
-
-    // Add non-PDF files to queue with pending status
     const newItems: FileUploadItem[] = pendingNonPdfFiles.map((file) => ({
       id: crypto.randomUUID(),
       file,
       title: generateTitle(file.name, courseCode),
-      status: "pending" as const,
+      status: "pending",
       progress: 0,
+      destinations: [],
     }));
-
     setFileQueue((prev) => [...prev, ...newItems]);
     setPendingNonPdfFiles([]);
   };
@@ -339,177 +333,437 @@ export default function RepUpload() {
     setPendingNonPdfFiles([]);
   };
 
-  const removeFromQueue = (id: string) => {
-    setFileQueue((prev) => prev.filter((item) => item.id !== id));
-  };
+  const removeFromQueue = (id: string) =>
+    setFileQueue((prev) => prev.filter((i) => i.id !== id));
 
-  const updateTitle = (id: string, newTitle: string) => {
+  const updateTitle = (id: string, newTitle: string) =>
     setFileQueue((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, title: newTitle } : item,
+      prev.map((i) => (i.id === id ? { ...i, title: newTitle } : i)),
+    );
+
+  const patchItem = (id: string, patch: Partial<FileUploadItem>) =>
+    setFileQueue((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+
+  const patchDestination = (
+    itemId: string,
+    deptId: string,
+    patch: Partial<DestinationResult>,
+  ) =>
+    setFileQueue((prev) =>
+      prev.map((i) =>
+        i.id === itemId
+          ? {
+              ...i,
+              destinations: i.destinations.map((d) =>
+                d.departmentId === deptId ? { ...d, ...patch } : d,
+              ),
+            }
+          : i,
       ),
     );
-  };
 
-  const updateItemStatus = (
-    id: string,
-    status: FileUploadItem["status"],
-    error?: string,
-  ) => {
-    setFileQueue((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status, error } : item)),
+  const toggleTargetDepartment = (option: FacultyDepartmentOption) => {
+    if (isProcessing) return;
+    setSelectedTargetDepartmentIds((current) =>
+      current.includes(option.id)
+        ? current.filter((id) => id !== option.id)
+        : [...current, option.id],
     );
   };
 
-  const updateItemProgress = (id: string, progress: number) => {
-    setFileQueue((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, progress: Math.max(0, Math.min(100, progress)) } : item,
-      ),
-    );
+  const selectAllTargetDepartments = () => {
+    setSelectedTargetDepartmentIds(facultyDepartmentOptions.map((o) => o.id));
   };
 
-  const handleUploadAll = async () => {
-    if (!selectedCourseId || fileQueue.length === 0 || !displayName) {
-      toast.error("Please select a course and add files");
-      return;
+  const selectOwnDepartmentOnly = () =>
+    setSelectedTargetDepartmentIds(departmentId ? [departmentId] : []);
+
+  const pendingFiles = fileQueue.filter((f) => f.status !== "success");
+
+  const selectedTargetCount =
+    facultyDepartmentOptions.length > 0
+      ? selectedTargetDepartmentIds.length
+      : 1;
+
+  const canUpload =
+    selectedCourseId &&
+    selectedSemester &&
+    selectedLevel &&
+    pendingFiles.length > 0 &&
+    selectedTargetCount > 0 &&
+    !isProcessing;
+
+  const activeCourse = useMemo(
+    () => courses.find((c) => c.id === selectedCourseId),
+    [courses, selectedCourseId],
+  );
+
+  /**
+   * Build the ordered list of destinations for the current upload batch.
+   * Every entry references a real (dept, courseId) pair.
+   */
+  const resolveDestinations = async (): Promise<
+    | { ok: true; destinations: Array<{ id: string; name: string; courseId: string }> }
+    | { ok: false }
+  > => {
+    // Case 1: no cross-faculty context loaded — just the home dept + selected course.
+    if (facultyDepartmentOptions.length === 0) {
+      if (!departmentId || !activeCourse) return { ok: false };
+      return {
+        ok: true,
+        destinations: [
+          {
+            id: departmentId,
+            name: departmentName || "",
+            courseId: activeCourse.id,
+          },
+        ],
+      };
     }
 
-    const course = courses.find((c) => c.id === selectedCourseId);
-    if (!course || !departmentName) {
-      toast.error("Course information not found");
-      return;
-    }
+    const chosen = facultyDepartmentOptions.filter((o) =>
+      selectedTargetDepartmentIds.includes(o.id),
+    );
+    const missing = chosen.filter((o) => !o.courseId);
 
-    setIsProcessing(true);
-    const uploadTargets =
-      facultyDepartmentOptions.length > 0
-        ? facultyDepartmentOptions.filter(
-            (option) =>
-              selectedTargetDepartmentIds.includes(option.id) &&
-              option.courseId,
-          )
-        : [
-            {
-              id: departmentId || "",
-              name: departmentName,
-              courseId: selectedCourseId,
-              courseCode: course.code,
-              courseName: course.name,
-            },
-          ];
+    // If any chosen destination is missing the course, ask ONCE, create in parallel.
+    if (missing.length > 0) {
+      // Show confirm and wait for the user.
+      const proceed = await new Promise<boolean>((resolve) => {
+        setPendingCreateInDepts(missing);
+        // Store the resolver on the state via a closure trick: we listen
+        // for setPendingCreateInDepts(null) with the outcome captured below.
+        (window as any).__repUploadCreateResolver = resolve;
+      });
+      if (!proceed) return { ok: false };
 
-    console.debug("RepUpload selected upload targets", uploadTargets.map((target) => ({
-      departmentId: target.id,
-      departmentName: target.name,
-      courseId: target.courseId,
-      courseCode: target.courseCode,
-    })));
-
-    if (uploadTargets.length === 0) {
-      toast.error("Select at least one department with this course available.");
-      setIsProcessing(false);
-      return;
-    }
-
-    const uploadableItems = fileQueue.filter((item) => item.status !== "success");
-    setUploadProgress({ completed: 0, total: uploadableItems.length * uploadTargets.length });
-
-    let successCount = 0;
-    let errorCount = 0;
-    let cursor = 0;
-    const concurrency = Math.min(3, uploadableItems.length);
-
-    const processItem = async (item: FileUploadItem) => {
-      let progressTimer: ReturnType<typeof setInterval> | undefined;
+      // Create in parallel via ensure_course.
+      setIsCreatingCourses(true);
       try {
-        let fileToUpload = item.file;
-        updateItemProgress(item.id, 5);
-
-        if (item.file.type !== "application/pdf") {
-          updateItemStatus(item.id, "converting");
-          updateItemProgress(item.id, 15);
-          const converted = await convertToPdf(item.file);
-          if (!converted) throw new Error("Conversion failed");
-          fileToUpload = converted;
-          updateItemProgress(item.id, 30);
-        }
-
-        updateItemStatus(item.id, "uploading");
-        progressTimer = setInterval(() => {
-          setFileQueue((prev) =>
-            prev.map((queued) =>
-              queued.id === item.id && queued.progress < 90
-                ? { ...queued, progress: queued.progress + Math.random() * 8 + 2 }
-                : queued,
-            ),
+        const results = await Promise.all(
+          missing.map(async (dep) => {
+            const { data, error } = await supabase.rpc(
+              "ensure_course" as any,
+              {
+                _dept_id: dep.id,
+                _code: activeCourse!.code,
+                _name: activeCourse!.name,
+                _level: selectedLevel,
+                _semester: selectedSemester,
+                _credit_units: activeCourse!.credit_units || 0,
+              } as any,
+            );
+            return { dep, courseId: (data as string) || null, error };
+          }),
+        );
+        const failed = results.filter((r) => r.error || !r.courseId);
+        if (failed.length > 0) {
+          toast.error(
+            `Couldn't create the course in ${failed.map((f) => f.dep.name).join(", ")}`,
           );
-        }, 350);
-
-        let itemSucceeded = false;
-        let completedTargets = 0;
-        for (const target of uploadTargets) {
-          console.debug("RepUpload uploading target", {
-            targetDepartmentId: target.id,
-            targetCourseId: target.courseId,
-          });
-          const success = await uploadNote(
-            target.courseId!,
-            target.courseCode || course.code,
-            target.name || departmentName,
-            fileToUpload,
-            item.title.trim(),
-            displayName,
-            target.id || undefined,
-            selectedMaterialType,
-            departmentName,
-          );
-          completedTargets += 1;
-          updateItemProgress(item.id, 30 + (completedTargets / uploadTargets.length) * 65);
-          if (success) {
-            itemSucceeded = true;
-            successCount++;
-          } else {
-            errorCount++;
-          }
-          setUploadProgress((prev) => ({ ...prev, completed: prev.completed + 1 }));
         }
-
-        if (!itemSucceeded) throw new Error("Upload failed");
-        updateItemStatus(item.id, "success");
-        updateItemProgress(item.id, 100);
-      } catch (err) {
-        updateItemStatus(item.id, "error", err instanceof Error ? err.message : "Unknown error");
-        errorCount++;
+        // Merge new courseIds into local options.
+        setFacultyDepartmentOptions((current) =>
+          current.map((o) => {
+            const hit = results.find((r) => r.dep.id === o.id && r.courseId);
+            return hit
+              ? {
+                  ...o,
+                  courseId: hit.courseId!,
+                  courseCode: activeCourse!.code,
+                  courseName: activeCourse!.name,
+                }
+              : o;
+          }),
+        );
+        // Rebuild "chosen" using the updated map.
+        const readyMap = new Map<string, string>();
+        results.forEach((r) => {
+          if (r.courseId) readyMap.set(r.dep.id, r.courseId);
+        });
+        const destinations = chosen
+          .map((o) => {
+            const cid = o.courseId || readyMap.get(o.id);
+            return cid ? { id: o.id, name: o.name, courseId: cid } : null;
+          })
+          .filter(Boolean) as Array<{ id: string; name: string; courseId: string }>;
+        return destinations.length > 0
+          ? { ok: true, destinations }
+          : { ok: false };
       } finally {
-        if (progressTimer) clearInterval(progressTimer);
+        setIsCreatingCourses(false);
+      }
+    }
+
+    const destinations = chosen
+      .filter((o) => o.courseId)
+      .map((o) => ({ id: o.id, name: o.name, courseId: o.courseId! }));
+    return destinations.length > 0
+      ? { ok: true, destinations }
+      : { ok: false };
+  };
+
+  /**
+   * Upload one file: convert if needed → put in storage ONCE →
+   * fan out to every destination via rep_upload_lecture_note in parallel.
+   */
+  const processItem = async (
+    item: FileUploadItem,
+    destinations: Array<{ id: string; name: string; courseId: string }>,
+    storageFolderName: string,
+  ) => {
+    // Seed destinations state.
+    const seededDestinations: DestinationResult[] = destinations.map((d) => ({
+      departmentId: d.id,
+      departmentName: d.name,
+      status: "pending",
+    }));
+    patchItem(item.id, {
+      destinations: seededDestinations,
+      status: "converting",
+      progress: 5,
+      error: undefined,
+    });
+
+    let fileToUpload = item.file;
+    try {
+      if (item.file.type !== "application/pdf") {
+        const converted = await convertToPdf(item.file);
+        if (!converted) throw new Error("Conversion failed");
+        fileToUpload = converted;
+      }
+    } catch (err) {
+      patchItem(item.id, {
+        status: "error",
+        error: err instanceof Error ? err.message : "Conversion failed",
+      });
+      return;
+    }
+
+    // Storage upload — ONCE per file, not per destination.
+    patchItem(item.id, { status: "uploading", progress: 20 });
+    const primaryCourseCode = activeCourse?.code || "COURSE";
+    const filePath = `${storageFolderName}/${primaryCourseCode}/lecture_notes/${crypto.randomUUID()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from("school_pdfs")
+      .upload(filePath, fileToUpload);
+    if (uploadError) {
+      patchItem(item.id, {
+        status: "error",
+        error: uploadError.message || "Storage upload failed",
+      });
+      return;
+    }
+    patchItem(item.id, { progress: 45, filePath });
+
+    // Fan out to destinations with bounded parallelism.
+    const runDestination = async (
+      dest: { id: string; name: string; courseId: string },
+    ) => {
+      patchDestination(item.id, dest.id, { status: "uploading" });
+      const { error } = await supabase.rpc("rep_upload_lecture_note" as any, {
+        _course_id: dest.courseId,
+        _file_path: filePath,
+        _title: item.title.trim(),
+        _file_size: fileToUpload.size,
+        _display_name: displayName,
+        _material_type: selectedMaterialType,
+        _level: selectedLevel,
+      } as any);
+      if (error) {
+        patchDestination(item.id, dest.id, {
+          status: "error",
+          error: error.message || "Insert failed",
+        });
+      } else {
+        patchDestination(item.id, dest.id, { status: "success" });
+        // Fire notifications for that dept (non-blocking).
+        supabase.functions
+          .invoke("notify-department-users", {
+            body: {
+              departmentId: dest.id,
+              courseCode: primaryCourseCode,
+              noteTitle: item.title.trim(),
+              uploadedBy: displayName,
+            },
+          })
+          .catch(() => {});
       }
     };
 
+    const queue = [...destinations];
+    let done = 0;
     await Promise.all(
-      Array.from({ length: concurrency }, async () => {
-        while (cursor < uploadableItems.length) {
-          const item = uploadableItems[cursor++];
-          await processItem(item);
+      Array.from({ length: Math.min(MAX_PARALLEL_DESTINATIONS, queue.length) }, async () => {
+        while (queue.length > 0) {
+          const next = queue.shift();
+          if (!next) return;
+          await runDestination(next);
+          done += 1;
+          patchItem(item.id, {
+            progress: 45 + Math.round((done / destinations.length) * 55),
+          });
         }
       }),
     );
 
-    setIsProcessing(false);
+    // Compute overall status from destination outcomes.
+    setFileQueue((prev) =>
+      prev.map((i) => {
+        if (i.id !== item.id) return i;
+        const ok = i.destinations.filter((d) => d.status === "success").length;
+        const bad = i.destinations.filter((d) => d.status === "error").length;
+        const total = i.destinations.length;
+        let status: FileUploadItem["status"] = "error";
+        if (ok === total) status = "success";
+        else if (ok > 0) status = "partial";
+        // Update storage counter once per file (we only put the object once).
+        if (ok > 0 && user) {
+          void supabase
+            .rpc("update_user_storage", {
+              p_user_id: user.id,
+              p_size_delta: fileToUpload.size,
+            })
+            .then(() => {}, () => {});
+        }
+        return {
+          ...i,
+          status,
+          progress: 100,
+          error: bad > 0 ? `${bad} destination(s) failed` : undefined,
+        };
+      }),
+    );
+  };
 
-    if (successCount > 0 && errorCount === 0) {
-      toast.success(`Successfully uploaded ${successCount} file${successCount > 1 ? "s" : ""}!`);
-      setTimeout(() => setFileQueue((prev) => prev.filter((item) => item.status !== "success")), 2000);
-    } else if (successCount > 0) {
-      toast.warning(`Uploaded ${successCount} file${successCount > 1 ? "s" : ""}, ${errorCount} failed`);
-    } else if (errorCount > 0) {
-      toast.error(`Failed to upload ${errorCount} file${errorCount > 1 ? "s" : ""}`);
+  const handleUploadAll = async () => {
+    if (!displayName) {
+      toast.error("Set a display name first.");
+      return;
+    }
+    if (!activeCourse || !departmentName) {
+      toast.error("Select a course first.");
+      return;
+    }
+    const uploadable = fileQueue.filter(
+      (i) => i.status === "pending" || i.status === "error" || i.status === "partial",
+    );
+    if (uploadable.length === 0) {
+      toast.error("Add at least one file.");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const resolved = await resolveDestinations();
+      if (!resolved.ok) {
+        setIsProcessing(false);
+        return;
+      }
+      // Process files sequentially (each fans out internally). This keeps memory low
+      // on large batches and gives clean per-file progress.
+      for (const item of uploadable) {
+        await processItem(item, resolved.destinations, departmentName);
+      }
+
+      const successCount = fileQueue.filter((i) => i.status === "success").length;
+      const partialCount = fileQueue.filter((i) => i.status === "partial").length;
+      const errorCount = fileQueue.filter((i) => i.status === "error").length;
+
+      // Show summary using the freshest state on next tick.
+      setTimeout(() => {
+        setFileQueue((current) => {
+          setSummary(current);
+          return current;
+        });
+      }, 50);
+
+      if (errorCount === 0 && partialCount === 0 && successCount > 0) {
+        toast.success(`Uploaded ${successCount} file${successCount > 1 ? "s" : ""}`);
+      } else if (errorCount > 0) {
+        toast.warning(`${errorCount} upload${errorCount > 1 ? "s" : ""} failed`);
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const clearQueue = () => {
-    setFileQueue([]);
+  const retryDestinationsForItem = async (itemId: string) => {
+    const item = fileQueue.find((i) => i.id === itemId);
+    if (!item || !item.filePath) return;
+    const failed = item.destinations.filter((d) => d.status === "error");
+    if (failed.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      for (const dest of failed) {
+        // We need the course id for this destination. Look it up from options.
+        const option = facultyDepartmentOptions.find(
+          (o) => o.id === dest.departmentId,
+        );
+        let courseId = option?.courseId || null;
+        if (!courseId && activeCourse) {
+          const { data } = await supabase.rpc("ensure_course" as any, {
+            _dept_id: dest.departmentId,
+            _code: activeCourse.code,
+            _name: activeCourse.name,
+            _level: selectedLevel,
+            _semester: selectedSemester,
+            _credit_units: activeCourse.credit_units || 0,
+          } as any);
+          courseId = (data as string) || null;
+        }
+        if (!courseId) {
+          patchDestination(itemId, dest.departmentId, {
+            status: "error",
+            error: "Missing target course",
+          });
+          continue;
+        }
+        patchDestination(itemId, dest.departmentId, {
+          status: "uploading",
+          error: undefined,
+        });
+        const { error } = await supabase.rpc("rep_upload_lecture_note" as any, {
+          _course_id: courseId,
+          _file_path: item.filePath,
+          _title: item.title.trim(),
+          _file_size: item.file.size,
+          _display_name: displayName,
+          _material_type: selectedMaterialType,
+          _level: selectedLevel,
+        } as any);
+        patchDestination(
+          itemId,
+          dest.departmentId,
+          error
+            ? { status: "error", error: error.message || "Insert failed" }
+            : { status: "success" },
+        );
+      }
+      // Recompute status
+      setFileQueue((prev) =>
+        prev.map((i) => {
+          if (i.id !== itemId) return i;
+          const ok = i.destinations.filter((d) => d.status === "success").length;
+          const bad = i.destinations.filter((d) => d.status === "error").length;
+          const total = i.destinations.length;
+          let status: FileUploadItem["status"] = "error";
+          if (ok === total) status = "success";
+          else if (ok > 0) status = "partial";
+          return {
+            ...i,
+            status,
+            error: bad > 0 ? `${bad} destination(s) failed` : undefined,
+          };
+        }),
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  const clearQueue = () => setFileQueue([]);
 
   if (repLoading || coursesLoading) {
     return (
@@ -520,106 +774,8 @@ export default function RepUpload() {
     );
   }
 
-  const pendingFiles = fileQueue.filter((f) => f.status === "pending");
-  const selectedTargetCount =
-    facultyDepartmentOptions.length > 0
-      ? selectedTargetDepartmentIds.length
-      : 1;
-  const canUpload =
-    selectedCourseId &&
-    selectedSemester &&
-    selectedLevel &&
-    pendingFiles.length > 0 &&
-    selectedTargetCount > 0 &&
-    !isProcessing;
-
-  const confirmCreateForwardedCourse = async () => {
-    const departmentOption = pendingForwardDepartment;
-    if (!departmentOption) return;
-    const sourceCourse = courses.find((item) => item.id === selectedCourseId);
-    if (!sourceCourse) {
-      setPendingForwardDepartment(null);
-      return;
-    }
-    setIsCreatingForwardedCourse(true);
-    try {
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from("courses")
-        .insert({
-          department_id: departmentOption.id,
-          code: sourceCourse.code,
-          name: sourceCourse.name,
-          level: selectedLevel,
-          semester: selectedSemester,
-          status: "approved",
-          suggested_by: currentUser?.id,
-        } as any)
-        .select("id, code, name")
-        .single();
-      if (error) {
-        toast.error(error.message || "Could not create course");
-        return;
-      }
-      setFacultyDepartmentOptions((current) =>
-        current.map((option) =>
-          option.id === departmentOption.id
-            ? {
-                ...option,
-                courseId: data.id,
-                courseCode: data.code,
-                courseName: data.name,
-              }
-            : option,
-        ),
-      );
-      setSelectedTargetDepartmentIds((current) =>
-        Array.from(new Set([...current, departmentOption.id])),
-      );
-      toast.success(`${sourceCourse.code} created in ${departmentOption.name}`);
-    } finally {
-      setIsCreatingForwardedCourse(false);
-      setPendingForwardDepartment(null);
-    }
-  };
-
-  const toggleTargetDepartment = (
-    departmentOption: FacultyDepartmentOption,
-  ) => {
-    if (isProcessing) return;
-    if (!departmentOption.courseId) {
-      // Never gate this on window.confirm() — it's a documented no-op in
-      // iOS standalone PWA mode (this app's manifest sets display: "standalone"),
-      // which is exactly how phone-first students run this. A silently
-      // no-op confirm() means the department quietly never gets selected,
-      // and the rep sees a false "uploaded successfully" while other
-      // departments got nothing. Use an in-app dialog instead.
-      setPendingForwardDepartment(departmentOption);
-      return;
-    }
-    setSelectedTargetDepartmentIds((current) =>
-      current.includes(departmentOption.id)
-        ? current.filter((id) => id !== departmentOption.id)
-        : [...current, departmentOption.id],
-    );
-  };
-
-  const selectAllTargetDepartments = () => {
-    const ready = facultyDepartmentOptions.filter((option) => option.courseId);
-    const needsSetup = facultyDepartmentOptions.filter((option) => !option.courseId);
-    setSelectedTargetDepartmentIds(ready.map((option) => option.id));
-    if (needsSetup.length > 0) {
-      toast.info(
-        `${needsSetup.length} department${needsSetup.length > 1 ? "s don't" : " doesn't"} have this course set up yet — tap ${needsSetup.length > 1 ? "them" : "it"} individually to create ${needsSetup.length > 1 ? "them" : "it"} and include ${needsSetup.length > 1 ? "them" : "it"}.`,
-      );
-    }
-  };
-
-  const selectOwnDepartmentOnly = () => {
-    setSelectedTargetDepartmentIds(departmentId ? [departmentId] : []);
-  };
+  const filesCount = pendingFiles.length;
+  const destsCount = selectedTargetCount;
 
   return (
     <>
@@ -640,17 +796,13 @@ export default function RepUpload() {
         initialLevel={selectedLevel}
         initialSemester={(selectedSemester as "first" | "second") || "first"}
         onCreated={(newId) => {
-          // Refresh course list and auto-select the new course if levels/sem match
           refreshCourses();
           setSelectedCourseId(newId);
         }}
       />
 
       {/* Conversion Dialog */}
-      <Dialog
-        open={showConversionDialog}
-        onOpenChange={setShowConversionDialog}
-      >
+      <Dialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -659,7 +811,7 @@ export default function RepUpload() {
               {pendingNonPdfFiles.length > 1 ? "s" : ""} to PDF?
             </DialogTitle>
             <DialogDescription>
-              The following files are not PDFs and will be converted:
+              These files aren't PDFs and will be converted before upload:
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 max-h-40 overflow-y-auto">
@@ -674,8 +826,7 @@ export default function RepUpload() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Supported conversions: Images (PNG, JPG), Text files, Word
-              documents, and PowerPoint files.
+              Supported: Images (PNG, JPG), TXT, Word, PowerPoint.
             </AlertDescription>
           </Alert>
           <DialogFooter>
@@ -687,42 +838,107 @@ export default function RepUpload() {
         </DialogContent>
       </Dialog>
 
-      {/* Forward-to-department course creation confirmation — deliberately NOT
-          a window.confirm(), which is a documented no-op in iOS standalone
-          PWA mode and was silently dropping cross-department forwards. */}
+      {/* Single batched confirm dialog for auto-creating the course in sibling depts */}
       <AlertDialog
-        open={!!pendingForwardDepartment}
+        open={!!pendingCreateInDepts}
         onOpenChange={(open) => {
-          if (!open && !isCreatingForwardedCourse) {
-            setPendingForwardDepartment(null);
+          if (!open && !isCreatingCourses) {
+            (window as any).__repUploadCreateResolver?.(false);
+            (window as any).__repUploadCreateResolver = undefined;
+            setPendingCreateInDepts(null);
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Create this course to forward the upload?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Create {activeCourse?.code || "this course"} in{" "}
+              {pendingCreateInDepts?.length || 0} department
+              {(pendingCreateInDepts?.length || 0) === 1 ? "" : "s"}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {courses.find((c) => c.id === selectedCourseId)?.code || "This course"} isn't
-              set up yet in {pendingForwardDepartment?.name || "that department"}. Create it
-              there so this upload can go to that department too.
+              {(pendingCreateInDepts || [])
+                .map((d) => d.name)
+                .join(", ")}
+              {" "}
+              don't have this course yet. We'll create it and continue the
+              upload automatically.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCreatingForwardedCourse}>
-              Cancel
+            <AlertDialogCancel disabled={isCreatingCourses}>
+              Skip these
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={isCreatingForwardedCourse}
+              disabled={isCreatingCourses}
               onClick={(e) => {
                 e.preventDefault();
-                void confirmCreateForwardedCourse();
+                (window as any).__repUploadCreateResolver?.(true);
+                (window as any).__repUploadCreateResolver = undefined;
+                setPendingCreateInDepts(null);
               }}
             >
-              {isCreatingForwardedCourse ? "Creating..." : "Create & Add"}
+              {isCreatingCourses ? "Creating…" : "Create & Continue"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Summary Dialog */}
+      <Dialog
+        open={!!summary}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSummary(null);
+            // Prune successful items after the user closes the summary.
+            setFileQueue((prev) => prev.filter((i) => i.status !== "success"));
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload complete</DialogTitle>
+            <DialogDescription>
+              {summary?.length || 0} file{(summary?.length || 0) === 1 ? "" : "s"} processed
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto space-y-3">
+            {(summary || []).map((item) => (
+              <div key={item.id} className="rounded-lg border p-3">
+                <p className="font-medium text-sm truncate">{item.title}</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {item.destinations.map((d) => (
+                    <li key={d.departmentId} className="flex items-center gap-2">
+                      {d.status === "success" ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                      ) : d.status === "error" ? (
+                        <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                      ) : (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      )}
+                      <span
+                        className={
+                          d.status === "success"
+                            ? "text-foreground"
+                            : d.status === "error"
+                              ? "text-red-600"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {d.departmentName}
+                        {d.status === "error" && d.error ? ` — ${d.error}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSummary(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-24">
         <PageHeader
@@ -740,7 +956,7 @@ export default function RepUpload() {
                 Batch Upload
               </CardTitle>
               <CardDescription>
-                Upload multiple lecture notes at once to your department
+                Upload one file to multiple departments in your faculty in a single go.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -860,8 +1076,9 @@ export default function RepUpload() {
                         Departments to receive this upload
                       </Label>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Choose departments in your faculty that offer{" "}
-                        {courses.find((c) => c.id === selectedCourseId)?.code || "this course"}.
+                        Pick any departments in your faculty. If they don't
+                        have {activeCourse?.code || "this course"} yet, we'll
+                        create it there.
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-2">
@@ -901,15 +1118,13 @@ export default function RepUpload() {
                             checked
                               ? "border-primary bg-primary/5"
                               : "border-border bg-background hover:border-primary/50"
-                          } ${!option.courseId ? "opacity-80" : ""}`}
+                          }`}
                         >
                           <div className="flex items-start gap-3">
                             <span
                               className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
                             >
-                              {checked && (
-                                <CheckCircle className="h-3.5 w-3.5" />
-                              )}
+                              {checked && <CheckCircle className="h-3.5 w-3.5" />}
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-medium text-foreground">
@@ -919,7 +1134,7 @@ export default function RepUpload() {
                               <span className="block text-xs text-muted-foreground">
                                 {option.courseId
                                   ? `${option.courseCode} — ${option.courseName}`
-                                  : `No matching ${courses.find((c) => c.id === selectedCourseId)?.code || "course"} course — click to create it here`}
+                                  : `Will create ${activeCourse?.code || "this course"} here on upload`}
                               </span>
                             </span>
                           </div>
@@ -933,11 +1148,22 @@ export default function RepUpload() {
               {/* File Input */}
               <div className="space-y-2">
                 <Label htmlFor="files">Add Files</Label>
-                <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDraggingFiles ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
-                  onDragEnter={(e) => { e.preventDefault(); setIsDraggingFiles(true); }}
-                  onDragOver={(e) => { e.preventDefault(); setIsDraggingFiles(true); }}
-                  onDragLeave={(e) => { e.preventDefault(); setIsDraggingFiles(false); }}
-                  onDrop={handleDrop}>
+                <div
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDraggingFiles ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    setIsDraggingFiles(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDraggingFiles(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDraggingFiles(false);
+                  }}
+                  onDrop={handleDrop}
+                >
                   <Input
                     id="files"
                     type="file"
@@ -966,8 +1192,7 @@ export default function RepUpload() {
                           : "Select a course first"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        PDF, Images, TXT, DOC, DOCX, PPT, PPTX • Multiple files
-                        supported
+                        PDF, Images, TXT, DOC, DOCX, PPT, PPTX • Multiple files supported
                       </p>
                     </div>
                   </label>
@@ -993,24 +1218,7 @@ export default function RepUpload() {
                     )}
                   </div>
 
-                  {isProcessing && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Uploading...</span>
-                        <span>
-                          {uploadProgress.completed}/{uploadProgress.total}
-                        </span>
-                      </div>
-                      <Progress
-                        value={
-                          (uploadProgress.completed / uploadProgress.total) *
-                          100
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <ScrollArea className="max-h-80">
+                  <ScrollArea className="max-h-96">
                     <div className="space-y-2 pr-4">
                       <AnimatePresence mode="popLayout">
                         {fileQueue.map((item) => (
@@ -1024,7 +1232,9 @@ export default function RepUpload() {
                                 ? "border-green-500/50 bg-green-50 dark:bg-green-950/20"
                                 : item.status === "error"
                                   ? "border-red-500/50 bg-red-50 dark:bg-red-950/20"
-                                  : "border-border bg-muted/30"
+                                  : item.status === "partial"
+                                    ? "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20"
+                                    : "border-border bg-muted/30"
                             }`}
                           >
                             <div className="flex items-start gap-3">
@@ -1034,7 +1244,9 @@ export default function RepUpload() {
                                     ? "bg-green-500/20"
                                     : item.status === "error"
                                       ? "bg-red-500/20"
-                                      : "bg-primary/10"
+                                      : item.status === "partial"
+                                        ? "bg-amber-500/20"
+                                        : "bg-primary/10"
                                 }`}
                               >
                                 {item.status === "success" ? (
@@ -1053,9 +1265,7 @@ export default function RepUpload() {
                                 {item.status === "pending" && !isProcessing ? (
                                   <Input
                                     value={item.title}
-                                    onChange={(e) =>
-                                      updateTitle(item.id, e.target.value)
-                                    }
+                                    onChange={(e) => updateTitle(item.id, e.target.value)}
                                     className="h-8 text-sm"
                                     placeholder="Enter title"
                                   />
@@ -1069,29 +1279,56 @@ export default function RepUpload() {
                                     {item.file.name}
                                   </p>
                                   <span className="text-xs text-muted-foreground">
-                                    (
-                                    {(item.file.size / (1024 * 1024)).toFixed(
-                                      2,
-                                    )}{" "}
-                                    MB)
+                                    ({(item.file.size / (1024 * 1024)).toFixed(2)} MB)
                                   </span>
                                 </div>
-                                {item.status === "converting" && (
-                                  <p className="text-xs text-primary mt-1">
-                                    Converting to PDF...
-                                  </p>
+                                {(item.status === "uploading" ||
+                                  item.status === "converting") && (
+                                  <Progress value={item.progress} className="mt-2 h-1.5" />
                                 )}
-                                {item.status === "uploading" && (
-                                  <p className="text-xs text-primary mt-1">
-                                    Uploading...
-                                  </p>
+                                {item.destinations.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {item.destinations.map((d) => (
+                                      <span
+                                        key={d.departmentId}
+                                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
+                                          d.status === "success"
+                                            ? "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400"
+                                            : d.status === "error"
+                                              ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400"
+                                              : d.status === "uploading"
+                                                ? "border-primary/30 bg-primary/10 text-primary"
+                                                : "border-border bg-muted text-muted-foreground"
+                                        }`}
+                                        title={d.error || d.departmentName}
+                                      >
+                                        {d.status === "success" && (
+                                          <CheckCircle className="w-3 h-3" />
+                                        )}
+                                        {d.status === "error" && (
+                                          <AlertCircle className="w-3 h-3" />
+                                        )}
+                                        {d.status === "uploading" && (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        )}
+                                        {d.departmentName}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
-                                <Progress value={item.progress} className="mt-2 h-1.5" />
-                                <p className="mt-1 text-xs text-muted-foreground">{Math.round(item.progress)}% · {item.status}</p>
                                 {item.error && (
-                                  <p className="text-xs text-red-600 mt-1">
-                                    {item.error}
-                                  </p>
+                                  <p className="text-xs text-red-600 mt-1">{item.error}</p>
+                                )}
+                                {item.status === "partial" && !isProcessing && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 h-7 text-xs gap-1"
+                                    onClick={() => retryDestinationsForItem(item.id)}
+                                  >
+                                    <RotateCw className="w-3 h-3" />
+                                    Retry failed destinations
+                                  </Button>
                                 )}
                               </div>
 
@@ -1117,8 +1354,8 @@ export default function RepUpload() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Only upload lecture notes for courses in {departmentName}.
-                  Non-PDF files will be converted automatically.
+                  Non-PDF files will be converted automatically. Uploaded files
+                  will be visible to students in each selected department.
                 </AlertDescription>
               </Alert>
 
@@ -1131,16 +1368,15 @@ export default function RepUpload() {
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading {uploadProgress.completed}/{uploadProgress.total}
-                    ...
+                    Uploading…
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload{" "}
-                    {pendingFiles.length > 0
-                      ? `${pendingFiles.length} File${pendingFiles.length > 1 ? "s" : ""}`
-                      : "Files"}
+                    Upload {filesCount} document{filesCount === 1 ? "" : "s"}
+                    {facultyDepartmentOptions.length > 0
+                      ? ` · ${destsCount} destination${destsCount === 1 ? "" : "s"}`
+                      : ""}
                   </>
                 )}
               </Button>
