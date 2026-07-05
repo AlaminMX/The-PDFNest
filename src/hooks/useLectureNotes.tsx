@@ -322,23 +322,32 @@ export function useLectureNotes(courseId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from("school_pdfs")
-        .remove([filePath]);
+      // How many lecture_notes reference this file? If > 1, other copies exist and
+      // we MUST NOT remove the storage object.
+      const { data: refCountData } = await supabase.rpc(
+        "file_path_reference_count" as any,
+        { _file_path: filePath } as any,
+      );
+      const refCount = typeof refCountData === "number" ? refCountData : 1;
 
-      if (storageError) {
-        console.error("Storage delete error:", storageError);
-        // Continue anyway to delete database record
-      }
-
-      // Delete from database
+      // Delete DB row first.
       const { error: deleteError } = await supabase
         .from("lecture_notes")
         .delete()
         .eq("id", noteId);
 
       if (deleteError) throw deleteError;
+
+      // Only remove the storage object when this was the last reference.
+      if (refCount <= 1) {
+        const { error: storageError } = await supabase.storage
+          .from("school_pdfs")
+          .remove([filePath]);
+        if (storageError) {
+          console.error("Storage delete error:", storageError);
+        }
+      }
+
 
       // Update user storage (subtract file size)
       await supabase.rpc("update_user_storage", {
