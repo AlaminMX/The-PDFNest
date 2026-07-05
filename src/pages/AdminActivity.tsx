@@ -133,8 +133,8 @@ export default function AdminActivity() {
         .in("id", [...uids]);
 
       setProfiles(new Map((profileRows || []).map((p) => [p.id, p])));
-      setLogs(rawLogs || []);
-      setSessions(rawSessions || []);
+      setLogs((rawLogs || []) as any);
+      setSessions((rawSessions || []) as any);
     } catch (err: any) {
       console.error("Failed to load activity:", err);
       toast.error("Couldn't load activity data.");
