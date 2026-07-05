@@ -241,11 +241,47 @@ export function useLectureNotes(courseId?: string) {
     } catch (err) {
       console.error("Error uploading lecture note:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to upload lecture note";
-      toast.error(errorMessage);
-      return false;
+      return { success: false, error: errorMessage } as const;
     } finally {
       setUploading(false);
     }
+  };
+
+  /**
+   * Copy an existing lecture note into one or more departments, reusing the
+   * underlying storage object. Preserves the original uploader attribution.
+   * Returns per-destination outcomes from the secure RPC.
+   */
+  const copyNote = async (
+    sourceNoteId: string,
+    targetDepartmentIds: string[],
+    target: {
+      level: number;
+      semester: "first" | "second";
+      courseCode: string;
+      courseName: string;
+    },
+    titleOverride?: string,
+  ): Promise<
+    Array<{
+      department_id: string;
+      status: "copied" | "skipped" | "failed";
+      reason?: string;
+      note_id?: string;
+      course_id?: string;
+    }>
+  > => {
+    const { data, error } = await supabase.rpc("rep_copy_lecture_note" as any, {
+      _source_note_id: sourceNoteId,
+      _target_dept_ids: targetDepartmentIds,
+      _target_level: target.level,
+      _target_semester: target.semester,
+      _target_course_code: target.courseCode,
+      _target_course_name: target.courseName,
+      _title_override: titleOverride ?? null,
+    } as any);
+    if (error) throw error;
+    return (data as any[]) || [];
   };
 
   const incrementViews = async (noteId: string) => {
