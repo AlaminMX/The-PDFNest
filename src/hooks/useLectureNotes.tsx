@@ -193,45 +193,26 @@ export function useLectureNotes(courseId?: string) {
 
       if (uploadError) throw uploadError;
 
-      // Get the course level for denormalisation
-      const { data: courseData } = await supabase
-        .from("courses")
-        .select("level")
-        .eq("id", courseId)
-        .maybeSingle();
-
-      // Check for same-title in this course — append {2}, {3}, etc.
-      let finalTitle = title;
-      const { data: existingNotes } = await supabase
-        .from("lecture_notes")
-        .select("title")
-        .eq("course_id", courseId);
-      if (existingNotes && existingNotes.length > 0) {
-        const existingTitles = new Set(existingNotes.map((n: any) => n.title.toLowerCase()));
-        if (existingTitles.has(finalTitle.toLowerCase())) {
-          let counter = 2;
-          while (existingTitles.has(`${finalTitle} {${counter}}`.toLowerCase())) counter++;
-          finalTitle = `${finalTitle} {${counter}}`;
-        }
-      }
-
-      const insertPayload = {
-        p_course_id: courseId,
-        p_file_path: filePath,
-        p_title: finalTitle,
-        p_file_size: file.size,
-        p_uploaded_by_display: displayName,
-        p_material_type: materialType,
-        p_level: courseData?.level ?? 100,
-      };
-      console.debug("uploadNote insert payload", insertPayload);
-
-      const { error: insertError } = await supabase.rpc(
-        "create_rep_lecture_note" as any,
-        insertPayload as any,
+      // Insert the lecture note via the secure RPC. It handles duplicate-title
+      // numbering and enforces "rep must be in the same faculty as the target course".
+      const { data: newNoteId, error: insertError } = await supabase.rpc(
+        "rep_upload_lecture_note" as any,
+        {
+          _course_id: courseId,
+          _file_path: filePath,
+          _title: title,
+          _file_size: file.size,
+          _display_name: displayName,
+          _material_type: materialType,
+          _level: null,
+        } as any,
       );
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Roll back the orphaned storage object so we don't accrue garbage.
+        await supabase.storage.from("school_pdfs").remove([filePath]).catch(() => {});
+        throw insertError;
+      }
 
       // Update user storage
       await supabase.rpc("update_user_storage", {
@@ -245,7 +226,7 @@ export function useLectureNotes(courseId?: string) {
           body: {
             departmentId,
             courseCode,
-            noteTitle: finalTitle,
+            noteTitle: title,
             uploadedBy: displayName,
           },
         }).catch((err) => {
@@ -254,10 +235,9 @@ export function useLectureNotes(courseId?: string) {
         });
       }
 
-      toast.success("Lecture note uploaded successfully!");
       await fetchNotes();
-      
-      return true;
+
+      return { success: true, noteId: newNoteId as string | null };
     } catch (err) {
       console.error("Error uploading lecture note:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to upload lecture note";
