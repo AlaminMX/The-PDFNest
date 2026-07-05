@@ -404,6 +404,7 @@ export function useLectureNotes(courseId?: string) {
     uploading,
     converting,
     uploadNote,
+    copyNote,
     convertToPdf,
     incrementViews,
     getSignedUrl,
