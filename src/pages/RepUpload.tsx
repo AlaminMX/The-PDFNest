@@ -619,10 +619,12 @@ export default function RepUpload() {
         else if (ok > 0) status = "partial";
         // Update storage counter once per file (we only put the object once).
         if (ok > 0 && user) {
-          supabase.rpc("update_user_storage", {
-            p_user_id: user.id,
-            p_size_delta: fileToUpload.size,
-          }).catch(() => {});
+          void supabase
+            .rpc("update_user_storage", {
+              p_user_id: user.id,
+              p_size_delta: fileToUpload.size,
+            })
+            .then(() => {}, () => {});
         }
         return {
           ...i,
