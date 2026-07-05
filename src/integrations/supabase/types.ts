@@ -1420,6 +1420,21 @@ export type Database = {
           title: string
         }[]
       }
+      ensure_course: {
+        Args: {
+          _code: string
+          _credit_units?: number
+          _dept_id: string
+          _level: number
+          _name: string
+          _semester: string
+        }
+        Returns: string
+      }
+      file_path_reference_count: {
+        Args: { _file_path: string }
+        Returns: number
+      }
       get_rep_public_info: {
         Args: { rep_user_id: string }
         Returns: {
@@ -1487,6 +1502,34 @@ export type Database = {
       reject_community_upload: {
         Args: { p_note?: string; p_reviewer_id: string; p_upload_id: string }
         Returns: undefined
+      }
+      rep_copy_lecture_note: {
+        Args: {
+          _source_note_id: string
+          _target_course_code: string
+          _target_course_name: string
+          _target_dept_ids: string[]
+          _target_level: number
+          _target_semester: string
+          _title_override?: string
+        }
+        Returns: Json
+      }
+      rep_same_faculty: {
+        Args: { _dept_id: string; _user_id: string }
+        Returns: boolean
+      }
+      rep_upload_lecture_note: {
+        Args: {
+          _course_id: string
+          _display_name: string
+          _file_path: string
+          _file_size: number
+          _level?: number
+          _material_type?: string
+          _title: string
+        }
+        Returns: string
       }
       update_user_storage: {
         Args: { p_size_delta: number; p_user_id: string }
