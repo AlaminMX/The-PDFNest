@@ -126,35 +126,6 @@ function NewDepartmentsLabelControl() {
   );
 }
 
-function RamadanToggleControl() {
-  const { settings, updateSetting } = useAppSettings();
-  const [toggling, setToggling] = useState(false);
-
-  const handleToggle = async (checked: boolean) => {
-    setToggling(true);
-    const success = await updateSetting("ramadan_theme_enabled", checked ? "true" : "false");
-    if (success) {
-      toast.success(checked ? "Ramadan theme enabled" : "Ramadan theme disabled");
-    } else {
-      toast.error("Failed to update setting");
-    }
-    setToggling(false);
-  };
-
-  return (
-    <div className="flex items-center justify-between gap-2 px-1 py-2">
-      <div className="flex items-center gap-2">
-        <Moon className="h-4 w-4 text-muted-foreground" />
-        <Label className="text-xs">Ramadan Theme</Label>
-      </div>
-      <Switch
-        checked={settings.ramadan_theme_enabled}
-        onCheckedChange={handleToggle}
-        disabled={toggling}
-      />
-    </div>
-  );
-}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
