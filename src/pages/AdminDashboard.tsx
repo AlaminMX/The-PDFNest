@@ -63,17 +63,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-const sidebarItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
-  { id: "faculties", label: "Faculties", icon: Building2, path: "/admin/faculties" },
-  { id: "departments", label: "Departments", icon: Building2, path: "/admin/departments" },
-  { id: "reps", label: "Reps", icon: UserCog, path: "/admin/reps" },
-  { id: "banners", label: "Banners", icon: Megaphone, path: "/admin/banners" },
-  { id: "activity", label: "Activity", icon: Activity, path: "/admin/activity" },
-  { id: "projects", label: "Final Year Projects", icon: ShoppingBag, path: "/admin/projects" },
-  { id: "uploads", label: "Pending Uploads", icon: Inbox, path: "/admin/uploads" },
-  { id: "past-questions", label: "Past Questions", icon: FileText, path: "/admin/past-questions" },
-];
 
 function NewDepartmentsLabelControl() {
   const { settings, updateSetting } = useAppSettings();
