@@ -561,8 +561,7 @@ export default function AdminDashboard() {
               Made with love ❤️ by Nexel
             </p>
           </div>
-        </footer>
-      </main>
-    </div>
+      </div>
+    </AdminShell>
   );
 }
