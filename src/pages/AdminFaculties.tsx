@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Building, Edit, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 import { TileImageUpload } from "@/components/TileImageUpload";
 

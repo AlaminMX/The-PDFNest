@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState, LoadingSpinner } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 
