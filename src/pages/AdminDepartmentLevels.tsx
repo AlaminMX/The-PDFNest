@@ -428,8 +428,7 @@ export default function AdminDepartmentLevels() {
         departmentName={deptName}
         onCreated={() => fetchData()}
       />
-
-      <SmartBottomNav />
-    </div>
+      </main>
+    </AdminShell>
   );
 }
