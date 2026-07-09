@@ -217,14 +217,12 @@ export default function AdminDepartmentLevels() {
   const ALL_LEVELS = getDepartmentLevels(deptName);
 
   return (
-    <div className="min-h-screen bg-background pb-16">
-      <PageHeader
-        title={`${deptName || "Department"} — Levels`}
-        subtitle="Add or remove levels and courses"
-        showBack backTo="/admin/departments"
-      />
-
-      <main className="container mx-auto px-4 py-6 max-w-3xl space-y-3">
+    <AdminShell
+      title={`${deptName || "Department"} — Levels`}
+      subtitle="Add or remove levels and courses"
+      icon={<GraduationCap className="w-5 h-5 text-primary" />}
+    >
+      <main className="container mx-auto px-4 py-6 max-w-3xl space-y-3 pb-16">
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setShowQuickCreate(true)} className="gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
