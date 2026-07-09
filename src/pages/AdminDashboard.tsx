@@ -296,137 +296,20 @@ export default function AdminDashboard() {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
+      <AdminShell title="Admin Dashboard" subtitle="Manage all users and PDFs" icon={<LayoutDashboard className="h-5 w-5 text-primary" />}>
+        <div className="flex items-center justify-center py-24">
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </div>
+      </AdminShell>
     );
   }
 
-  if (!isAdmin) {
-    return null;
-  }
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to App
-        </Button>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1">
-        {sidebarItems.map((item) => (
-          <Button
-            key={item.id}
-            variant={item.path === "/admin" ? "secondary" : "ghost"}
-            className="w-full justify-start gap-2"
-            onClick={() => {
-              navigate(item.path);
-              setMobileSidebarOpen(false);
-            }}
-          >
-            <item.icon className="h-4 w-4" />
-            <span className="flex-1 text-left">{item.label}</span>
-            {item.id === "uploads" && pendingUploadsCount > 0 && (
-              <span className="ml-auto min-w-5 h-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
-                {pendingUploadsCount > 99 ? "99+" : pendingUploadsCount}
-              </span>
-            )}
-          </Button>
-        ))}
-      </nav>
-
-      <div className="p-4 border-t space-y-2">
-        <RamadanToggleControl />
-        <ThemeToggle />
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-          onClick={handleSignOut}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside
-        className={cn(
-          "hidden md:flex flex-col border-r bg-card transition-all duration-300",
-          sidebarOpen ? "w-64" : "w-0 overflow-hidden"
-        )}
-      >
-        <SidebarContent />
-      </aside>
+    <AdminShell title="Admin Dashboard" subtitle="Manage all users and PDFs" icon={<LayoutDashboard className="h-5 w-5 text-primary" />}>
+      <div className="p-4 md:p-6 space-y-6">
 
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 md:hidden",
-          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className="flex items-center justify-between p-4 border-b">
-          <span className="font-semibold">Admin Menu</span>
-          <Button variant="ghost" size="icon" onClick={() => setMobileSidebarOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        <SidebarContent />
-      </aside>
-
-      <main className="flex-1 overflow-auto">
-        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="px-4 md:px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setMobileSidebarOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <img
-                src="/pdfnest-logo.png"
-                alt="PDFNest Logo"
-                className="h-10 w-10 rounded-lg object-contain"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Manage all users and PDFs</p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-4 md:p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-6">
               <div className="flex items-center gap-4">
