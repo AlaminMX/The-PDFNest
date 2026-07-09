@@ -18,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap, BookPlus } from "lucide-react";
 import { toast } from "sonner";
-import { AdminShell } from "@/components/AdminShell";
+import { PageHeader } from "@/components/PageHeader";
 import { LoadingState } from "@/components/LoadingState";
 import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { TileImageUpload } from "@/components/TileImageUpload";
