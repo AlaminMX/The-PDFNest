@@ -412,15 +412,15 @@ export default function AdminDepartments() {
 
       <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {/* Create Buttons */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-center">
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Create Department
           </Button>
           <Button
             variant="outline"
             onClick={() => setShowQuickCreateCourse(true)}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <BookPlus className="h-4 w-4" />
             Quick add course

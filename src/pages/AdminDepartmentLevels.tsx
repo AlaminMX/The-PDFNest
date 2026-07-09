@@ -9,11 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, GraduationCap, BookOpen, Loader2, ChevronDown, ChevronRight, PlusCircle, Check, X, GitMerge, Clock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
-import { SmartBottomNav } from "@/components/SmartBottomNav";
 import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { getDepartmentLevels } from "@/lib/departmentLevels";
 
@@ -149,7 +148,7 @@ export default function AdminDepartmentLevels() {
 
   const handleRejectCourse = async (courseId: string) => {
     const { error } = await supabase.from("courses").delete().eq("id", courseId);
-    if (error) { toast.error("Failed to reject"); return; }
+    if (error) { console.error(error); toast.error(error.message || "Failed to reject"); return; }
     toast.success("Pending course removed"); fetchData();
   };
 
@@ -157,29 +156,51 @@ export default function AdminDepartmentLevels() {
     if (!mergeSource || !mergeTargetId) return;
     await supabase.from("community_uploads").update({ course_id: mergeTargetId }).eq("course_id", mergeSource.id);
     const { error } = await supabase.from("courses").delete().eq("id", mergeSource.id);
-    if (error) { toast.error("Failed to merge"); return; }
+    if (error) { console.error(error); toast.error(error.message || "Failed to merge"); return; }
     toast.success("Course merged"); setMergeSource(null); setMergeTargetId(""); fetchData();
+  };
+
+  const deleteCourseWithCleanup = async (courseId: string) => {
+    const { data, error } = await supabase.rpc("admin_delete_course" as any, {
+      _course_id: courseId,
+    } as any);
+    if (error) throw error;
+    const paths = ((data as any[]) || [])
+      .map((r) => r?.orphaned_file_path)
+      .filter((p: any): p is string => typeof p === "string" && p.length > 0);
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabase.storage.from("school_pdfs").remove(paths);
+      if (storageErr) console.warn("Storage cleanup partial:", storageErr);
+    }
   };
 
   const handleDeleteCourse = async () => {
     if (!deleteTarget) return;
-    const { error } = await supabase.from("courses").delete().eq("id", deleteTarget.id);
-    if (error) { toast.error("Failed to delete"); return; }
-    toast.success("Course removed"); setDeleteTarget(null); fetchData();
+    try {
+      await deleteCourseWithCleanup(deleteTarget.id);
+      toast.success("Course removed");
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to delete course");
+    }
   };
 
   const handleRemoveLevel = async () => {
     if (!removeLevelTarget) return;
     setRemovingLevel(true);
     try {
-      const { error } = await supabase.from("courses").delete()
-        .eq("department_id", deptId).eq("level", removeLevelTarget);
-      if (error) throw error;
+      const levelCourses = groups.find((g) => g.level === removeLevelTarget)?.courses ?? [];
+      for (const c of levelCourses) {
+        await deleteCourseWithCleanup(c.id);
+      }
       setDeletedLevels(prev => new Set([...prev, removeLevelTarget]));
       toast.success(`${removeLevelTarget} Level removed from ${deptName}`);
       setRemoveLevelTarget(null); fetchData();
     } catch (err: any) {
-      toast.error(err.message || "Failed to remove level");
+      console.error(err);
+      toast.error(err?.message || "Failed to remove level");
     } finally { setRemovingLevel(false); }
   };
 
@@ -196,14 +217,12 @@ export default function AdminDepartmentLevels() {
   const ALL_LEVELS = getDepartmentLevels(deptName);
 
   return (
-    <div className="min-h-screen bg-background pb-16">
-      <PageHeader
-        title={`${deptName || "Department"} — Levels`}
-        subtitle="Add or remove levels and courses"
-        showBack backTo="/admin/departments"
-      />
-
-      <main className="container mx-auto px-4 py-6 max-w-3xl space-y-3">
+    <AdminShell
+      title={`${deptName || "Department"} — Levels`}
+      subtitle="Add or remove levels and courses"
+      icon={<GraduationCap className="w-5 h-5 text-primary" />}
+    >
+      <main className="container mx-auto px-4 py-6 max-w-3xl space-y-3 pb-16">
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setShowQuickCreate(true)} className="gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
@@ -346,7 +365,6 @@ export default function AdminDepartmentLevels() {
             ))}
           </div>
         </div>
-      </main>
 
       {mergeSource && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -409,8 +427,7 @@ export default function AdminDepartmentLevels() {
         departmentName={deptName}
         onCreated={() => fetchData()}
       />
-
-      <SmartBottomNav />
-    </div>
+      </main>
+    </AdminShell>
   );
 }

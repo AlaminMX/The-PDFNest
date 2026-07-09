@@ -1393,6 +1393,12 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_course: {
+        Args: { _course_id: string }
+        Returns: {
+          orphaned_file_path: string
+        }[]
+      }
       admin_delete_user_account: {
         Args: { p_user_id: string }
         Returns: undefined

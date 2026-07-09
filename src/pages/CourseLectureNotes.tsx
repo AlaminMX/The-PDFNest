@@ -50,6 +50,10 @@ import {
 import { PDFViewer } from "@/components/PDFViewer";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { buildBrowsePath } from "@/lib/browseNavigation";
+import { CopyDocumentDialog } from "@/components/CopyDocumentDialog";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useRepStatus } from "@/hooks/useRepStatus";
+import { Copy } from "lucide-react";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
@@ -102,6 +106,15 @@ function CourseLectureNotesContent() {
   // PDF Viewer state
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [viewerPdfUrl, setViewerPdfUrl] = useState<string>("");
+
+  // Copy dialog state
+  const { isAdmin } = useAdminStatus();
+  const { isRep } = useRepStatus();
+  const canCopy = !!user && (isAdmin || isRep);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copySource, setCopySource] = useState<{
+    id: string; title: string; level: number; semester: "first" | "second";
+  } | null>(null);
 
   const loading = deptLoading || coursesLoading || notesLoading;
 
@@ -578,6 +591,23 @@ function CourseLectureNotesContent() {
                     
                     <DropdownMenuSeparator />
 
+                    {canCopy && currentCourse && currentDept && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setCopySource({
+                            id: note.id,
+                            title: note.title,
+                            level: (currentCourse.level ?? 100) as number,
+                            semester: ((currentCourse.semester ?? "first") as "first" | "second"),
+                          });
+                          setCopyDialogOpen(true);
+                        }}
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy to another department
+                      </DropdownMenuItem>
+                    )}
+
                     {user?.id === note.uploaded_by && (
                       <>
                         <DropdownMenuSeparator />
@@ -716,6 +746,21 @@ function CourseLectureNotesContent() {
       />
 
       <SmartBottomNav />
+
+      {copySource && currentCourse && currentDept && (
+        <CopyDocumentDialog
+          open={copyDialogOpen}
+          onOpenChange={(v) => { setCopyDialogOpen(v); if (!v) setCopySource(null); }}
+          sourceNoteId={copySource.id}
+          sourceCourseId={currentCourse.id}
+          sourceDepartmentId={currentDept.id}
+          sourceTitle={copySource.title}
+          sourceCourseCode={currentCourse.code}
+          sourceCourseName={currentCourse.name}
+          sourceLevel={copySource.level}
+          sourceSemester={copySource.semester}
+        />
+      )}
     </div>
   );
 }
