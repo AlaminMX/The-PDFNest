@@ -50,6 +50,10 @@ import {
 import { PDFViewer } from "@/components/PDFViewer";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
 import { buildBrowsePath } from "@/lib/browseNavigation";
+import { CopyDocumentDialog } from "@/components/CopyDocumentDialog";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
+import { useRepStatus } from "@/hooks/useRepStatus";
+import { Copy } from "lucide-react";
 
 function CourseLectureNotesContent() {
   const navigate = useNavigate();
