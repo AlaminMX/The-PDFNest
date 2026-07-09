@@ -562,7 +562,6 @@ export default function AdminDashboard() {
             </p>
           </div>
         </footer>
-      </div>
     </AdminShell>
   );
 }
