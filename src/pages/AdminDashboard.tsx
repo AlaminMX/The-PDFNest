@@ -145,40 +145,6 @@ export default function AdminDashboard() {
     fetchAllUsers();
   }, []);
 
-  const fetchPendingCount = async () => {
-    try {
-      const { count } = await supabase
-        .from("community_uploads")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      setPendingUploadsCount(count || 0);
-    } catch {
-      // non-critical
-    }
-  };
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    const channel = supabase
-      .channel("admin_pending_uploads")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "community_uploads",
-        },
-        () => {
-          fetchPendingCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isAdmin]);
-
   const fetchAllUsers = async () => {
     try {
       const { data: profilesData, error: profilesError } = await supabase
