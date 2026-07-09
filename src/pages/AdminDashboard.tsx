@@ -129,15 +129,11 @@ function NewDepartmentsLabelControl() {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingUploadsCount, setPendingUploadsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [totalPDFs, setTotalPDFs] = useState(0);
   const [totalStorage, setTotalStorage] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -146,18 +142,8 @@ export default function AdminDashboard() {
   const { departments } = useDepartments();
 
   useEffect(() => {
-    if (!adminLoading && !isAdmin) {
-      toast.error("Access denied. Admin privileges required.");
-      navigate("/dashboard");
-    }
-  }, [isAdmin, adminLoading, navigate]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchAllUsers();
-      fetchPendingCount();
-    }
-  }, [isAdmin]);
+    fetchAllUsers();
+  }, []);
 
   const fetchPendingCount = async () => {
     try {
