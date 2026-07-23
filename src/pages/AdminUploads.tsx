@@ -253,32 +253,12 @@ export default function AdminUploads() {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="px-4 md:px-6 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Inbox className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Community Uploads</h1>
-              <p className="text-xs text-muted-foreground">
-                Review and moderate user-submitted materials
-              </p>
-            </div>
-          </div>
-          {pendingCount > 0 && (
-            <Badge variant="destructive" className="ml-auto">
-              {pendingCount} pending
-            </Badge>
-          )}
-        </div>
-      </header>
-
+    <AdminShell
+      title="Community Uploads"
+      subtitle="Review and moderate user-submitted materials"
+      icon={<Inbox className="h-5 w-5 text-primary" />}
+      actions={pendingCount > 0 ? <Badge variant="destructive">{pendingCount} pending</Badge> : undefined}
+    >
       <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
         {/* Status tabs */}
         <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>

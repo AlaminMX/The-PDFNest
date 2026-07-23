@@ -199,17 +199,11 @@ export default function AdminPastQuestions() {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="px-4 md:px-6 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}><ArrowLeft className="h-5 w-5" /></Button>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10"><BookOpen className="h-5 w-5 text-primary" /></div>
-            <div><h1 className="text-xl font-bold">Past Questions</h1><p className="text-xs text-muted-foreground">Manage courses and files</p></div>
-          </div>
-        </div>
-      </header>
-
+    <AdminShell
+      title="Past Questions"
+      subtitle="Manage courses and files"
+      icon={<BookOpen className="h-5 w-5 text-primary" />}
+    >
       <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList><TabsTrigger value="courses">Courses ({courses.length})</TabsTrigger><TabsTrigger value="files">Files ({files.length})</TabsTrigger></TabsList>

@@ -18,8 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { SmartBottomNav } from "@/components/SmartBottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -298,15 +297,12 @@ export default function AdminUserDetail() {
   const displayName = user.full_name || user.email?.split('@')[0] || "Unknown User";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title={displayName}
-        subtitle="User Details"
-        showBack
-        icon={<User className="h-6 w-6 text-primary" />}
-      />
-
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+    <AdminShell
+      title={displayName}
+      subtitle="User Details"
+      icon={<User className="h-6 w-6 text-primary" />}
+    >
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {/* User Info Card */}
         <Card>
           <CardHeader>
