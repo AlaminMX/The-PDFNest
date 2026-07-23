@@ -1,3 +1,4 @@
+import { AdminShell } from "@/components/AdminShell";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, X, FileText, ExternalLink } from "lucide-react";
@@ -79,16 +80,11 @@ export default function AdminProjects() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      <header className="border-b border-border/30 bg-background/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="rounded-full h-9 w-9">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <h1 className="text-lg font-semibold">Final Year Projects</h1>
-        </div>
-      </header>
-
+    <AdminShell
+      title="Final Year Projects"
+      subtitle="Review and moderate submissions"
+      icon={<FileText className="w-5 h-5 text-primary" />}
+    >
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <Tabs value={status} onValueChange={(v) => setStatus(v as any)}>
           <TabsList>
@@ -150,6 +146,6 @@ export default function AdminProjects() {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
+    </AdminShell>
   );
 }

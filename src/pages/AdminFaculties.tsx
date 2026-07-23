@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Building, Edit, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 import { TileImageUpload } from "@/components/TileImageUpload";
 
@@ -168,16 +168,12 @@ export default function AdminFaculties() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title="Faculty Management"
-        subtitle="Create, edit, and manage faculties"
-        showBack
-        backTo="/admin"
-        icon={<Building className="h-6 w-6 text-primary" />}
-      />
-
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+    <AdminShell
+      title="Faculty Management"
+      subtitle="Create, edit, and manage faculties"
+      icon={<Building className="h-6 w-6 text-primary" />}
+    >
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         <div className="flex justify-center">
           <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -282,7 +278,7 @@ export default function AdminFaculties() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -567,6 +563,6 @@ export default function AdminFaculties() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AdminShell>
   );
 }
