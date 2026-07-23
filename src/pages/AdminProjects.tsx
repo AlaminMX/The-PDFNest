@@ -1,3 +1,4 @@
+import { AdminShell } from "@/components/AdminShell";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, X, FileText, ExternalLink } from "lucide-react";
