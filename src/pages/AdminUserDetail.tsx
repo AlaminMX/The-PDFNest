@@ -553,7 +553,7 @@ export default function AdminUserDetail() {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       {previewPdf && (
         <PDFPreviewModal
@@ -564,14 +564,6 @@ export default function AdminUserDetail() {
         />
       )}
 
-      <footer className="mt-auto py-6 border-t border-border/40">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            Made with love ❤️ by Nexel
-          </p>
-        </div>
-      </footer>
-          <SmartBottomNav />
-    </div>
+    </AdminShell>
   );
 }

@@ -404,7 +404,7 @@ export default function AdminUploads() {
         onCancel={() => { setReviewTarget(null); setReviewAction(null); }}
         loading={reviewLoading}
       />
-    </div>
+    </AdminShell>
   );
 }
 

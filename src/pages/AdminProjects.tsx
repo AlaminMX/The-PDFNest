@@ -145,6 +145,6 @@ export default function AdminProjects() {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
+    </AdminShell>
   );
 }
