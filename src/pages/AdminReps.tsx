@@ -745,7 +745,7 @@ export default function AdminReps() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Edit Rep Dialog - FULL editing */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -924,13 +924,6 @@ export default function AdminReps() {
         </DialogContent>
       </Dialog>
 
-      <footer className="mt-auto py-6 border-t border-border/40">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            Made with love ❤️ by Nexel
-          </p>
-        </div>
-      </footer>
-    </div>
+    </AdminShell>
   );
 }
