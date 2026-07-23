@@ -563,6 +563,6 @@ export default function AdminFaculties() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AdminShell>
   );
 }
