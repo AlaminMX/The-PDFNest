@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { SmartBottomNav } from "@/components/SmartBottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -115,10 +114,7 @@ export default function AdminCategories() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <PageHeader title="Department Categories" showBack
-        backTo="/admin" />
-
+    <AdminShell title="Department Categories" subtitle="Group departments for signup">
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -167,7 +163,6 @@ export default function AdminCategories() {
           )}
         </div>
       </main>
-          <SmartBottomNav />
-    </div>
+    </AdminShell>
   );
 }

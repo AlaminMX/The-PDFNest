@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import {
@@ -209,15 +209,11 @@ export default function AdminActivity() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <PageHeader
-        title="Activity"
-        subtitle="Usage signal at a glance, plus per-user drill-down"
-        showBack
-        backTo="/admin"
-        icon={<Activity className="h-5 w-5 text-primary" />}
-      />
-
+    <AdminShell
+      title="Activity"
+      subtitle="Usage signal at a glance, plus per-user drill-down"
+      icon={<Activity className="h-5 w-5 text-primary" />}
+    >
       <div className="container mx-auto px-4 py-6 max-w-5xl space-y-6">
         {/* Summary stats */}
         <div className="grid grid-cols-3 gap-3">

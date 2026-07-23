@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Calendar, Plus, Trash2, Eye, X, Sparkles, Edit2 } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState, LoadingSpinner } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -495,16 +495,12 @@ export default function AdminReps() {
   const visibleEditCourses = editCourses.filter(c => !c.isDeleted);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title="Course Reps Management"
-        subtitle="View and manage all course representatives"
-        showBack
-        backTo="/admin"
-        icon={<Users className="h-6 w-6 text-primary" />}
-      />
-
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+    <AdminShell
+      title="Course Reps Management"
+      subtitle="View and manage all course representatives"
+      icon={<Users className="h-6 w-6 text-primary" />}
+    >
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {/* Create Rep Button */}
         <div className="flex justify-end">
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

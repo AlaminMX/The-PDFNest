@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Megaphone, Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 
 interface AdminBanner {
@@ -223,16 +223,12 @@ export default function AdminBanners() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title="Banner Management"
-        subtitle="Create and manage announcement banners"
-        showBack
-        backTo="/admin"
-        icon={<Megaphone className="h-6 w-6 text-primary" />}
-      />
-
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+    <AdminShell
+      title="Banner Management"
+      subtitle="Create and manage announcement banners"
+      icon={<Megaphone className="h-6 w-6 text-primary" />}
+    >
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         <div className="flex justify-center">
           <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" />
