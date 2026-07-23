@@ -331,6 +331,6 @@ export default function AdminActivity() {
           )}
         </Card>
       </div>
-    </div>
+    </AdminShell>
   );
 }

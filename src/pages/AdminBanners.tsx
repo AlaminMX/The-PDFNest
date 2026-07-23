@@ -322,7 +322,7 @@ export default function AdminBanners() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -527,6 +527,6 @@ export default function AdminBanners() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AdminShell>
   );
 }
