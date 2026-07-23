@@ -278,7 +278,7 @@ export default function AdminFaculties() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
