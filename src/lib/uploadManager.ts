@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/sessionLogger";
+import { uploadPersonalThumbnail } from "@/lib/pdfThumbnails";
 
 export type UploadStatus = "pending" | "uploading" | "success" | "failed";
 
@@ -204,18 +205,38 @@ class UploadManager {
       this.notify();
 
       // Create database record
-      const { error: dbError } = await supabase.from("pdf_files").insert({
-        user_id: this.userId,
-        name: item.file.name,
-        file_name: fileName,
-        file_size: item.file.size,
-        storage_path: filePath,
-        category_id:
-          item.categoryId === "uncategorized" ? null : item.categoryId,
-        thumbnail_url: null,
-      });
+      const { data: inserted, error: dbError } = await supabase
+        .from("pdf_files")
+        .insert({
+          user_id: this.userId,
+          name: item.file.name,
+          file_name: fileName,
+          file_size: item.file.size,
+          storage_path: filePath,
+          category_id:
+            item.categoryId === "uncategorized" ? null : item.categoryId,
+          thumbnail_url: null,
+        })
+        .select("id")
+        .single();
 
       if (dbError) throw dbError;
+
+      // Generate a first-page thumbnail in the background. This is
+      // best-effort: if it fails, the file itself has already uploaded
+      // successfully, so we don't want to fail the whole upload over it.
+      if (inserted?.id && this.userId) {
+        uploadPersonalThumbnail(item.file, this.userId, inserted.id).then((thumbnailPath) => {
+          if (!thumbnailPath) return;
+          supabase
+            .from("pdf_files")
+            .update({ thumbnail_url: thumbnailPath })
+            .eq("id", inserted.id)
+            .then(({ error }) => {
+              if (error) console.error("Failed to save thumbnail path:", error);
+            });
+        });
+      }
 
       // Update storage usage
       await supabase.rpc("update_user_storage", {
