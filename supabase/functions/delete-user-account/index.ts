@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
     const { data: userFiles, error: filesError } = await supabaseAdmin
       .from("pdf_files")
-      .select("storage_path")
+      .select("storage_path, thumbnail_url")
       .eq("user_id", userId);
 
     if (filesError) throw filesError;
@@ -86,6 +86,47 @@ Deno.serve(async (req) => {
     if (storagePaths.length > 0) {
       const { error: storageError } = await supabaseAdmin.storage.from("pdfs").remove(storagePaths);
       if (storageError) throw storageError;
+    }
+
+    const thumbnailPaths = (userFiles || []).map((file) => file.thumbnail_url).filter(Boolean);
+    if (thumbnailPaths.length > 0) {
+      const { error: thumbnailError } = await supabaseAdmin.storage.from("pdf-thumbnails").remove(thumbnailPaths);
+      if (thumbnailError) throw thumbnailError;
+    }
+
+    // Community contributions live in a different bucket and community_uploads
+    // has no foreign key back to the user, so without this they'd be left
+    // permanently orphaned — no owner, and no other code path ever revisits
+    // them for cleanup.
+    //
+    // IMPORTANT: only pending/rejected uploads are safe to remove here.
+    // Once a upload is approved, approve_community_upload() inserts a
+    // lecture_notes row that points at this exact same file_path — it does
+    // not copy the file to a new location. Deleting an approved upload's
+    // file would silently break a live, published lecture note for every
+    // student trying to access it, so approved uploads are left untouched;
+    // they're no longer "this user's" content once published.
+    const { data: communityUploads, error: communityFetchError } = await supabaseAdmin
+      .from("community_uploads")
+      .select("id, file_path")
+      .eq("user_id", userId)
+      .in("status", ["pending", "rejected"]);
+
+    if (communityFetchError) throw communityFetchError;
+
+    const communityFilePaths = (communityUploads || []).map((upload) => upload.file_path).filter(Boolean);
+    if (communityFilePaths.length > 0) {
+      const { error: communityStorageError } = await supabaseAdmin.storage.from("school_pdfs").remove(communityFilePaths);
+      if (communityStorageError) throw communityStorageError;
+    }
+
+    if ((communityUploads || []).length > 0) {
+      const { error: communityDeleteError } = await supabaseAdmin
+        .from("community_uploads")
+        .delete()
+        .eq("user_id", userId)
+        .in("status", ["pending", "rejected"]);
+      if (communityDeleteError) throw communityDeleteError;
     }
 
     const { error: profileDeleteError } = await supabaseAdmin
