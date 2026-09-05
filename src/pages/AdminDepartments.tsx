@@ -200,6 +200,8 @@ export default function AdminDepartments() {
   const [creating, setCreating] = useState(false);
   const [deletingDept, setDeletingDept] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<{ courses: number; lectureNotes: number; standaloneDocs: number } | null>(null);
+  const [loadingImpact, setLoadingImpact] = useState(false);
   const [orderedDepts, setOrderedDepts] = useState<any[]>([]);
   const [showQuickCreateCourse, setShowQuickCreateCourse] = useState(false);
 
@@ -214,6 +216,50 @@ export default function AdminDepartments() {
   useEffect(() => {
     setOrderedDepts(departments);
   }, [departments]);
+
+  // When a department is selected for deletion, look up how many rows in
+  // dependent tables would actually be destroyed, so the confirmation
+  // dialog can show real numbers instead of a vague "may affect" warning.
+  useEffect(() => {
+    if (!deletingDept) {
+      setDeleteImpact(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingImpact(true);
+    setDeleteImpact(null);
+
+    (async () => {
+      const [coursesListRes, standaloneDocsRes] = await Promise.all([
+        supabase.from("courses").select("id").eq("department_id", deletingDept.id),
+        supabase.from("standalone_documents").select("id", { count: "exact", head: true }).eq("department_id", deletingDept.id),
+      ]);
+
+      if (cancelled) return;
+
+      const courseIds = (coursesListRes.data || []).map((c: any) => c.id);
+
+      // lecture_notes has no direct department_id column — it's only linked
+      // via course_id, so we count through the department's own courses.
+      const lectureNotesRes = courseIds.length
+        ? await supabase.from("lecture_notes").select("id", { count: "exact", head: true }).in("course_id", courseIds)
+        : { count: 0 };
+
+      if (cancelled) return;
+
+      setDeleteImpact({
+        courses: courseIds.length,
+        lectureNotes: lectureNotesRes.count || 0,
+        standaloneDocs: standaloneDocsRes.count || 0,
+      });
+      setLoadingImpact(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deletingDept]);
 
   const handleEdit = (dept: any) => {
     setEditingDept({
@@ -358,21 +404,17 @@ export default function AdminDepartments() {
 
   const handleReorder = async (newOrder: any[]) => {
     setOrderedDepts(newOrder);
-    
-    // Update display_order in database for all reordered items
-    try {
-      const updates = newOrder.map((dept, index) => ({
-        id: dept.id,
-        display_order: index + 1,
-      }));
 
-      for (const update of updates) {
-        await supabase
-          .from("departments")
-          .update({ display_order: update.display_order })
-          .eq("id", update.id);
-      }
-      
+    // Save the new order in a single atomic call — previously this looped
+    // through individual .update() calls per department, which could leave
+    // display_order half-updated if one call in the middle failed.
+    try {
+      const { error } = await supabase.rpc(
+        "reorder_departments" as any,
+        { _ordered_ids: newOrder.map((dept) => dept.id) } as any,
+      );
+      if (error) throw error;
+
       toast.success("Department order saved");
     } catch (error: any) {
       console.error("Error updating order:", error);
@@ -910,16 +952,24 @@ export default function AdminDepartments() {
             <AlertDialogDescription>
               Are you sure you want to delete "{deletingDept?.name}"? This action cannot be undone.
               <br /><br />
-              <span className="text-destructive font-medium">
-                Warning: This may affect courses and lecture notes associated with this department.
-              </span>
+              {loadingImpact ? (
+                <span className="text-muted-foreground">Checking what this will affect…</span>
+              ) : deleteImpact && (deleteImpact.courses > 0 || deleteImpact.lectureNotes > 0 || deleteImpact.standaloneDocs > 0) ? (
+                <span className="text-destructive font-medium">
+                  This will permanently delete {deleteImpact.courses} course{deleteImpact.courses === 1 ? "" : "s"},{" "}
+                  {deleteImpact.lectureNotes} lecture note{deleteImpact.lectureNotes === 1 ? "" : "s"}, and{" "}
+                  {deleteImpact.standaloneDocs} e-library document{deleteImpact.standaloneDocs === 1 ? "" : "s"} linked to this department.
+                </span>
+              ) : (
+                <span className="text-muted-foreground">No courses, lecture notes, or e-library documents are linked to this department.</span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || loadingImpact}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? "Deleting..." : "Delete Department"}
