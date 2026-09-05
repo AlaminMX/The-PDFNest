@@ -68,32 +68,55 @@ Deno.serve(async (req) => {
     const wildcardQuery = `%${sanitized}%`;
     const codeWildcard = courseCodePattern ? `${sanitize(courseCodePattern)}%` : null;
 
-    // Run all queries in parallel
-    const [coursesRes, pqCoursesRes, notesRes, pqFilesRes, standaloneRes] = await Promise.all([
-      // 1. Courses with department info
+    // Run all queries in parallel.
+    //
+    // Note: courses and pq_courses used to be queried with a single
+    // `.or("code.ilike.X,name.ilike.Y")` call built via string
+    // interpolation. PostgREST treats commas and parentheses as filter
+    // syntax inside `.or()`, and the sanitizer above only escapes ILIKE's
+    // own wildcard characters (%, _, \) — not those. A search query
+    // containing a comma could inject an extra filter clause. Splitting
+    // into two separate `.ilike()` calls (merged below) avoids building
+    // any filter string from user input at all.
+    const [
+      coursesByCodeRes, coursesByNameRes,
+      pqCoursesByCodeRes, pqCoursesByNameRes,
+      notesRes, pqFilesRes, standaloneRes,
+    ] = await Promise.all([
+      // 1a. Courses matching by code
       supabase
         .from("courses")
         .select(`
           id, code, name, level, semester,
           departments!inner(id, name, slug, faculty_id, faculties(slug))
         `)
-        .or(
-          codeWildcard
-            ? `code.ilike.${codeWildcard},name.ilike.${wildcardQuery}`
-            : `code.ilike.${wildcardQuery},name.ilike.${wildcardQuery}`
-        )
+        .ilike("code", codeWildcard || wildcardQuery)
         .eq("status", "approved")
         .limit(15),
 
-      // 2. PQ courses
+      // 1b. Courses matching by name
+      supabase
+        .from("courses")
+        .select(`
+          id, code, name, level, semester,
+          departments!inner(id, name, slug, faculty_id, faculties(slug))
+        `)
+        .ilike("name", wildcardQuery)
+        .eq("status", "approved")
+        .limit(15),
+
+      // 2a. PQ courses matching by code
       supabase
         .from("pq_courses")
         .select("id, code, name, level, semester")
-        .or(
-          codeWildcard
-            ? `code.ilike.${codeWildcard},name.ilike.${wildcardQuery}`
-            : `code.ilike.${wildcardQuery},name.ilike.${wildcardQuery}`
-        )
+        .ilike("code", codeWildcard || wildcardQuery)
+        .limit(5),
+
+      // 2b. PQ courses matching by name
+      supabase
+        .from("pq_courses")
+        .select("id, code, name, level, semester")
+        .ilike("name", wildcardQuery)
         .limit(5),
 
       // 3. Lecture notes (only if we have a keyword or no course code)
@@ -128,6 +151,11 @@ Deno.serve(async (req) => {
         .ilike("title", wildcardQuery)
         .limit(10),
     ]);
+
+    // Merge and de-duplicate the two-part course/pq_course results by id.
+    const dedupeById = (rows: any[]) => Array.from(new Map(rows.map((r) => [r.id, r])).values());
+    const coursesRes = { data: dedupeById([...(coursesByCodeRes.data || []), ...(coursesByNameRes.data || [])]) };
+    const pqCoursesRes = { data: dedupeById([...(pqCoursesByCodeRes.data || []), ...(pqCoursesByNameRes.data || [])]) };
 
     // Transform courses
     const courses = (coursesRes.data || []).map((c: any) => ({
