@@ -29,13 +29,14 @@ export function DomainRedirect() {
 
     const targetPath = institution.landingPath;
 
-    // Already on the target path (or a child route beneath it) — do NOT
-    // redirect; that would create an infinite loop.
-    if (location.pathname.startsWith(targetPath)) return;
-
-    // Also leave admin and auth routes alone regardless of domain.
-    const bypassPrefixes = ["/admin", "/auth", "/reset-password"];
-    if (bypassPrefixes.some((p) => location.pathname.startsWith(p))) return;
+    // Only redirect when landing on the bare root path. Every other route
+    // (dashboard, onboarding, reset-password-success, contribute, profile,
+    // notifications, rep upload, etc.) must be left alone — those are real
+    // in-app destinations that auth/onboarding/password-reset flows navigate
+    // to, and blacklisting a handful of paths here previously broke all of
+    // them on institution subdomains by bouncing users back to the landing
+    // page mid-flow.
+    if (location.pathname !== "/") return;
 
     // Safe to redirect.
     navigate(targetPath, { replace: true });
