@@ -322,15 +322,7 @@ export function useLectureNotes(courseId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // How many lecture_notes reference this file? If > 1, other copies exist and
-      // we MUST NOT remove the storage object.
-      const { data: refCountData } = await supabase.rpc(
-        "file_path_reference_count" as any,
-        { _file_path: filePath } as any,
-      );
-      const refCount = typeof refCountData === "number" ? refCountData : 1;
-
-      // Delete DB row first.
+      // Delete the DB row first.
       const { error: deleteError } = await supabase
         .from("lecture_notes")
         .delete()
@@ -338,16 +330,21 @@ export function useLectureNotes(courseId?: string) {
 
       if (deleteError) throw deleteError;
 
-      // Only remove the storage object when this was the last reference.
-      if (refCount <= 1) {
-        const { error: storageError } = await supabase.storage
-          .from("school_pdfs")
-          .remove([filePath]);
-        if (storageError) {
-          console.error("Storage delete error:", storageError);
-        }
+      // Now that this note's row is gone, atomically check whether any
+      // other lecture_notes rows still reference the same file_path (via
+      // rep_copy_lecture_note) and remove the storage object only if none
+      // do. The check and the delete happen in a single SQL statement
+      // server-side, so two notes sharing a file being deleted around the
+      // same time can't both "see" the other as still existing and both
+      // skip cleanup — whichever one runs last will correctly find zero
+      // remaining references and remove the file.
+      const { error: cleanupError } = await supabase.rpc(
+        "cleanup_orphaned_lecture_note_file" as any,
+        { _file_path: filePath } as any,
+      );
+      if (cleanupError) {
+        console.error("Storage cleanup error:", cleanupError);
       }
-
 
       // Update user storage (subtract file size)
       await supabase.rpc("update_user_storage", {
