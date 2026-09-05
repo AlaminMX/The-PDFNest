@@ -48,6 +48,23 @@ export async function uploadStandaloneThumbnail(file: File, documentId: string):
   }
 }
 
+export async function uploadPersonalThumbnail(file: File, userId: string, fileId: string): Promise<string | null> {
+  try {
+    const thumbnail = await renderPdfFirstPageThumbnail(file);
+    const path = `${userId}/personal/${fileId}.jpg`;
+    const { error } = await supabase.storage
+      .from("pdf-thumbnails")
+      .upload(path, thumbnail, { contentType: "image/jpeg", upsert: true });
+    if (error) throw error;
+    return path;
+  } catch (error) {
+    // Thumbnail generation is a nice-to-have, not a blocker — the file
+    // itself has already uploaded successfully by the time this runs.
+    console.error("Failed to generate personal PDF thumbnail:", error);
+    return null;
+  }
+}
+
 export async function getThumbnailSignedUrl(path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
   const { data, error } = await supabase.storage.from("pdf-thumbnails").createSignedUrl(path, 3600);
