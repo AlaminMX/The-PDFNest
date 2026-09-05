@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { logActivity } from "@/lib/sessionLogger";
 import { uploadManager, UploadItem } from "@/lib/uploadManager";
 import { cachePDF, getCachedPDF, getAllCachedIds, removeCachedPDF, isOffline, saveFileListForOffline, getOfflineFileList, type OfflineFileMetadata } from "@/lib/offlineStorage";
+import { getThumbnailSignedUrl } from "@/lib/pdfThumbnails";
 
 export interface PDFFile {
   id: string;
@@ -93,14 +94,15 @@ export function usePDFFiles(userId: string | undefined) {
       // Get signed URLs in parallel
       const filesWithUrls = await Promise.all(
         records.map(async (file) => {
-          const { data: urlData } = await supabase.storage
-            .from("pdfs")
-            .createSignedUrl(file.storage_path, 3600);
+          const [{ data: urlData }, thumbnailUrl] = await Promise.all([
+            supabase.storage.from("pdfs").createSignedUrl(file.storage_path, 3600),
+            getThumbnailSignedUrl(file.thumbnail_url),
+          ]);
 
           return {
             ...file,
             url: urlData?.signedUrl,
-            thumbnail_url: null as string | null,
+            thumbnail_url: thumbnailUrl,
             isOfflineAvailable: cachedIds.has(file.id),
           };
         })
