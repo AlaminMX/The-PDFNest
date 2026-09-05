@@ -1201,8 +1201,12 @@ export default function Index() {
                         className="w-4 h-4 cursor-pointer flex-shrink-0" />
                       
                         <div className="flex-shrink-0">
-                          <div className="w-10 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center border border-primary/20 shadow-sm">
-                            <FileText className="w-5 h-5 text-primary" />
+                          <div className="w-10 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center border border-primary/20 shadow-sm overflow-hidden">
+                            {file.thumbnail_url ? (
+                              <img src={file.thumbnail_url} alt={file.name} className="w-full h-full object-cover object-top" />
+                            ) : (
+                              <FileText className="w-5 h-5 text-primary" />
+                            )}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 max-w-full overflow-hidden">
@@ -1411,14 +1415,22 @@ export default function Index() {
                     
 
                       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/20 shadow-sm">
-                        <div className="w-full h-full flex flex-col items-center justify-center p-3">
-                          <FileText className="w-12 h-12 text-primary mb-2" />
-                          <div className="w-full space-y-1">
-                            <div className="h-1.5 bg-primary/20 rounded-full w-full"></div>
-                            <div className="h-1.5 bg-primary/15 rounded-full w-4/5"></div>
-                            <div className="h-1.5 bg-primary/10 rounded-full w-3/5"></div>
+                        {file.thumbnail_url ? (
+                          <img
+                            src={file.thumbnail_url}
+                            alt={file.name}
+                            className="w-full h-full object-cover object-top"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-3">
+                            <FileText className="w-12 h-12 text-primary mb-2" />
+                            <div className="w-full space-y-1">
+                              <div className="h-1.5 bg-primary/20 rounded-full w-full"></div>
+                              <div className="h-1.5 bg-primary/15 rounded-full w-4/5"></div>
+                              <div className="h-1.5 bg-primary/10 rounded-full w-3/5"></div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                         
                         {file.is_favorite &&
                       <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1">
