@@ -46,6 +46,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialRenderDone, setInitialRenderDone] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +127,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
         renderTaskRef.current.cancel();
       }
     };
-  }, [isOpen, pdfUrl, fileId]);
+  }, [isOpen, pdfUrl, fileId, retryKey]);
 
   // Render current page - use 1x DPI on first render for speed, then re-render at full quality
   const renderPage = useCallback(async (pageNum: number) => {
@@ -268,6 +269,10 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
     setError(null);
     setLoading(true);
     setPdfDoc(null);
+    // Bumping this is what actually re-runs the load effect below — without
+    // it, resetting the state above alone leaves the viewer stuck spinning
+    // forever since nothing re-fetches or re-parses the PDF.
+    setRetryKey((k) => k + 1);
   };
 
   return (
