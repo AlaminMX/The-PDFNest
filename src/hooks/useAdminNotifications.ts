@@ -34,7 +34,7 @@ export function useAdminNotifications() {
     };
 
     const channel = supabase
-      .channel("admin-notifications")
+      .channel(`admin-notifications-${Math.random().toString(36).slice(2, 9)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "community_uploads" },

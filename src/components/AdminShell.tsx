@@ -168,7 +168,7 @@ export function AdminShell({ title, subtitle, icon, actions, children, skipGuard
     };
     load();
     const channel = supabase
-      .channel("admin_shell_pending")
+      .channel(`admin_shell_pending_${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "community_uploads" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };

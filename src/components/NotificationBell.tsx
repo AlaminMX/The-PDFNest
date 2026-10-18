@@ -24,6 +24,7 @@ export function NotificationBell() {
 
       // Realtime
       const refreshCount = async () => {
+        if (!mounted) return;
         const { count: c } = await supabase
           .from("user_notifications")
           .select("id", { count: "exact", head: true })
@@ -32,8 +33,10 @@ export function NotificationBell() {
         if (mounted) setUnread(c || 0);
       };
 
-      channelRef.current = supabase
-        .channel(`bell:${user.id}`)
+      if (!mounted) return;
+      const channelId = `bell:${user.id}:${Math.random().toString(36).slice(2, 9)}`;
+      const channel = supabase
+        .channel(channelId)
         .on("postgres_changes", {
           event: "*",
           schema: "public",
@@ -41,6 +44,12 @@ export function NotificationBell() {
           filter: `user_id=eq.${user.id}`,
         }, refreshCount)
         .subscribe();
+
+      if (!mounted) {
+        supabase.removeChannel(channel);
+        return;
+      }
+      channelRef.current = channel;
     };
 
     init();

@@ -116,8 +116,10 @@ export function SmartBottomNav() {
   useEffect(() => {
     if (!userId) return;
 
+    let mounted = true;
+    const channelId = `nav_notifications:${userId}:${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel(`nav_notifications:${userId}`)
+      .channel(channelId)
       .on(
         "postgres_changes",
         {
@@ -127,17 +129,21 @@ export function SmartBottomNav() {
           filter: `user_id=eq.${userId}`,
         },
         async () => {
+          if (!mounted) return;
           const { count } = await supabase
             .from("user_notifications")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
             .eq("is_read", false);
-          setUnreadNotifications(count || 0);
+          if (mounted) {
+            setUnreadNotifications(count || 0);
+          }
         }
       )
       .subscribe();
 
     return () => {
+      mounted = false;
       supabase.removeChannel(channel);
     };
   }, [userId]);

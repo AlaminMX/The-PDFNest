@@ -3,10 +3,12 @@ import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { 
@@ -297,6 +299,7 @@ export function NavigationTutorial({ open, onOpenChange }: NavigationTutorialPro
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[85vh]">
+          <DrawerTitle className="sr-only">{currentStepData.title}</DrawerTitle>
           {content}
         </DrawerContent>
       </Drawer>
@@ -307,6 +310,7 @@ export function NavigationTutorial({ open, onOpenChange }: NavigationTutorialPro
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden">
+        <DialogTitle className="sr-only">{currentStepData.title}</DialogTitle>
         {content}
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -282,6 +282,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
         side="bottom" 
         className="h-[95vh] rounded-t-3xl p-0 flex flex-col fullscreen:h-screen fullscreen:rounded-none"
       >
+        <SheetTitle className="sr-only">{fileName || "PDF Document Viewer"}</SheetTitle>
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/50 sticky top-0 bg-background z-20">
           <div className="min-w-0 flex-1">
