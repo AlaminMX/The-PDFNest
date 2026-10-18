@@ -59,8 +59,11 @@ export default function AdminReps() {
   const [newDepartmentName, setNewDepartmentName] = useState("");
   const [newDepartmentColor, setNewDepartmentColor] = useState("");
   const [newDepartmentIcon, setNewDepartmentIcon] = useState("");
-  const [courses, setCourses] = useState<{ code: string; name: string }[]>([{ code: "", name: "" }]);
-  const [selectedCreateSemester, setSelectedCreateSemester] = useState<string>("first");
+  const [newRepLevel, setNewRepLevel] = useState<number>(100);
+  const [newRepCohort, setNewRepCohort] = useState("");
+  const [allowCrossLevel, setAllowCrossLevel] = useState(false);
+  const [allowCrossDepartment, setAllowCrossDepartment] = useState(false);
+  const [allowCrossFaculty, setAllowCrossFaculty] = useState(false);
 
   // Edit rep state - FULL editing capability
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -188,21 +191,7 @@ export default function AdminReps() {
     }
   };
 
-  const addCourse = () => {
-    setCourses([...courses, { code: "", name: "" }]);
-  };
 
-  const removeCourse = (index: number) => {
-    if (courses.length > 1) {
-      setCourses(courses.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateCourse = (index: number, field: "code" | "name", value: string) => {
-    const updated = [...courses];
-    updated[index][field] = value;
-    setCourses(updated);
-  };
 
   // Edit dialog course management
   const addEditCourse = () => {
@@ -244,12 +233,6 @@ export default function AdminReps() {
       return;
     }
 
-    const validCourses = courses.filter(c => c.name.trim());
-    if (validCourses.length === 0) {
-      toast.error("Please add at least one course");
-      return;
-    }
-
     setCreating(true);
     try {
       const deptSlug = generateSlug(newDepartmentName.trim());
@@ -280,22 +263,17 @@ export default function AdminReps() {
         departmentId = newDept.id;
       }
 
-      const coursesToInsert = validCourses.map(c => ({
-        department_id: departmentId,
-        code: c.code.trim() || c.name.trim().substring(0, 10).toUpperCase().replace(/\s/g, ""),
-        name: c.name.trim(),
-        level: 100,
-        semester: selectedCreateSemester,
-      }));
-
-      await supabase.from("courses").insert(coursesToInsert);
-
       const response = await supabase.functions.invoke("create-rep-account", {
         body: {
           email: newRepEmail,
           password: newRepPassword,
           displayName: newRepDisplayName,
           departmentId: departmentId,
+          level: newRepLevel,
+          repCohort: newRepCohort,
+          allowCrossLevel,
+          allowCrossDepartment,
+          allowCrossFaculty,
         },
       });
 
@@ -322,8 +300,11 @@ export default function AdminReps() {
     setNewDepartmentName("");
     setNewDepartmentColor("");
     setNewDepartmentIcon("");
-    setCourses([{ code: "", name: "" }]);
-    setSelectedCreateSemester("first");
+    setNewRepLevel(100);
+    setNewRepCohort("");
+    setAllowCrossLevel(false);
+    setAllowCrossDepartment(false);
+    setAllowCrossFaculty(false);
   };
 
   const handleDeleteRep = async (repId: string, displayName: string) => {
@@ -602,66 +583,84 @@ export default function AdminReps() {
                     </div>
                   </div>
 
-                  {/* Courses */}
+                  {/* Rep Level, Cohort, and Permissions */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                        Courses Offered
-                      </h3>
-                      <Button type="button" variant="outline" size="sm" onClick={addCourse} className="gap-1">
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Course
-                      </Button>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Academic Scope &amp; Cohort
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="repLevel">Assigned Level</Label>
+                        <Select value={String(newRepLevel)} onValueChange={(val) => setNewRepLevel(Number(val))}>
+                          <SelectTrigger id="repLevel">
+                            <SelectValue placeholder="Select Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="100">100 Level</SelectItem>
+                            <SelectItem value="200">200 Level</SelectItem>
+                            <SelectItem value="300">300 Level</SelectItem>
+                            <SelectItem value="400">400 Level</SelectItem>
+                            <SelectItem value="500">500 Level</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="repCohort">Cohort Year Set (optional)</Label>
+                        <Input
+                          id="repCohort"
+                          placeholder="e.g., U25, U24"
+                          value={newRepCohort}
+                          onChange={(e) => setNewRepCohort(e.target.value)}
+                        />
+                      </div>
                     </div>
 
-                    {/* Semester selector for create */}
-                    <div className="space-y-2">
-                      <Label>Semester</Label>
-                      <Tabs value={selectedCreateSemester} onValueChange={setSelectedCreateSemester}>
-                        <TabsList className="w-full">
-                          <TabsTrigger value="first" className="flex-1">First Semester</TabsTrigger>
-                          <TabsTrigger value="second" className="flex-1">Second Semester</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                      <p className="text-xs text-muted-foreground">
-                        All courses below will be added to the {selectedCreateSemester} semester.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {courses.map((course, index) => (
-                        <div key={index} className="flex gap-3 items-start">
-                          <div className="flex-1 grid grid-cols-3 gap-3">
-                            <Input
-                              placeholder="Code (optional)"
-                              value={course.code}
-                              onChange={(e) => updateCourse(index, "code", e.target.value)}
-                              className="col-span-1"
-                            />
-                            <Input
-                              placeholder="Course Name"
-                              value={course.name}
-                              onChange={(e) => updateCourse(index, "name", e.target.value)}
-                              className="col-span-2"
-                            />
+                    <div className="space-y-3 pt-2">
+                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        Upload Permissions &amp; Scope
+                      </h3>
+                      <div className="space-y-3 bg-muted/40 p-3 rounded-lg border border-border">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="crossLevel" className="text-sm font-medium cursor-pointer">Allow Cross-Level Uploads</Label>
+                            <p className="text-xs text-muted-foreground">Allow rep to upload to levels other than their assigned level</p>
                           </div>
-                          {courses.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeCourse(index)}
-                              className="shrink-0 text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <input
+                            type="checkbox"
+                            id="crossLevel"
+                            checked={allowCrossLevel}
+                            onChange={(e) => setAllowCrossLevel(e.target.checked)}
+                            className="w-4 h-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+                          />
                         </div>
-                      ))}
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <div>
+                            <Label htmlFor="crossDept" className="text-sm font-medium cursor-pointer">Allow Cross-Department Uploads</Label>
+                            <p className="text-xs text-muted-foreground">Allow rep to upload to other departments in the faculty</p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            id="crossDept"
+                            checked={allowCrossDepartment}
+                            onChange={(e) => setAllowCrossDepartment(e.target.checked)}
+                            className="w-4 h-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <div>
+                            <Label htmlFor="crossFac" className="text-sm font-medium cursor-pointer">Allow Cross-Faculty Uploads</Label>
+                            <p className="text-xs text-muted-foreground">Allow rep to upload across different faculties</p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            id="crossFac"
+                            checked={allowCrossFaculty}
+                            onChange={(e) => setAllowCrossFaculty(e.target.checked)}
+                            className="w-4 h-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Add all courses this department offers for the selected semester.
-                    </p>
                   </div>
                 </div>
               </ScrollArea>

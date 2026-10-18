@@ -2,7 +2,6 @@ import { useEffect, useState, ReactNode } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useAppSettings } from "@/hooks/useAppSettings";
 import {
   Sidebar,
   SidebarContent,
@@ -17,13 +16,13 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LoadingState } from "@/components/LoadingState";
 import {
   ArrowLeft, LayoutDashboard, Building2, UserCog, Megaphone, Activity,
-  ShoppingBag, Inbox, FileText, LogOut, Moon, Tag,
+  ShoppingBag, Inbox, FileText, LogOut, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,28 +39,7 @@ const items = [
   { label: "Past Questions", path: "/admin/past-questions", icon: FileText },
 ];
 
-function RamadanRow() {
-  const { settings, updateSetting } = useAppSettings();
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-      <div className="flex items-center gap-2 min-w-0">
-        <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
-        <Label className="text-xs truncate">Ramadan</Label>
-      </div>
-      <Switch
-        checked={settings.ramadan_theme_enabled}
-        disabled={busy}
-        onCheckedChange={async (v) => {
-          setBusy(true);
-          const ok = await updateSetting("ramadan_theme_enabled", v ? "true" : "false");
-          toast[ok ? "success" : "error"](ok ? (v ? "Ramadan theme on" : "Ramadan theme off") : "Failed");
-          setBusy(false);
-        }}
-      />
-    </div>
-  );
-}
+
 
 function AdminSidebar({ pendingUploadsCount }: { pendingUploadsCount: number }) {
   const navigate = useNavigate();
@@ -113,7 +91,6 @@ function AdminSidebar({ pendingUploadsCount }: { pendingUploadsCount: number }) 
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="gap-1 group-data-[collapsible=icon]:hidden">
-        <RamadanRow />
         <ThemeToggle />
         <Button
           variant="ghost"

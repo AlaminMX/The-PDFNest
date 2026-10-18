@@ -64,7 +64,17 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, displayName, departmentId } = await req.json();
+    const { 
+      email, 
+      password, 
+      displayName, 
+      departmentId, 
+      level, 
+      repCohort, 
+      allowCrossLevel, 
+      allowCrossDepartment, 
+      allowCrossFaculty 
+    } = await req.json();
 
     // Input validation - presence checks
     if (!email || !password || !displayName || !departmentId) {
@@ -106,6 +116,12 @@ Deno.serve(async (req) => {
       );
     }
 
+    const parsedLevel = level ? Number(level) : 100;
+    const cohortStr = repCohort ? String(repCohort).trim() : "";
+    const crossLevel = !!allowCrossLevel;
+    const crossDept = !!allowCrossDepartment;
+    const crossFac = !!allowCrossFaculty;
+
     console.log(`Creating rep account for: ${email}`);
 
     // Create the user with admin API
@@ -115,6 +131,11 @@ Deno.serve(async (req) => {
       email_confirm: true, // Auto-confirm email
       user_metadata: {
         display_name: displayName.trim(),
+        rep_level: parsedLevel,
+        rep_cohort: cohortStr,
+        allow_cross_level: crossLevel,
+        allow_cross_department: crossDept,
+        allow_cross_faculty: crossFac,
       },
     });
 
@@ -129,18 +150,18 @@ Deno.serve(async (req) => {
     const userId = newUser.user.id;
     console.log(`User created with ID: ${userId}`);
 
-    // Update profile with display name and department
+    // Update profile with display name, department, and level
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
         display_name: displayName.trim(),
         department_id: departmentId,
+        level: parsedLevel,
       })
       .eq("id", userId);
 
     if (profileError) {
       console.error("Error updating profile:", profileError);
-      // Don't fail the whole operation, profile will be created by trigger
     }
 
     // Assign 'rep' role

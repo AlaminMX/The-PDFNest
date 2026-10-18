@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AppSettings {
-  ramadan_theme_enabled: boolean;
   new_departments_label_enabled: boolean;
   new_departments_label: string;
 }
 
 const defaultSettings: AppSettings = {
-  ramadan_theme_enabled: false,
   new_departments_label_enabled: true,
   new_departments_label: "New Departments",
 };
@@ -30,9 +28,6 @@ export function useAppSettings() {
 
       const parsed: AppSettings = { ...defaultSettings };
       (data as any[])?.forEach((row: { key: string; value: string }) => {
-        if (row.key === "ramadan_theme_enabled") {
-          parsed.ramadan_theme_enabled = row.value === "true";
-        }
         if (row.key === "new_departments_label_enabled") {
           parsed.new_departments_label_enabled = row.value !== "false";
         }
@@ -58,12 +53,6 @@ export function useAppSettings() {
       if (error) throw error;
 
       // Update local state
-      if (key === "ramadan_theme_enabled") {
-        setSettings((prev) => ({
-          ...prev,
-          ramadan_theme_enabled: value === "true",
-        }));
-      }
       if (key === "new_departments_label_enabled") {
         setSettings((prev) => ({
           ...prev,

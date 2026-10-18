@@ -64,7 +64,19 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { repId, email, password, displayName, departmentId, facultyId } = await req.json();
+    const { 
+      repId, 
+      email, 
+      password, 
+      displayName, 
+      departmentId, 
+      facultyId,
+      level,
+      repCohort,
+      allowCrossLevel,
+      allowCrossDepartment,
+      allowCrossFaculty
+    } = await req.json();
 
     // Input validation - repId is required
     if (!repId || typeof repId !== 'string' || !UUID_REGEX.test(repId)) {
@@ -91,49 +103,71 @@ Deno.serve(async (req) => {
 
     console.log(`Updating rep account: ${repId}`);
 
-    // Update auth credentials if provided
-    if (email || password) {
-      const authUpdate: { email?: string; password?: string } = {};
-      
-      if (email) {
-        if (typeof email !== 'string' || !EMAIL_REGEX.test(email) || email.length > 255) {
-          return new Response(
-            JSON.stringify({ error: "Invalid email format" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        authUpdate.email = email;
-      }
-      
-      if (password) {
-        if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
-          return new Response(
-            JSON.stringify({ error: "Password must be between 6 and 128 characters" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        authUpdate.password = password;
-      }
-
-      if (Object.keys(authUpdate).length > 0) {
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
-          repId,
-          authUpdate
+    // Update auth credentials and user metadata if provided
+    const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, any> } = {};
+    const userMetadataUpdate: Record<string, any> = {};
+    
+    if (email) {
+      if (typeof email !== 'string' || !EMAIL_REGEX.test(email) || email.length > 255) {
+        return new Response(
+          JSON.stringify({ error: "Invalid email format" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-
-        if (updateAuthError) {
-          console.error("Error updating auth:", updateAuthError);
-          return new Response(
-            JSON.stringify({ error: updateAuthError.message }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        console.log(`Auth credentials updated for: ${repId}`);
       }
+      authUpdate.email = email;
+    }
+    
+    if (password) {
+      if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
+        return new Response(
+          JSON.stringify({ error: "Password must be between 6 and 128 characters" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      authUpdate.password = password;
     }
 
-    // Update profile if displayName or departmentId provided
-    const profileUpdate: { display_name?: string; department_id?: string | null; faculty_id?: string | null } = {};
+    if (displayName !== undefined) {
+      userMetadataUpdate.display_name = displayName.trim();
+    }
+    if (level !== undefined) {
+      userMetadataUpdate.rep_level = Number(level);
+    }
+    if (repCohort !== undefined) {
+      userMetadataUpdate.rep_cohort = String(repCohort).trim();
+    }
+    if (allowCrossLevel !== undefined) {
+      userMetadataUpdate.allow_cross_level = !!allowCrossLevel;
+    }
+    if (allowCrossDepartment !== undefined) {
+      userMetadataUpdate.allow_cross_department = !!allowCrossDepartment;
+    }
+    if (allowCrossFaculty !== undefined) {
+      userMetadataUpdate.allow_cross_faculty = !!allowCrossFaculty;
+    }
+
+    if (Object.keys(userMetadataUpdate).length > 0) {
+      authUpdate.user_metadata = userMetadataUpdate;
+    }
+
+    if (Object.keys(authUpdate).length > 0) {
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+        repId,
+        authUpdate
+      );
+
+      if (updateAuthError) {
+        console.error("Error updating auth:", updateAuthError);
+        return new Response(
+          JSON.stringify({ error: updateAuthError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.log(`Auth credentials updated for: ${repId}`);
+    }
+
+    // Update profile if displayName, departmentId, facultyId, or level provided
+    const profileUpdate: { display_name?: string; department_id?: string | null; faculty_id?: string | null; level?: number | null } = {};
     
     if (displayName !== undefined) {
       if (typeof displayName !== 'string' || displayName.trim().length === 0 || displayName.length > 100) {
@@ -163,6 +197,10 @@ Deno.serve(async (req) => {
         );
       }
       profileUpdate.faculty_id = facultyId;
+    }
+
+    if (level !== undefined && level !== null) {
+      profileUpdate.level = Number(level);
     }
 
     if (Object.keys(profileUpdate).length > 0) {
