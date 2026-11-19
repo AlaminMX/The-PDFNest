@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useDepartmentCategories } from "@/hooks/useDepartmentCategories";
 import { useFaculties } from "@/hooks/useFaculties";
@@ -16,10 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap, BookPlus } from "lucide-react";
+import { Building2, Edit, Palette, Sparkles, Plus, Trash2, GripVertical, Eye, EyeOff, Tag, GraduationCap, BookPlus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
-import { LoadingState } from "@/components/LoadingState";
+import { AdminShell } from "@/components/AdminShell";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { CreateCourseModal } from "@/components/CreateCourseModal";
 import { TileImageUpload } from "@/components/TileImageUpload";
 import { getDepartmentStyles, getIconGlowStyles } from "@/lib/departmentColors";
@@ -54,9 +52,11 @@ interface DepartmentItemProps {
   onDelete: (dept: any) => void;
   onToggleVisibility: (dept: any) => void;
   categoryName?: string;
+  onDragEnd: () => void;
+  savingOrder: boolean;
 }
 
-function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, categoryName }: DepartmentItemProps) {
+function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, categoryName, onDragEnd, savingOrder }: DepartmentItemProps) {
   const navigate = useNavigate();
   const dragControls = useDragControls();
   const styles = getDepartmentStyles(dept.color, index);
@@ -69,6 +69,7 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
       id={dept.id}
       dragListener={false}
       dragControls={dragControls}
+      onDragEnd={onDragEnd}
       className="list-none"
     >
       <Card 
@@ -83,7 +84,7 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
             {/* Drag Handle */}
             <div
               className="cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-white/10 transition-colors"
-              onPointerDown={(e) => dragControls.start(e)}
+              onPointerDown={(e) => { if (!savingOrder) dragControls.start(e); }}
             >
               <GripVertical className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -186,13 +187,11 @@ function DepartmentItem({ dept, index, onEdit, onDelete, onToggleVisibility, cat
 }
 
 export default function AdminDepartments() {
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdminStatus();
   const { departments, loading: deptLoading, refresh: refreshDepartments } = useDepartments();
   const { categories } = useDepartmentCategories();
   const { faculties, refresh: refreshFaculties } = useFaculties();
   
+  const [searchOpen, setSearchOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<EditingDepartment | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -202,15 +201,10 @@ export default function AdminDepartments() {
   const [deleting, setDeleting] = useState(false);
   const [deleteImpact, setDeleteImpact] = useState<{ courses: number; lectureNotes: number; standaloneDocs: number } | null>(null);
   const [loadingImpact, setLoadingImpact] = useState(false);
-  const [orderedDepts, setOrderedDepts] = useState<any[]>([]);
+  const [orderedDepts, setOrderedDepts] = useState<typeof departments>([]);
+  const pendingOrder = useRef<typeof departments | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
   const [showQuickCreateCourse, setShowQuickCreateCourse] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !adminLoading && !isAdmin) {
-      toast.error("Access denied. Admin privileges required.");
-      navigate("/dashboard");
-    }
-  }, [isAdmin, authLoading, adminLoading, navigate]);
 
   // Sync ordered departments with fetched departments
   useEffect(() => {
@@ -402,31 +396,32 @@ export default function AdminDepartments() {
     }
   };
 
-  const handleReorder = async (newOrder: any[]) => {
+  const handleReorder = (newOrder: typeof departments) => {
+    pendingOrder.current = newOrder;
     setOrderedDepts(newOrder);
+  };
 
-    // Save the new order in a single atomic call — previously this looped
-    // through individual .update() calls per department, which could leave
-    // display_order half-updated if one call in the middle failed.
+  const saveOrder = async () => {
+    const newOrder = pendingOrder.current;
+    if (!newOrder) return;
+
+    pendingOrder.current = null;
+    setSavingOrder(true);
     try {
-      const { error } = await supabase.rpc(
-        "reorder_departments" as any,
-        { _ordered_ids: newOrder.map((dept) => dept.id) } as any,
-      );
+      const { error } = await supabase.rpc("admin_set_department_order", {
+        _ordered_ids: newOrder.map((dept) => dept.id),
+      });
       if (error) throw error;
 
       toast.success("Department order saved");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating order:", error);
       toast.error("Failed to save order");
-      // Revert on error
-      refreshDepartments();
+    } finally {
+      await refreshDepartments();
+      setSavingOrder(false);
     }
   };
-
-  if (authLoading || adminLoading || !isAdmin) {
-    return <LoadingState message="Verifying access..." />;
-  }
 
   // Preview styles for editing
   const previewStyles = editingDept 
@@ -443,16 +438,19 @@ export default function AdminDepartments() {
   const createPreviewGlow = createPreviewIcon ? getIconGlowStyles(createPreviewStyles.hsl) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10 pb-8">
-      <PageHeader
-        title="Department Management"
-        subtitle="Create, edit, delete, and reorder departments"
-        showBack
-        backTo="/admin"
-        icon={<Building2 className="h-6 w-6 text-primary" />}
-      />
-
-      <main className="container mx-auto px-4 py-6 md:py-8 space-y-6">
+    <AdminShell
+      title="Department Management"
+      subtitle="Create, edit, delete, and reorder departments"
+      icon={<Building2 className="h-5 w-5 text-primary" />}
+      actions={
+        <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Search">
+          <Search className="h-5 w-5" />
+        </Button>
+      }
+      contentClassName="bg-gradient-to-br from-background to-secondary/10 pb-8"
+    >
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
         {/* Create Buttons */}
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-center">
           <Button onClick={() => setShowCreateDialog(true)} className="gap-2 w-full sm:w-auto">
@@ -506,6 +504,8 @@ export default function AdminDepartments() {
                     onEdit={handleEdit}
                     onDelete={setDeletingDept}
                     categoryName={category?.name}
+                    onDragEnd={saveOrder}
+                    savingOrder={savingOrder}
                     onToggleVisibility={handleToggleVisibility}
                   />
                 );
@@ -513,7 +513,7 @@ export default function AdminDepartments() {
             </Reorder.Group>
           </div>
         )}
-      </main>
+      </div>
 
       <CreateCourseModal
         open={showQuickCreateCourse}
@@ -985,6 +985,6 @@ export default function AdminDepartments() {
           </p>
         </div>
       </footer>
-    </div>
+    </AdminShell>
   );
 }

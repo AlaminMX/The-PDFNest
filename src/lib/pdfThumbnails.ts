@@ -1,11 +1,12 @@
-import * as pdfjs from "pdfjs-dist";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import { supabase } from "@/integrations/supabase/client";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export async function renderPdfFirstPageThumbnail(file: File, maxWidth = 420): Promise<Blob> {
   const data = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data }).promise;
+  const pdf = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
   try {
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: 1 });

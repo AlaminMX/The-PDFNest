@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -26,6 +27,7 @@ interface EditProfileModalProps {
   userId: string;
   currentDisplayName: string;
   currentAvatarUrl?: string | null;
+  departmentLocked?: boolean;
   currentDepartmentId?: string | null;
   currentPhoneNumber?: string | null;
   currentFullName?: string | null;
@@ -39,6 +41,7 @@ export function EditProfileModal({
   userId,
   currentDisplayName,
   currentAvatarUrl,
+  departmentLocked = false,
   currentDepartmentId,
   currentPhoneNumber,
   currentFullName,
@@ -95,7 +98,7 @@ export function EditProfileModal({
 
     setSaving(true);
     try {
-      const updateData: Record<string, any> = {
+      const updateData: TablesUpdate<"profiles"> = {
         display_name: displayName.trim(),
         nickname: displayName.trim(),
         phone_number: phoneNumber.trim() || null,
@@ -103,14 +106,8 @@ export function EditProfileModal({
         date_of_birth: dateOfBirth ? format(dateOfBirth, "yyyy-MM-dd") : null,
       };
 
-      if (departmentId !== (currentDepartmentId || "")) {
+      if (!departmentLocked && departmentId !== (currentDepartmentId || "")) {
         updateData.department_id = departmentId || null;
-        const deptCacheData = {
-          hasDepartment: !!departmentId,
-          userId: userId,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem("pdfnest_dept_status", JSON.stringify(deptCacheData));
       }
 
       const { error } = await supabase
@@ -120,6 +117,7 @@ export function EditProfileModal({
 
       if (error) throw error;
 
+      if ("department_id" in updateData) localStorage.removeItem("pdfnest_dept_status");
       toast.success("Profile updated successfully");
       onUpdateComplete();
       onClose();
@@ -231,7 +229,7 @@ export function EditProfileModal({
 
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
-            <Select value={departmentId || "none"} onValueChange={(val) => setDepartmentId(val === "none" ? "" : val)}>
+            <Select disabled={departmentLocked} value={departmentId || "none"} onValueChange={(val) => setDepartmentId(val === "none" ? "" : val)}>
               <SelectTrigger id="department">
                 <SelectValue placeholder={loadingDepts ? "Loading..." : "Select department (optional)"} />
               </SelectTrigger>
@@ -246,7 +244,7 @@ export function EditProfileModal({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Only select if you are a student of AFIT
+              {departmentLocked ? "Your department is assigned by an administrator." : "Only select if you are a student of AFIT"}
             </p>
           </div>
         </div>

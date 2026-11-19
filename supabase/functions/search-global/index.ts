@@ -20,33 +20,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Require authentication
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Search only the catalog visible under anonymous row-level policies.
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
 
     const { query } = await req.json().catch(() => ({ query: "" }));
     if (!query || typeof query !== "string" || query.trim().length < 2) {
       return new Response(
-        JSON.stringify({ courses: [], pqCourses: [], lectureNotes: [], pastQuestions: [] }),
+        JSON.stringify({ courses: [], pqCourses: [], lectureNotes: [], pastQuestions: [], standaloneDocuments: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -66,7 +49,7 @@ Deno.serve(async (req) => {
     }
 
     const wildcardQuery = `%${sanitized}%`;
-    const codeWildcard = courseCodePattern ? `${sanitize(courseCodePattern)}%` : null;
+    const codeWildcard = codeMatch ? `${codeMatch[1]}%${codeMatch[2]}%` : null;
 
     // Run all queries in parallel.
     //
@@ -92,6 +75,7 @@ Deno.serve(async (req) => {
         `)
         .ilike("code", codeWildcard || wildcardQuery)
         .eq("status", "approved")
+        .eq("departments.is_visible", true)
         .limit(15),
 
       // 1b. Courses matching by name
@@ -103,6 +87,7 @@ Deno.serve(async (req) => {
         `)
         .ilike("name", wildcardQuery)
         .eq("status", "approved")
+        .eq("departments.is_visible", true)
         .limit(15),
 
       // 2a. PQ courses matching by code
@@ -123,19 +108,21 @@ Deno.serve(async (req) => {
       supabase
         .from("lecture_notes")
         .select(`
-          id, title, file_path,
+          id, title,
           courses!inner(code, level, semester, department_id,
             departments!inner(slug, faculty_id, faculties(slug))
           )
         `)
         .ilike("title", wildcardQuery)
+        .eq("courses.status", "approved")
+        .eq("courses.departments.is_visible", true)
         .limit(5),
 
       // 4. Past question files
       supabase
         .from("past_questions")
         .select(`
-          id, title, file_path,
+          id, title,
           pq_courses!inner(code, level, semester)
         `)
         .ilike("title", wildcardQuery)
@@ -149,8 +136,16 @@ Deno.serve(async (req) => {
           departments!inner(slug, name)
         `)
         .ilike("title", wildcardQuery)
+        .eq("departments.is_visible", true)
         .limit(10),
     ]);
+
+    for (const result of [
+      coursesByCodeRes, coursesByNameRes, pqCoursesByCodeRes, pqCoursesByNameRes,
+      notesRes, pqFilesRes, standaloneRes,
+    ]) {
+      if (result.error) throw result.error;
+    }
 
     // Merge and de-duplicate the two-part course/pq_course results by id.
     const dedupeById = (rows: any[]) => Array.from(new Map(rows.map((r) => [r.id, r])).values());
@@ -172,8 +167,8 @@ Deno.serve(async (req) => {
 
     // Sort: exact code matches first, then by keyword hint on department name
     courses.sort((a: any, b: any) => {
-      const aExact = courseCodePattern && a.code.toUpperCase() === courseCodePattern ? 0 : 1;
-      const bExact = courseCodePattern && b.code.toUpperCase() === courseCodePattern ? 0 : 1;
+      const aExact = courseCodePattern && a.code.toUpperCase().replace(/\s/g, "") === courseCodePattern ? 0 : 1;
+      const bExact = courseCodePattern && b.code.toUpperCase().replace(/\s/g, "") === courseCodePattern ? 0 : 1;
       if (aExact !== bExact) return aExact - bExact;
 
       if (keywordHint) {
@@ -198,7 +193,6 @@ Deno.serve(async (req) => {
     const lectureNotes = (notesRes.data || []).map((n: any) => ({
       id: n.id,
       title: n.title,
-      file_path: n.file_path,
       course_code: n.courses?.code,
       level: n.courses?.level,
       semester: n.courses?.semester,
@@ -210,7 +204,6 @@ Deno.serve(async (req) => {
     const pastQuestions = (pqFilesRes.data || []).map((p: any) => ({
       id: p.id,
       title: p.title,
-      file_path: p.file_path,
       course_code: p.pq_courses?.code,
       level: p.pq_courses?.level,
       semester: p.pq_courses?.semester,

@@ -1,25 +1,25 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+export function ProtectedRoute({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [checking, setChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { pathname, search, hash } = useLocation();
+  const [userId, setUserId] = useState<string | null>();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        sessionStorage.setItem("redirectAfterLogin", location.pathname + location.search);
-        navigate("/auth", { replace: true });
-      } else {
-        setIsAuthenticated(true);
-      }
-      setChecking(false);
-    });
-  }, [location.pathname]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUserId(session?.user.id ?? null),
+    );
+    return () => subscription.unsubscribe();
+  }, []);
 
-  if (checking) return null;
-  return isAuthenticated ? <>{children}</> : null;
+  useEffect(() => {
+    if (userId === null) {
+      sessionStorage.setItem("redirectAfterLogin", pathname + search + hash);
+      navigate("/auth?mode=signin", { replace: true });
+    }
+  }, [userId, pathname, search, hash, navigate]);
+
+  return userId ? <Fragment key={userId}>{children}</Fragment> : null;
 }

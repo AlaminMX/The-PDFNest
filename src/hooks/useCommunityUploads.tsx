@@ -160,35 +160,7 @@ export function useCommunityUploads({
 
     const { error } = await supabase.rpc(functionName, approvalArgs);
 
-    if (error) {
-      const isStaleApprovalFunction =
-        error.code === "PGRST202" ||
-        error.message?.includes(`Could not find the function public.${functionName}`);
-
-      if (!isStaleApprovalFunction || !trimmedTitle) {
-        throw error;
-      }
-
-      // Some deployments can temporarily have a stale PostgREST schema cache or
-      // the older 3-argument approval functions. Persist the reviewed title
-      // first, then retry the legacy RPC so approval still publishes the
-      // renamed document with the admin's chosen title.
-      const { error: titleError } = await supabase
-        .from("community_uploads")
-        .update({ title: trimmedTitle })
-        .eq("id", uploadId)
-        .eq("status", "pending");
-
-      if (titleError) throw titleError;
-
-      const { error: retryError } = await supabase.rpc(functionName, {
-        p_upload_id: uploadId,
-        p_reviewer_id: user.id,
-        p_note: note || null,
-      });
-
-      if (retryError) throw retryError;
-    }
+    if (error) throw error;
 
     logActivity("upload_approved", { title: trimmedTitle || upload?.title || uploadId });
     await fetchUploads();

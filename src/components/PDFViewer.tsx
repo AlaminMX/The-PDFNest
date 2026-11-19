@@ -18,11 +18,12 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
-import * as pdfjs from "pdfjs-dist";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import { getCachedPDF } from "@/lib/offlineStorage";
 
 // Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PDFViewerProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
     if (!isOpen || (!pdfUrl && !fileId)) return;
 
     let cancelled = false;
+    let loadingTask: ReturnType<typeof pdfjs.getDocument> | undefined;
     
     const loadPDF = async () => {
       setLoading(true);
@@ -92,10 +94,11 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
           };
         }
 
-        const loadingTask = pdfjs.getDocument(source);
+        if (cancelled) return;
+        loadingTask = pdfjs.getDocument({ ...source, isEvalSupported: false });
 
         loadingTask.onProgress = (progress) => {
-          if (progress.total > 0) {
+          if (!cancelled && progress.total > 0) {
             const percent = Math.round((progress.loaded / progress.total) * 100);
             setLoadingProgress(percent);
           }
@@ -103,10 +106,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
 
         const pdf = await loadingTask.promise;
         
-        if (cancelled) {
-          pdf.destroy();
-          return;
-        }
+        if (cancelled) return;
 
         setPdfDoc(pdf);
         setTotalPages(pdf.numPages);
@@ -126,6 +126,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
       }
+      void loadingTask?.destroy().catch(console.error);
     };
   }, [isOpen, pdfUrl, fileId, retryKey]);
 

@@ -115,7 +115,7 @@ export default function AdminCategories() {
 
   return (
     <AdminShell title="Department Categories" subtitle="Group departments for signup">
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Card className="mb-6">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold mb-4">Add New Category</h2>
@@ -162,7 +162,7 @@ export default function AdminCategories() {
             ))
           )}
         </div>
-      </main>
+      </div>
     </AdminShell>
   );
 }

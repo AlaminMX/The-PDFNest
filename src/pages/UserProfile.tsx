@@ -1,3 +1,4 @@
+import { useRepStatus } from "@/hooks/useRepStatus";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +89,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function UserProfile() {
+  const { isRep, loading: checkingRep } = useRepStatus();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -155,7 +157,7 @@ export default function UserProfile() {
     placeholderData: cachedProfile,
   });
 
-  const profile = profileData || cachedProfile;
+  const profile = profileData || (cachedProfile?.id === user?.id ? cachedProfile : null);
   const userId = profile?.id || null;
 
   const recentFiles = useMemo(() => {
@@ -309,7 +311,7 @@ export default function UserProfile() {
         </div>
 
         {/* ── Department prompt ── */}
-        {!profile.department_id && (
+        {!profile.department_id && !checkingRep && !isRep && (
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-primary shrink-0" />
@@ -453,6 +455,7 @@ export default function UserProfile() {
           currentDisplayName={displayName}
           currentAvatarUrl={profile.avatar_url}
           currentDepartmentId={profile.department_id}
+          departmentLocked={checkingRep || isRep}
           currentPhoneNumber={profile.phone_number}
           currentFullName={profile.full_name}
           currentDateOfBirth={profile.date_of_birth}

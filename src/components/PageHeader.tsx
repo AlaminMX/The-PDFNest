@@ -1,19 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import {
-  ArrowLeft,
-  Search,
-  LayoutDashboard,
-  Building2,
-  UserCog,
-  Megaphone,
-  Activity,
-  ShoppingBag,
-  Inbox,
-  FileText,
-} from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { GlobalSearch } from "@/components/GlobalSearch";
 
 interface PageHeaderProps {
@@ -34,24 +23,7 @@ export function PageHeader({
   icon,
 }: PageHeaderProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
-
-  const adminItems = [
-    { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
-    { label: "Faculties", path: "/admin/faculties", icon: Building2 },
-    { label: "Departments", path: "/admin/departments", icon: Building2 },
-    { label: "Reps", path: "/admin/reps", icon: UserCog },
-    { label: "Banners", path: "/admin/banners", icon: Megaphone },
-    { label: "Activity", path: "/admin/activity", icon: Activity },
-    { label: "Projects", path: "/admin/projects", icon: ShoppingBag },
-    { label: "Uploads", path: "/admin/uploads", icon: Inbox },
-    { label: "Past Questions", path: "/admin/past-questions", icon: FileText },
-  ];
-  const showAdminNav =
-    showBack &&
-    location.pathname.startsWith("/admin") &&
-    location.pathname !== "/admin";
 
   const handleBack = () => {
     if (backTo) {
@@ -68,7 +40,7 @@ export function PageHeader({
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-              {showBack && !showAdminNav && (
+              {showBack && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -107,30 +79,8 @@ export function PageHeader({
               <ThemeToggle />
             </div>
           </div>
-          {showAdminNav && (
-            <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {adminItems.map((item) => {
-                const Icon = item.icon;
-                const active = location.pathname === item.path;
-                return (
-                  <Button
-                    key={item.path}
-                    asChild
-                    size="sm"
-                    variant={active ? "secondary" : "ghost"}
-                    className="h-9 shrink-0 gap-2 rounded-full"
-                  >
-                    <Link to={item.path}>
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  </Button>
-                );
-              })}
-            </nav>
-          )}
         </div>
       </header>
     </>
   );
-                                               }
+}

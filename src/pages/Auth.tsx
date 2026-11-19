@@ -65,8 +65,10 @@ async function routeAfterAuth(
   const redirectTo = sessionStorage.getItem("redirectAfterLogin");
   if (redirectTo) {
     sessionStorage.removeItem("redirectAfterLogin");
-    navigate(redirectTo, { replace: true });
-    return;
+    if (redirectTo.startsWith("/") && !redirectTo.startsWith("//") && !redirectTo.includes("\\")) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
   }
   try {
     const { data } = await supabase

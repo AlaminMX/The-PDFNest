@@ -19,7 +19,7 @@ interface GlobalSearchProps {
 
 export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const navigate = useNavigate();
-  const { query, setQuery, results, loading } = useGlobalSearch();
+  const { query, setQuery, results, loading, error } = useGlobalSearch();
 
   // Reset query when dialog closes
   useEffect(() => {
@@ -54,20 +54,20 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     level: number;
     semester: string;
   }) => {
-    if (!c.faculty_slug || !c.department_slug) return;
+    if (!c.department_slug) return;
     navigate(
-      `/afit-pdfs/${c.faculty_slug}/${c.department_slug}/level/${c.level}/semester/${c.semester}/${c.code}`
+      `/afit-pdfs/${c.faculty_slug || "dept"}/${c.department_slug}/level/${c.level}/semester/${c.semester}/${encodeURIComponent(c.code)}`
     );
     close();
   };
 
   const navigateToPQCourse = (c: { code: string; level: number; semester: string }) => {
-    navigate(`/past-questions/level/${c.level}/semester/${c.semester}/${c.code}`);
+    navigate(`/past-questions/level/${c.level}/semester/${c.semester}/${encodeURIComponent(c.code)}`);
     close();
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} shouldFilter={false}>
       <CommandInput
         placeholder="Search courses, PDFs, past questions..."
         value={query}
@@ -85,9 +85,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           <CommandEmpty>
             <div className="flex flex-col items-center gap-2 py-4">
               <Search className="h-8 w-8 text-muted-foreground/50" />
-              <p>No results found</p>
+              <p>{error ? "Search is temporarily unavailable" : "No results found"}</p>
               <p className="text-xs text-muted-foreground">
-                Try another keyword or upload material
+                {error ? "Try again in a moment" : "Try another keyword or upload material"}
               </p>
             </div>
           </CommandEmpty>
@@ -156,9 +156,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                   key={`note-${n.id}`}
                   value={`PDF ${n.title} ${n.course_code}`}
                   onSelect={() => {
-                    if (n.faculty_slug && n.department_slug) {
+                    if (n.department_slug) {
                       navigate(
-                        `/afit-pdfs/${n.faculty_slug}/${n.department_slug}/level/${n.level}/semester/${n.semester}/${n.course_code}`
+                        `/afit-pdfs/${n.faculty_slug || "dept"}/${n.department_slug}/level/${n.level}/semester/${n.semester}/${encodeURIComponent(n.course_code)}`
                       );
                     }
                     close();
@@ -191,7 +191,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                   value={`PQF ${p.title} ${p.course_code}`}
                   onSelect={() => {
                     navigate(
-                      `/past-questions/level/${p.level}/semester/${p.semester}/${p.course_code}`
+                      `/past-questions/level/${p.level}/semester/${p.semester}/${encodeURIComponent(p.course_code)}`
                     );
                     close();
                   }}
