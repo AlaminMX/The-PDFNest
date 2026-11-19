@@ -1,3 +1,4 @@
+import { hasCompletedOnboarding, takePostLoginDestination } from "@/lib/onboarding";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,28 +63,15 @@ async function routeAfterAuth(
   userId: string,
   navigate: (to: string, opts?: any) => void,
 ) {
-  const redirectTo = sessionStorage.getItem("redirectAfterLogin");
-  if (redirectTo) {
-    sessionStorage.removeItem("redirectAfterLogin");
-    if (redirectTo.startsWith("/") && !redirectTo.startsWith("//") && !redirectTo.includes("\\")) {
-      navigate(redirectTo, { replace: true });
+  try {
+    if (await hasCompletedOnboarding(userId)) {
+      navigate(takePostLoginDestination(), { replace: true });
       return;
     }
+  } catch (error) {
+    console.error("Could not check onboarding status", error);
   }
-  try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("onboarding_complete")
-      .eq("id", userId)
-      .maybeSingle();
-    if (!data || data.onboarding_complete === false) {
-      navigate("/onboarding", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
-    }
-  } catch {
-    navigate("/dashboard", { replace: true });
-  }
+  navigate("/onboarding", { replace: true });
 }
 
 export default function Auth() {
