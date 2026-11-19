@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
@@ -248,6 +249,7 @@ export default function StandaloneDocuments() {
       filePath: document.file_path,
       thumbnailPath: document.thumbnail_path,
     });
+    void logActivity("view_pdf", { title: document.title });
   };
 
   const downloadDocument = async (document: StandaloneDocument) => {
@@ -268,6 +270,7 @@ export default function StandaloneDocuments() {
       window.document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success("Download started");
+      void logActivity("download_pdf", { title: document.title });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Download failed");
     } finally {

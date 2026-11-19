@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePQCourses } from "@/hooks/usePQCourses";
@@ -42,7 +43,12 @@ export default function PQFiles() {
     try {
       await incrementViews(qId);
       const url = await getSignedUrl(filePath);
-      if (url) { setSelectedTitle(title); setViewerPdfUrl(url); setPdfViewerOpen(true); }
+      if (url) {
+        setSelectedTitle(title);
+        setViewerPdfUrl(url);
+        setPdfViewerOpen(true);
+        void logActivity("view_pdf", { title, courseCode });
+      }
       else toast.error("Failed to load PDF");
     } catch { toast.error("Failed to open PDF"); }
   };
@@ -50,8 +56,13 @@ export default function PQFiles() {
   const handleDownload = (filePath: string, title: string) => {
     requireAuth(async () => {
       const url = await getSignedUrl(filePath);
-      if (url) await downloadFile(url, `${title}.pdf`);
-      else toast.error("Failed to download");
+      if (!url) {
+        toast.error("Failed to download");
+        return;
+      }
+      if (await downloadFile(url, `${title}.pdf`)) {
+        void logActivity("download_pdf", { title, courseCode });
+      }
     });
   };
 

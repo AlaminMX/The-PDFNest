@@ -147,7 +147,7 @@ export function useDownloadManager() {
   }, []);
 
   const downloadMultiple = useCallback(async (
-    files: { url: string; fileName: string }[],
+    files: { url: string; fileName: string; onComplete?: () => void }[],
     concurrency: number = 3
   ): Promise<void> => {
     const queue = [...files];
@@ -157,7 +157,7 @@ export function useDownloadManager() {
       if (queue.length === 0) return;
       
       const file = queue.shift()!;
-      await downloadFile(file.url, file.fileName);
+      if (await downloadFile(file.url, file.fileName)) file.onComplete?.();
       // Add delay between downloads to prevent browser blocking
       await new Promise(resolve => setTimeout(resolve, 500));
       await processNext();

@@ -17,6 +17,7 @@ export type ActivityType =
   | "ai_voice"
   | "ai_translate"
   | "ai_chat"
+  | "contribute_upload"
   | "upload_approved"
   | "upload_rejected"
   | "category_create"
