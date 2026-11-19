@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { RecentActivity } from "@/components/RecentActivity";
 import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
 import { useQuery } from "@tanstack/react-query";
@@ -188,6 +189,7 @@ export default function AdminActivity() {
       icon={<Activity className="h-5 w-5 text-primary" />}
     >
       <div className="container mx-auto px-4 py-6 max-w-5xl space-y-6">
+        <RecentActivity />
         <Card className="p-4">
           <div className="mb-3 flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
@@ -259,7 +261,7 @@ export default function AdminActivity() {
                 {topUsers.map(({ userId, count, profile }) => {
                   const name = displayName(profile, userId);
                   return (
-                    <div key={userId} className="flex items-center justify-between py-1.5">
+                    <Link key={userId} to={`/admin/user/${userId}#student-activity`} className="flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-muted">
                       <div className="flex items-center gap-2 min-w-0">
                         <Avatar className="w-7 h-7">
                           <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
@@ -270,7 +272,7 @@ export default function AdminActivity() {
                         </div>
                       </div>
                       <Badge variant="secondary">{count} events</Badge>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

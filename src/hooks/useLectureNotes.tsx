@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
@@ -213,6 +214,8 @@ export function useLectureNotes(courseId?: string) {
         await supabase.storage.from("school_pdfs").remove([filePath]).catch(() => {});
         throw insertError;
       }
+
+      void logActivity("lecture_note_upload", { title, courseCode });
 
       // Update user storage
       await supabase.rpc("update_user_storage", {

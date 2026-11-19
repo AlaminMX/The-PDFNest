@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,13 @@ interface PDFViewerProps {
   fileName: string;
   fileSize?: number;
   fileId?: string;
+  courseCode?: string;
   onDelete?: () => void;
   canDelete?: boolean;
   isDeleting?: boolean;
 }
 
-export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId, onDelete, canDelete, isDeleting }: PDFViewerProps) {
+export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId, courseCode, onDelete, canDelete, isDeleting }: PDFViewerProps) {
   const [pdfDoc, setPdfDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -54,9 +56,15 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
   const sheetRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<pdfjs.RenderTask | null>(null);
 
+  const loggedOpen = useRef<string | null>(null);
+
   // Load PDF document - check offline cache first, then network with range requests
   useEffect(() => {
-    if (!isOpen || (!pdfUrl && !fileId)) return;
+    if (!isOpen) {
+      loggedOpen.current = null;
+      return;
+    }
+    if (!pdfUrl && !fileId) return;
 
     let cancelled = false;
     let loadingTask: ReturnType<typeof pdfjs.getDocument> | undefined;
@@ -109,6 +117,11 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
         if (cancelled) return;
 
         setPdfDoc(pdf);
+        const openedDocument = fileId || pdfUrl;
+        if (loggedOpen.current !== openedDocument) {
+          loggedOpen.current = openedDocument;
+          void logActivity("view_pdf", { title: fileName, fileId, courseCode });
+        }
         setTotalPages(pdf.numPages);
         setLoading(false);
       } catch (err) {
@@ -128,7 +141,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
       }
       void loadingTask?.destroy().catch(console.error);
     };
-  }, [isOpen, pdfUrl, fileId, retryKey]);
+  }, [isOpen, pdfUrl, fileId, fileName, courseCode, retryKey]);
 
   // Render current page - use 1x DPI on first render for speed, then re-render at full quality
   const renderPage = useCallback(async (pageNum: number) => {
@@ -249,7 +262,9 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
   const handleDownload = async () => {
     try {
       const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error("Download unavailable");
       const blob = await response.blob();
+      if (!blob.size) throw new Error("Empty download");
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -259,6 +274,7 @@ export function PDFViewer({ isOpen, onClose, pdfUrl, fileName, fileSize, fileId,
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       toast.success("Download started");
+      void logActivity("download_pdf", { title: fileName, fileId, courseCode });
     } catch (err) {
       toast.error("Download failed");
     }

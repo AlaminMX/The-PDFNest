@@ -18,6 +18,8 @@ export type ActivityType =
   | "ai_translate"
   | "ai_chat"
   | "contribute_upload"
+  | "document_published"
+  | "document_copied"
   | "upload_approved"
   | "upload_rejected"
   | "category_create"
