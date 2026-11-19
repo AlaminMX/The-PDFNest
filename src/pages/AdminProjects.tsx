@@ -85,7 +85,7 @@ export default function AdminProjects() {
       subtitle="Review and moderate submissions"
       icon={<FileText className="w-5 h-5 text-primary" />}
     >
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Tabs value={status} onValueChange={(v) => setStatus(v as any)}>
           <TabsList>
             <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -145,7 +145,7 @@ export default function AdminProjects() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </AdminShell>
   );
 }

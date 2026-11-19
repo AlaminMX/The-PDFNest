@@ -1,5 +1,5 @@
-import { useEffect, useState, ReactNode } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useEffect, useState, Suspense, ReactNode } from "react";
+import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import {
@@ -15,9 +15,9 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LoadingState } from "@/components/LoadingState";
 import {
@@ -69,11 +69,13 @@ function AdminSidebar({ pendingUploadsCount }: { pendingUploadsCount: number }) 
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = pathname === item.path;
+                const currentPath = pathname.replace(/\/+$/, "");
+                const active = currentPath === item.path ||
+                  (item.path !== "/admin" && currentPath.startsWith(item.path + "/"));
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                      <Link to={item.path} className="flex items-center gap-2">
+                      <Link to={item.path} aria-current={active ? "page" : undefined} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4 shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>
                         {item.path === "/admin/uploads" && pendingUploadsCount > 0 && (
@@ -111,28 +113,17 @@ function AdminSidebar({ pendingUploadsCount }: { pendingUploadsCount: number }) 
   );
 }
 
-interface AdminShellProps {
-  title: string;
-  subtitle?: string;
-  icon?: ReactNode;
-  actions?: ReactNode;
-  children: ReactNode;
-  /** Skip admin auth guard (dashboard runs its own). */
-  skipGuard?: boolean;
-}
-
-export function AdminShell({ title, subtitle, icon, actions, children, skipGuard }: AdminShellProps) {
+export function AdminLayout() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    if (skipGuard) return;
     if (!adminLoading && !isAdmin) {
       toast.error("Access denied. Admin privileges required.");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
-  }, [isAdmin, adminLoading, navigate, skipGuard]);
+  }, [isAdmin, adminLoading, navigate]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -151,7 +142,7 @@ export function AdminShell({ title, subtitle, icon, actions, children, skipGuard
     return () => { supabase.removeChannel(channel); };
   }, [isAdmin]);
 
-  if (!skipGuard && (adminLoading || !isAdmin)) {
+  if (adminLoading || !isAdmin) {
     return <LoadingState message="Verifying access..." />;
   }
 
@@ -160,26 +151,45 @@ export function AdminShell({ title, subtitle, icon, actions, children, skipGuard
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar pendingUploadsCount={pendingCount} />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center gap-2 px-3 md:px-6 py-3">
-              <SidebarTrigger />
-              {icon && <div className="shrink-0 hidden sm:block">{icon}</div>}
-              <div className="min-w-0 flex-1">
-                <h1 className="text-base md:text-xl font-bold truncate leading-tight">{title}</h1>
-                {subtitle && (
-                  <p className="text-xs md:text-sm text-muted-foreground truncate hidden sm:block">
-                    {subtitle}
-                  </p>
-                )}
-              </div>
-              {actions && (
-                <div className="flex items-center gap-2 shrink-0">{actions}</div>
-              )}
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto">{children}</main>
+          <Suspense fallback={<LoadingState />}>
+            <Outlet />
+          </Suspense>
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+interface AdminShellProps {
+  title: string;
+  subtitle?: string;
+  icon?: ReactNode;
+  actions?: ReactNode;
+  contentClassName?: string;
+  children: ReactNode;
+}
+
+export function AdminShell({ title, subtitle, icon, actions, contentClassName, children }: AdminShellProps) {
+  return (
+    <>
+      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-2 px-3 md:px-6 py-3">
+          <SidebarTrigger />
+          {icon && <div className="shrink-0 hidden sm:block">{icon}</div>}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base md:text-xl font-bold truncate leading-tight">{title}</h1>
+            {subtitle && (
+              <p className="text-xs md:text-sm text-muted-foreground truncate hidden sm:block">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {actions && (
+            <div className="flex items-center gap-2 shrink-0">{actions}</div>
+          )}
+        </div>
+      </header>
+      <main className={cn("flex-1 overflow-auto", contentClassName)}>{children}</main>
+    </>
   );
 }

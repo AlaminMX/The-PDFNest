@@ -221,19 +221,23 @@ export interface OfflineFileMetadata {
   thumbnail_url: string | null;
 }
 
-export function saveFileListForOffline(files: OfflineFileMetadata[]): void {
+export function saveFileListForOffline(userId: string, files: OfflineFileMetadata[]): void {
   try {
-    localStorage.setItem(FILE_LIST_KEY, JSON.stringify(files));
+    localStorage.setItem(`${FILE_LIST_KEY}-${userId}`, JSON.stringify(files));
   } catch {
     // Storage full or unavailable
   }
 }
 
-export function getOfflineFileList(): OfflineFileMetadata[] {
+export function getOfflineFileList(userId: string): OfflineFileMetadata[] {
   try {
-    const stored = localStorage.getItem(FILE_LIST_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored);
+    const stored = localStorage.getItem(`${FILE_LIST_KEY}-${userId}`);
+    if (stored) return JSON.parse(stored);
+
+    // Earlier versions cached full database records in one shared list.
+    const legacy: Array<OfflineFileMetadata & { user_id?: string }> =
+      JSON.parse(localStorage.getItem(FILE_LIST_KEY) || "[]");
+    return legacy.filter((file) => file.user_id === userId);
   } catch {
     return [];
   }

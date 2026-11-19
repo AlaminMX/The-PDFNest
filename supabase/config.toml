@@ -42,9 +42,6 @@ verify_jwt = true
 [functions.organize-pdfs]
 verify_jwt = true
 
-[functions.organize-pdfs]
-verify_jwt = true
-
 [functions.search-global]
-verify_jwt = true
+verify_jwt = false
 

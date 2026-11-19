@@ -60,7 +60,7 @@ export function usePDFFiles(userId: string | undefined) {
 
     // If offline, load from cached metadata
     if (isOffline()) {
-      const offlineFiles = getOfflineFileList();
+      const offlineFiles = getOfflineFileList(userId);
       const filesWithOfflineFlag: PDFFile[] = offlineFiles
         .filter((f) => cachedIds.has(f.id))
         .map((f) => ({
@@ -112,20 +112,20 @@ export function usePDFFiles(userId: string | undefined) {
         setFiles((prev) => {
           const combined = [...prev, ...filesWithUrls];
           // Persist metadata for offline use
-          saveFileListForOffline(combined.map(({ url, isOfflineAvailable, ...rest }) => rest));
+          saveFileListForOffline(userId, combined.map(({ url, isOfflineAvailable, ...rest }) => rest));
           return combined;
         });
       } else {
         setFiles(filesWithUrls);
         // Persist metadata for offline use
-        saveFileListForOffline(filesWithUrls.map(({ url, isOfflineAvailable, ...rest }) => rest));
+        saveFileListForOffline(userId, filesWithUrls.map(({ url, isOfflineAvailable, ...rest }) => rest));
       }
     } catch (error: any) {
       if (!isOffline()) {
         toast.error("Failed to load files");
       } else {
         // Fallback to offline list on network error
-        const offlineFiles = getOfflineFileList();
+        const offlineFiles = getOfflineFileList(userId);
         const filesWithOfflineFlag: PDFFile[] = offlineFiles
           .filter((f) => cachedIds.has(f.id))
           .map((f) => ({

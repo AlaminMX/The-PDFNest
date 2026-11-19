@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -20,6 +21,7 @@ const LEVELS = [100, 200, 300, 400, 500];
 export default function Onboarding() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [isRep, setIsRep] = useState(false);
   const [step, setStep] = useState(1);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -43,11 +45,11 @@ export default function Onboarding() {
         return;
       }
       setUserId(session.user.id);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_complete")
-        .eq("id", session.user.id)
-        .maybeSingle();
+      const [{ data: profile }, { data: repRole }] = await Promise.all([
+        supabase.from("profiles").select("onboarding_complete").eq("id", session.user.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "rep").maybeSingle(),
+      ]);
+      setIsRep(Boolean(repRole));
       if (profile?.onboarding_complete) {
         navigate("/dashboard", { replace: true });
         return;
@@ -65,7 +67,9 @@ export default function Onboarding() {
 
   // Load departments when faculty chosen
   useEffect(() => {
+    setDepartments([]);
     if (!facultyId) return;
+    let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("departments")
@@ -73,28 +77,25 @@ export default function Onboarding() {
         .eq("is_visible", true)
         .eq("faculty_id", facultyId)
         .order("display_order", { ascending: true });
-      setDepartments(data || []);
+      if (!cancelled) setDepartments(data || []);
     })();
+    return () => { cancelled = true; };
   }, [facultyId]);
 
   const finish = async (skip = false) => {
     if (!userId) return;
     setSaving(true);
     try {
-      const update: Record<string, any> = {
+      const update: TablesUpdate<"profiles"> = {
         onboarding_complete: true,
         is_student: isStudent === true,
         nickname: nickname.trim() || null,
         display_name: nickname.trim() || null,
       };
-      if (!skip && isStudent) {
-        update.faculty_id = facultyId;
-        update.department_id = departmentId;
-        update.level = level;
-      } else {
-        update.faculty_id = null;
-        update.department_id = null;
-        update.level = null;
+      if (!isRep) {
+        update.faculty_id = !skip && isStudent ? facultyId : null;
+        update.department_id = !skip && isStudent ? departmentId : null;
+        update.level = !skip && isStudent ? level : null;
       }
       const { error } = await supabase
         .from("profiles")

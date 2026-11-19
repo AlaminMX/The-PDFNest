@@ -63,6 +63,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
+import { AdminLayout } from "@/components/AdminShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
@@ -156,18 +157,20 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/reset-password-success" element={<PasswordResetSuccess />} />
-                <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/reps" element={<ProtectedRoute><AdminReps /></ProtectedRoute>} />
-                <Route path="/admin/departments" element={<ProtectedRoute><AdminDepartments /></ProtectedRoute>} />
-                <Route path="/admin/departments/:deptId/levels" element={<ProtectedRoute><AdminDepartmentLevels /></ProtectedRoute>} />
-                <Route path="/admin/banners" element={<ProtectedRoute><AdminBanners /></ProtectedRoute>} />
-                <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
-                <Route path="/admin/activity" element={<ProtectedRoute><AdminActivity /></ProtectedRoute>} />
-                <Route path="/admin/user/:userId" element={<ProtectedRoute><AdminUserDetail /></ProtectedRoute>} />
-                <Route path="/admin/faculties" element={<ProtectedRoute><AdminFaculties /></ProtectedRoute>} />
-                <Route path="/admin/projects" element={<ProtectedRoute><AdminProjects /></ProtectedRoute>} />
-                <Route path="/admin/uploads" element={<ProtectedRoute><AdminUploads /></ProtectedRoute>} />
-                <Route path="/admin/past-questions" element={<ProtectedRoute><AdminPastQuestions /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="reps" element={<AdminReps />} />
+                  <Route path="departments" element={<AdminDepartments />} />
+                  <Route path="departments/:deptId/levels" element={<AdminDepartmentLevels />} />
+                  <Route path="banners" element={<AdminBanners />} />
+                  <Route path="categories" element={<AdminCategories />} />
+                  <Route path="activity" element={<AdminActivity />} />
+                  <Route path="user/:userId" element={<AdminUserDetail />} />
+                  <Route path="faculties" element={<AdminFaculties />} />
+                  <Route path="projects" element={<AdminProjects />} />
+                  <Route path="uploads" element={<AdminUploads />} />
+                  <Route path="past-questions" element={<AdminPastQuestions />} />
+                </Route>
                 <Route path="/afit-pdfs" element={<FacultySelection />} />
                 <Route path="/afit-pdfs/:facultySlug" element={<AFITPDFs />} />
                 <Route path="/projects" element={<ProjectsPage />} />

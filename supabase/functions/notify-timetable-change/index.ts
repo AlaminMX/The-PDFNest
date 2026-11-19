@@ -10,7 +10,6 @@ interface TimetableChangePayload {
   changeType: "slot_added" | "slot_updated" | "slot_removed";
   courseCode: string;
   courseName: string;
-  changedBy: string;
   slotsAffected?: number;
 }
 
@@ -66,15 +65,27 @@ Deno.serve(async (req) => {
     }
 
     const payload: TimetableChangePayload = await req.json();
-    const { departmentId, changeType, courseCode, courseName, changedBy, slotsAffected = 1 } = payload;
+    const { departmentId, changeType, courseCode, courseName, slotsAffected = 1 } = payload;
 
     console.log(`[notify-timetable-change] Processing ${changeType} for ${courseCode} in department ${departmentId} by user ${claims.user.id}`);
 
-    if (!departmentId || !changeType || !courseCode) {
+    if (!departmentId || !["slot_added", "slot_updated", "slot_removed"].includes(changeType) || !courseCode) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: departmentId, changeType, courseCode" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    const { data: sender, error: senderError } = await supabase
+      .from("profiles")
+      .select("department_id, display_name")
+      .eq("id", claims.user.id)
+      .maybeSingle();
+    if (senderError) throw senderError;
+    if (!userRoles?.some(r => r.role === "admin") && sender?.department_id !== departmentId) {
+      return new Response(JSON.stringify({ error: "Forbidden for this department" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get department name
@@ -128,7 +139,7 @@ Deno.serve(async (req) => {
         course_name: courseName,
         change_type: changeType,
         change_message: changeMessages[changeType],
-        changed_by: changedBy,
+        changed_by: sender?.display_name || "PDFNest",
         slots_affected: slotsAffected,
       },
       is_read: false,

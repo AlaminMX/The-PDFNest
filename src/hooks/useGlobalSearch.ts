@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CourseResult {
@@ -24,7 +24,6 @@ export interface PQCourseResult {
 export interface LectureNoteResult {
   id: string;
   title: string;
-  file_path: string;
   course_code: string;
   level: number;
   semester: string;
@@ -35,7 +34,6 @@ export interface LectureNoteResult {
 export interface PastQuestionResult {
   id: string;
   title: string;
-  file_path: string;
   course_code: string;
   level: number;
   semester: string;
@@ -64,46 +62,39 @@ export function useGlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [loading, setLoading] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const abortRef = useRef<AbortController>();
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults(EMPTY);
-      setLoading(false);
-      return;
-    }
+    const term = query.trim();
+    setResults(EMPTY);
+    setError(false);
+    setLoading(term.length >= 2);
+    if (term.length < 2) return;
 
-    setLoading(true);
-    clearTimeout(timerRef.current);
-
-    timerRef.current = setTimeout(async () => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("search-global", {
-          body: { query: query.trim() },
+        const { data, error } = await supabase.functions.invoke<SearchResults>("search-global", {
+          body: { query: term },
+          signal: controller.signal,
         });
-
         if (controller.signal.aborted) return;
         if (error) throw error;
         setResults(data || EMPTY);
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
-        console.error("Search error:", err);
-        setResults(EMPTY);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Search error:", error);
+        setError(true);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
     }, 300);
 
     return () => {
-      clearTimeout(timerRef.current);
-      abortRef.current?.abort();
+      clearTimeout(timer);
+      controller.abort();
     };
   }, [query]);
 
-  return { query, setQuery, results, loading };
+  return { query, setQuery, results, loading, error };
 }
