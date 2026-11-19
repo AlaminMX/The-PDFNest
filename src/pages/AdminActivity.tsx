@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Input } from "@/components/ui/input";
@@ -9,22 +9,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
-import { EmptyState } from "@/components/EmptyState";
-import {
-  Search, Activity, RefreshCw, Users, LogIn, LogOut, Upload,
-  Trash2, Download, Eye, FileText, TrendingUp,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Activity, RefreshCw, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-import { formatDistanceToNow, format, subDays } from "date-fns";
+import { subDays } from "date-fns";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface RawLog {
   id: string;
   user_id: string;
-  activity_type: string;
-  details: Record<string, any> | null;
-  user_agent: string | null;
   created_at: string;
 }
 
@@ -32,49 +26,18 @@ interface RawSession {
   id: string;
   user_id: string;
   login_at: string;
-  logout_at: string | null;
-  is_active: boolean;
-  duration_seconds: number | null;
 }
 
 interface ProfileLite {
   id: string;
   full_name: string | null;
-  email: string;
-}
-
-const LABELS: Record<string, string> = {
-  login: "Signed in",
-  logout: "Signed out",
-  upload_pdf: "Uploaded PDF",
-  delete_pdf: "Deleted PDF",
-  download_pdf: "Downloaded PDF",
-  view_pdf: "Viewed PDF",
-  contribute_upload: "Contributed Material",
-  upload_approved: "Upload Approved",
-  upload_rejected: "Upload Rejected",
-  login_failed: "Failed Login Attempt",
-};
-
-function label(type: string): string {
-  return LABELS[type] ?? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function actionIcon(type: string) {
-  const cls = "w-4 h-4";
-  if (type === "login") return <LogIn className={cls} />;
-  if (type === "logout") return <LogOut className={cls} />;
-  if (type.startsWith("upload") || type === "contribute_upload") return <Upload className={cls} />;
-  if (type.includes("delete")) return <Trash2 className={cls} />;
-  if (type === "download_pdf") return <Download className={cls} />;
-  if (type.includes("view")) return <Eye className={cls} />;
-  return <FileText className={cls} />;
+  email: string | null;
 }
 
 function displayName(p: ProfileLite | undefined, userId: string): string {
   if (!p) return userId.slice(0, 8);
   if (p.full_name && p.full_name.trim()) return p.full_name;
-  return p.email.split("@")[0];
+  return p.email?.split("@")[0] || "Unnamed account";
 }
 
 function initials(name: string): string {
@@ -91,6 +54,7 @@ export default function AdminActivity() {
   const [sessions, setSessions] = useState<RawSession[]>([]);
   const [profiles, setProfiles] = useState<Map<string, ProfileLite>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -103,18 +67,19 @@ export default function AdminActivity() {
 
   const fetchData = useCallback(async () => {
     try {
+      setOverviewError(false);
       const since = subDays(new Date(), 30).toISOString();
 
       const [{ data: rawLogs, error: logsErr }, { data: rawSessions, error: sessErr }] = await Promise.all([
         supabase
           .from("user_activity_logs")
-          .select("id, user_id, activity_type, details, user_agent, created_at")
+          .select("id, user_id, created_at")
           .gte("created_at", since)
           .order("created_at", { ascending: false })
           .limit(1000),
         supabase
           .from("user_sessions")
-          .select("id, user_id, login_at, logout_at, is_active, duration_seconds")
+          .select("id, user_id, login_at")
           .gte("login_at", since)
           .order("login_at", { ascending: false })
           .limit(1000),
@@ -123,21 +88,24 @@ export default function AdminActivity() {
       if (logsErr) throw logsErr;
       if (sessErr) throw sessErr;
 
-      const uids = new Set<string>();
-      (rawLogs || []).forEach((r) => uids.add(r.user_id));
-      (rawSessions || []).forEach((r) => uids.add(r.user_id));
-
-      const { data: profileRows } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", [...uids]);
-
-      setProfiles(new Map((profileRows || []).map((p) => [p.id, p])));
-      setLogs((rawLogs || []) as any);
-      setSessions((rawSessions || []) as any);
+      const counts = new Map<string, number>();
+      for (const log of rawLogs ?? []) counts.set(log.user_id, (counts.get(log.user_id) ?? 0) + 1);
+      const topIds = [...counts.keys()].sort((a, b) => counts.get(b)! - counts.get(a)!).slice(0, 5);
+      if (topIds.length > 0) {
+        const { data: profileRows, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", topIds);
+        if (profilesError) throw profilesError;
+        setProfiles(new Map(profileRows.map((profile) => [profile.id, profile])));
+      } else {
+        setProfiles(new Map());
+      }
+      setLogs(rawLogs || []);
+      setSessions(rawSessions || []);
     } catch (err: any) {
       console.error("Failed to load activity:", err);
-      toast.error("Couldn't load activity data.");
+      setOverviewError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -184,152 +152,131 @@ export default function AdminActivity() {
       .map(([userId, count]) => ({ userId, count, profile: profiles.get(userId) }));
   }, [logs, profiles]);
 
-  // ─── Search drill-down ──────────────────────────────────────────────────
+  const term = search.trim().slice(0, 100);
+  const studentSearch = useQuery({
+    queryKey: ["admin-activity-profile-search", term],
+    enabled: isAdmin && term.length >= 2,
+    queryFn: async ({ signal }) => {
+      const pattern = '%' + term.replace(/[\\%_]/g, (character) => '\\' + character) + '%';
+      const results = await Promise.all(
+        (["full_name", "email", "nickname"] as const).map((field) =>
+          supabase.from("profiles")
+            .select("id, full_name, nickname, email, is_student")
+            .ilike(field, pattern)
+            .order("full_name")
+            .limit(12)
+            .abortSignal(signal),
+        ),
+      );
+      const matches = new Map<string, ProfileLite & { nickname: string | null; is_student: boolean | null }>();
+      for (const result of results) {
+        if (result.error) throw result.error;
+        for (const profile of result.data) matches.set(profile.id, profile);
+      }
+      return [...matches.values()];
+    },
+  });
 
-  const searchResults = useMemo(() => {
-    if (search.trim().length < 2) return null;
-    const q = search.trim().toLowerCase();
-
-    const matchingIds = new Set(
-      [...profiles.values()]
-        .filter((p) => (p.full_name || "").toLowerCase().includes(q) || p.email.toLowerCase().includes(q))
-        .map((p) => p.id)
-    );
-
-    if (matchingIds.size === 0) return { userLogs: [], userSessions: [] };
-
-    return {
-      userLogs: logs.filter((l) => matchingIds.has(l.user_id)).slice(0, 100),
-      userSessions: sessions.filter((s) => matchingIds.has(s.user_id)).slice(0, 50),
-    };
-  }, [search, profiles, logs, sessions]);
-
-  if (adminLoading || loading) {
+  if (adminLoading || !isAdmin) {
     return <LoadingState />;
   }
 
   return (
     <AdminShell
       title="Activity"
-      subtitle="Usage signal at a glance, plus per-user drill-down"
+      subtitle="Find a student and review their library activity"
       icon={<Activity className="h-5 w-5 text-primary" />}
     >
       <div className="container mx-auto px-4 py-6 max-w-5xl space-y-6">
-        {/* Summary stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Active today</p>
-            <p className="text-2xl font-bold">{stats.dau}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Active (7 days)</p>
-            <p className="text-2xl font-bold">{stats.wau}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Active (30 days)</p>
-            <p className="text-2xl font-bold">{stats.mau}</p>
-          </Card>
-        </div>
-
-        {/* Top active users */}
         <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-sm">Most active (last 30 days)</h3>
-          </div>
-          {topUsers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {topUsers.map(({ userId, count, profile }) => {
-                const name = displayName(profile, userId);
-                return (
-                  <div key={userId} className="flex items-center justify-between py-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Avatar className="w-7 h-7">
-                        <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{name}</p>
-                        {profile?.email && <p className="text-xs text-muted-foreground truncate">{profile.email}</p>}
-                      </div>
-                    </div>
-                    <Badge variant="secondary">{count} events</Badge>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Search drill-down */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-semibold text-sm">Look up a user's raw activity</h3>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            </Button>
+          <div className="mb-3 flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Find a student</h3>
           </div>
           <Input
-            placeholder="Search by name or email..."
+            aria-label="Search accounts by name, nickname, or email"
+            placeholder="Search by name, nickname, or email"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mb-4"
+            onChange={(event) => setSearch(event.target.value)}
           />
-
-          {!searchResults && (
-            <p className="text-sm text-muted-foreground">
-              Type at least 2 characters of a name or email to pull that user's session and event history.
-            </p>
-          )}
-
-          {searchResults && searchResults.userLogs.length === 0 && searchResults.userSessions.length === 0 && (
-            <EmptyState
-              icon={<Activity className="h-10 w-10 text-muted-foreground" />}
-              title="No matching user or no activity found"
-            />
-          )}
-
-          {searchResults && (searchResults.userLogs.length > 0 || searchResults.userSessions.length > 0) && (
-            <div className="space-y-4">
-              {searchResults.userSessions.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Sessions</p>
-                  <div className="space-y-1.5">
-                    {searchResults.userSessions.map((s) => (
-                      <div key={s.id} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
-                        <span>{format(new Date(s.login_at), "MMM d, yyyy · h:mm a")}</span>
-                        <span className="text-muted-foreground">
-                          {s.is_active ? "Active now" : s.duration_seconds ? `${Math.round(s.duration_seconds / 60)} min` : "—"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {term.length >= 2 && (
+            <div className="mt-3 space-y-1">
+              {studentSearch.isPending && <p role="status" className="text-sm text-muted-foreground">Searching…</p>}
+              {studentSearch.isError && (
+                <Button size="sm" variant="outline" onClick={() => void studentSearch.refetch()}>Search failed. Retry</Button>
               )}
-
-              {searchResults.userLogs.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Events</p>
-                  <div className="space-y-1.5">
-                    {searchResults.userLogs.map((l) => (
-                      <div key={l.id} className="flex items-center gap-2 text-sm py-1 border-b border-border/50 last:border-0">
-                        <span className="text-muted-foreground">{actionIcon(l.activity_type)}</span>
-                        <span className="flex-1">{label(l.activity_type)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(l.created_at), { addSuffix: true })}
-                        </span>
-                      </div>
-                    ))}
+              {studentSearch.data?.length === 0 && <p className="text-sm text-muted-foreground">No matching accounts.</p>}
+              {studentSearch.data?.map((profile) => (
+                <div key={profile.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{profile.nickname || displayName(profile, profile.id)}</p>
+                    <p className="break-all text-xs text-muted-foreground">{profile.email}{profile.is_student ? " · Student" : ""}</p>
                   </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to={`/admin/user/${profile.id}#student-activity`}>View activity</Link>
+                  </Button>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </Card>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">Overview based on the most recent 1,000 events and 1,000 sessions in the last 30 days.</p>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={loading || refreshing} aria-label="Refresh activity overview">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        {loading && <p role="status" className="text-sm text-muted-foreground">Loading activity overview…</p>}
+        {overviewError && <p role="alert" className="text-sm text-muted-foreground">Couldn’t load the overview. Student lookup is still available.</p>}
+        {!loading && !overviewError && <>
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Active today</p>
+              <p className="text-2xl font-bold">{stats.dau}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Active (7 days)</p>
+              <p className="text-2xl font-bold">{stats.wau}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground mb-1">Active (30 days)</p>
+              <p className="text-2xl font-bold">{stats.mau}</p>
+            </Card>
+          </div>
+
+          {/* Top active users */}
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold text-sm">Most active (last 30 days)</h3>
+            </div>
+            {topUsers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {topUsers.map(({ userId, count, profile }) => {
+                  const name = displayName(profile, userId);
+                  return (
+                    <div key={userId} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{name}</p>
+                          {profile?.email && <p className="text-xs text-muted-foreground truncate">{profile.email}</p>}
+                        </div>
+                      </div>
+                      <Badge variant="secondary">{count} events</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </>}
       </div>
     </AdminShell>
   );

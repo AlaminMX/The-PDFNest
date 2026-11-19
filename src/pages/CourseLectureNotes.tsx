@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDepartments } from "@/hooks/useDepartments";
@@ -150,6 +151,7 @@ function CourseLectureNotesContent() {
         setSelectedNote({ id: noteId, title, filePath, fileSize });
         setViewerPdfUrl(url);
         setPdfViewerOpen(true);
+        void logActivity("lecture_note_view", { title, courseCode });
       } else {
         toast.error("Failed to load PDF");
       }
@@ -163,7 +165,9 @@ function CourseLectureNotesContent() {
       try {
         const url = await getSignedUrl(filePath);
         if (url) {
-          await downloadFile(url, `${title}.pdf`);
+          if (await downloadFile(url, `${title}.pdf`)) {
+            void logActivity("download_pdf", { title, courseCode });
+          }
         } else {
           toast.error("Failed to download PDF");
         }
@@ -180,12 +184,16 @@ function CourseLectureNotesContent() {
     
     toast.info(`Starting download of ${selectedList.length} files...`);
     
-    const filesToDownload: { url: string; fileName: string }[] = [];
+    const filesToDownload: { url: string; fileName: string; onComplete: () => void }[] = [];
     
     for (const note of selectedList) {
       const url = await getSignedUrl(note.file_path);
       if (url) {
-        filesToDownload.push({ url, fileName: `${note.title}.pdf` });
+        filesToDownload.push({
+          url,
+          fileName: `${note.title}.pdf`,
+          onComplete: () => { void logActivity("download_pdf", { title: note.title, courseCode }); },
+        });
       }
     }
     

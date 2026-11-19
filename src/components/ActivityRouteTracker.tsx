@@ -13,18 +13,16 @@ export function ActivityRouteTracker() {
   }, []);
 
   useEffect(() => {
-    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    const currentPath = location.pathname;
     if (previousPath.current === currentPath) return;
 
     previousPath.current = currentPath;
 
     void logActivity("page_view", {
       path: location.pathname,
-      search: location.search || null,
-      hash: location.hash || null,
       source: "route_tracker",
     });
-  }, [location.pathname, location.search, location.hash]);
+  }, [location.pathname]);
 
   return null;
 }

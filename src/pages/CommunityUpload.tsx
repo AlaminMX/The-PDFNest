@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { GuestAuthPrompt } from "@/components/GuestAuthPrompt";
@@ -550,6 +551,10 @@ function CommunityUploadContent() {
           .insert(insertPayload);
 
         if (insertError) throw insertError;
+
+        const course = isPastQuestions ? pqCourses.find((course) => course.id === selectedPqCourseId)
+          : courses.find((course) => course.id === effectiveCourseId);
+        void logActivity("contribute_upload", { title: insertPayload.title, courseCode: course?.code });
 
         await supabase.rpc("increment_pending_count" as any, {
           p_user_id: user.id,
