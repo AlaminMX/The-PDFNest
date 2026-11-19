@@ -111,9 +111,9 @@ function CourseLectureNotesContent() {
   const { isAdmin } = useAdminStatus();
   const { isRep } = useRepStatus();
   const canCopy = !!user && (isAdmin || isRep);
-  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
-  const [copySource, setCopySource] = useState<{
-    id: string; title: string; level: number; semester: "first" | "second";
+  const [copyBatch, setCopyBatch] = useState<{
+    courseId: string;
+    sources: Array<{ id: string; title: string }>;
   } | null>(null);
 
   const loading = deptLoading || coursesLoading || notesLoading;
@@ -139,6 +139,8 @@ function CourseLectureNotesContent() {
     }
     return result;
   }, [notes, searchQuery, materialTypeFilter]);
+
+  const selectedVisibleNotes = filteredNotes.filter((note) => selectedNotes.has(note.id));
 
   const handleView = async (noteId: string, filePath: string, title: string, fileSize?: number) => {
     try {
@@ -173,7 +175,7 @@ function CourseLectureNotesContent() {
 
   const handleBulkDownload = () => {
     requireAuth(async () => {
-    const selectedList = filteredNotes.filter(note => selectedNotes.has(note.id));
+    const selectedList = selectedVisibleNotes;
     if (selectedList.length === 0) return;
     
     toast.info(`Starting download of ${selectedList.length} files...`);
@@ -210,7 +212,7 @@ function CourseLectureNotesContent() {
 
   const toggleSelectAll = () => {
     requireAuth(() => {
-      if (selectedNotes.size === filteredNotes.length) {
+      if (selectedVisibleNotes.length === filteredNotes.length) {
         setSelectedNotes(new Set());
       } else {
         setSelectedNotes(new Set(filteredNotes.map(n => n.id)));
@@ -439,23 +441,38 @@ function CourseLectureNotesContent() {
 
         {/* Bulk Actions Bar */}
         <AnimatePresence>
-          {selectedNotes.size > 0 && (
+          {selectedVisibleNotes.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20 flex items-center justify-between gap-3"
+              className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20 flex flex-wrap items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3">
                 <Checkbox
-                  checked={selectedNotes.size === filteredNotes.length}
+                  aria-label="Select all visible files"
+                  checked={selectedVisibleNotes.length === filteredNotes.length}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {selectedNotes.size} selected
+                  {selectedVisibleNotes.length} selected
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {canCopy && currentCourse && currentDept && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8"
+                    onClick={() => setCopyBatch({
+                      courseId: currentCourse.id,
+                      sources: selectedVisibleNotes.map(({ id, title }) => ({ id, title })),
+                    })}
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    Copy selected
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
@@ -593,15 +610,10 @@ function CourseLectureNotesContent() {
 
                     {canCopy && currentCourse && currentDept && (
                       <DropdownMenuItem
-                        onClick={() => {
-                          setCopySource({
-                            id: note.id,
-                            title: note.title,
-                            level: (currentCourse.level ?? 100) as number,
-                            semester: ((currentCourse.semester ?? "first") as "first" | "second"),
-                          });
-                          setCopyDialogOpen(true);
-                        }}
+                        onClick={() => setCopyBatch({
+                          courseId: currentCourse.id,
+                          sources: [{ id: note.id, title: note.title }],
+                        })}
                       >
                         <Copy className="w-4 h-4 mr-2" />
                         Copy to another department
@@ -747,18 +759,18 @@ function CourseLectureNotesContent() {
 
       <SmartBottomNav />
 
-      {copySource && currentCourse && currentDept && (
+      {canCopy && copyBatch && currentCourse && copyBatch.courseId === currentCourse.id && currentDept && (
         <CopyDocumentDialog
-          open={copyDialogOpen}
-          onOpenChange={(v) => { setCopyDialogOpen(v); if (!v) setCopySource(null); }}
-          sourceNoteId={copySource.id}
+          key={currentCourse.id}
+          open
+          onOpenChange={(open) => { if (!open) setCopyBatch(null); }}
+          sources={copyBatch.sources}
           sourceCourseId={currentCourse.id}
           sourceDepartmentId={currentDept.id}
-          sourceTitle={copySource.title}
           sourceCourseCode={currentCourse.code}
           sourceCourseName={currentCourse.name}
-          sourceLevel={copySource.level}
-          sourceSemester={copySource.semester}
+          sourceLevel={currentCourse.level ?? 100}
+          sourceSemester={currentCourse.semester === "second" ? "second" : "first"}
         />
       )}
     </div>
