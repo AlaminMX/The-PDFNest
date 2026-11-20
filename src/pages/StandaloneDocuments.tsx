@@ -197,6 +197,11 @@ export default function StandaloneDocuments() {
       if (insertError) throw insertError;
 
       const documentId = (inserted as any).id as string;
+      void logActivity("document_published", {
+        title: item.title.trim() || item.file.name.replace(/\.pdf$/i, ""),
+        fileId: documentId,
+        destination: currentDept.name,
+      });
       const thumbnailPath = await uploadStandaloneThumbnail(item.file, documentId);
       if (thumbnailPath) {
         await supabase
@@ -249,7 +254,6 @@ export default function StandaloneDocuments() {
       filePath: document.file_path,
       thumbnailPath: document.thumbnail_path,
     });
-    void logActivity("view_pdf", { title: document.title });
   };
 
   const downloadDocument = async (document: StandaloneDocument) => {
@@ -260,6 +264,7 @@ export default function StandaloneDocuments() {
       const response = await fetch(data.signedUrl);
       if (!response.ok) throw new Error("Download failed");
       const blob = await response.blob();
+      if (!blob.size) throw new Error("Empty download");
       const url = URL.createObjectURL(blob);
       const fileName = document.title.toLowerCase().endsWith(".pdf") ? document.title : `${document.title}.pdf`;
       const a = window.document.createElement("a");

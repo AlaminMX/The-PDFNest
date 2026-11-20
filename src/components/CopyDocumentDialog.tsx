@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -121,6 +122,13 @@ export function CopyDocumentDialog({
           const byDepartment = new Map(response.map((result) => [result.department_id, result]));
           for (const departmentId of departmentIds) {
             const result = byDepartment.get(departmentId);
+            if (result?.status === "copied") {
+              void logActivity("document_copied", {
+                title: singleSource ? titleOverride.trim() || source.title : source.title,
+                courseCode: target.courseCode,
+                destination: deptName(departmentId),
+              });
+            }
             completed.push({
               sourceId: source.id,
               department_id: departmentId,

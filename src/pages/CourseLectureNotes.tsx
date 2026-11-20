@@ -151,7 +151,6 @@ function CourseLectureNotesContent() {
         setSelectedNote({ id: noteId, title, filePath, fileSize });
         setViewerPdfUrl(url);
         setPdfViewerOpen(true);
-        void logActivity("lecture_note_view", { title, courseCode });
       } else {
         toast.error("Failed to load PDF");
       }
@@ -756,6 +755,7 @@ function CourseLectureNotesContent() {
         pdfUrl={viewerPdfUrl}
         fileName={selectedNote?.title || ""}
         fileSize={selectedNote?.fileSize}
+        courseCode={courseCode}
       />
 
       {/* Download Progress */}

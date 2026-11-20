@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { AdminShell } from "@/components/AdminShell";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -177,6 +178,11 @@ export default function AdminPastQuestions() {
 
       if (insertError) throw insertError;
 
+      void logActivity("document_published", {
+        title: uploadTitle.trim(),
+        courseCode: selectedCourse?.code,
+        destination: "Past questions",
+      });
       toast.success("File uploaded successfully");
       setUploadDialogOpen(false);
       fetchFiles();

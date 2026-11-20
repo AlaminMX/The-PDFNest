@@ -47,7 +47,6 @@ export default function PQFiles() {
         setSelectedTitle(title);
         setViewerPdfUrl(url);
         setPdfViewerOpen(true);
-        void logActivity("view_pdf", { title, courseCode });
       }
       else toast.error("Failed to load PDF");
     } catch { toast.error("Failed to open PDF"); }
@@ -174,7 +173,7 @@ export default function PQFiles() {
       </main>
 
       <GuestAuthPrompt open={guestOpen} action="download past questions" onClose={() => setGuestOpen(false)} />
-      <PDFViewer isOpen={pdfViewerOpen} pdfUrl={viewerPdfUrl} fileName={selectedTitle} onClose={() => { setPdfViewerOpen(false); setViewerPdfUrl(""); }} />
+      <PDFViewer isOpen={pdfViewerOpen} pdfUrl={viewerPdfUrl} fileName={selectedTitle} courseCode={courseCode} onClose={() => { setPdfViewerOpen(false); setViewerPdfUrl(""); }} />
       <SmartBottomNav />
     </div>
   );

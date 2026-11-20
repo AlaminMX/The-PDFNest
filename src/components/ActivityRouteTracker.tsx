@@ -1,28 +1,31 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { getCurrentSessionId, logActivity, startSession } from "@/lib/sessionLogger";
+import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/sessionLogger";
 
 export function ActivityRouteTracker() {
-  const location = useLocation();
-  const previousPath = useRef<string | null>(null);
+  const { pathname } = useLocation();
+  const [userId, setUserId] = useState<string | null>(null);
+  const previousVisit = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!getCurrentSessionId()) {
-      void startSession();
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUserId(session?.user.id ?? null),
+    );
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    const currentPath = location.pathname;
-    if (previousPath.current === currentPath) return;
+    if (!userId) {
+      previousVisit.current = null;
+      return;
+    }
+    const visit = `${userId}:${pathname}`;
+    if (previousVisit.current === visit) return;
 
-    previousPath.current = currentPath;
-
-    void logActivity("page_view", {
-      path: location.pathname,
-      source: "route_tracker",
-    });
-  }, [location.pathname]);
+    previousVisit.current = visit;
+    void logActivity("page_view", { path: pathname, source: "route_tracker" });
+  }, [userId, pathname]);
 
   return null;
 }

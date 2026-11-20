@@ -77,7 +77,7 @@ export function useDownloadManager() {
       };
 
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.response instanceof Blob && xhr.response.size > 0) {
           updateDownload(id, { progress: 100, status: "complete" });
           
           // Trigger actual download
@@ -112,7 +112,7 @@ export function useDownloadManager() {
           
           resolve(true);
         } else {
-          updateDownload(id, { status: "error", error: `HTTP ${xhr.status}` });
+          updateDownload(id, { status: "error", error: xhr.status >= 200 && xhr.status < 300 ? "Empty download" : `HTTP ${xhr.status}` });
           resolve(false);
         }
       };

@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activityLogger";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRepStatus } from "@/hooks/useRepStatus";
@@ -577,6 +578,11 @@ export default function RepUpload() {
         });
       } else {
         patchDestination(item.id, dest.id, { status: "success" });
+        void logActivity("document_published", {
+          title: item.title.trim(),
+          courseCode: activeCourse?.code,
+          destination: dest.name,
+        });
         // Fire notifications for that dept (non-blocking).
         supabase.functions
           .invoke("notify-department-users", {
@@ -733,6 +739,13 @@ export default function RepUpload() {
           _material_type: selectedMaterialType,
           _level: selectedLevel,
         } as any);
+        if (!error) {
+          void logActivity("document_published", {
+            title: item.title.trim(),
+            courseCode: activeCourse?.code,
+            destination: dest.departmentName,
+          });
+        }
         patchDestination(
           itemId,
           dest.departmentId,

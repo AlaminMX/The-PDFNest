@@ -6,30 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Json } from "@/integrations/supabase/types";
-
-type EventGroup = "Reading" | "Downloads" | "Uploads" | "Browsing" | "Account" | "Other";
-const groups: EventGroup[] = ["Reading", "Downloads", "Uploads", "Browsing", "Account", "Other"];
-const eventTypes: Record<string, [string, EventGroup]> = {
-  PAGE_VIEW: ["Visited a page", "Browsing"],
-  PDF_VIEW: ["Opened a PDF", "Reading"],
-  PDF_OPEN: ["Opened a PDF", "Reading"],
-  VIEW_PDF: ["Opened a PDF", "Reading"],
-  OPEN_PDF: ["Opened a PDF", "Reading"],
-  LECTURE_NOTE_VIEW: ["Opened a lecture note", "Reading"],
-  FILE_DOWNLOAD: ["Downloaded a PDF", "Downloads"],
-  DOWNLOAD_PDF: ["Downloaded a PDF", "Downloads"],
-  FILE_UPLOAD: ["Uploaded a PDF", "Uploads"],
-  UPLOAD_PDF: ["Uploaded a PDF", "Uploads"],
-  LECTURE_NOTE_UPLOAD: ["Uploaded a lecture note", "Uploads"],
-  CONTRIBUTE_UPLOAD: ["Submitted material for review", "Uploads"],
-  LOGIN: ["Signed in", "Account"],
-  LOGIN_SUCCESS: ["Signed in", "Account"],
-  LOGIN_FAILED: ["Sign-in failed", "Account"],
-  LOGOUT: ["Signed out", "Account"],
-  SESSION_START: ["Started a session", "Account"],
-  SESSION_END: ["Ended a session", "Account"],
-};
+import { formatActivity, groups, type EventGroup } from "@/lib/formatActivity";
 
 const timeZone = "Africa/Lagos";
 const dateKey = (date: Date) => new Date(date.getTime() + 3_600_000).toISOString().slice(0, 10);
@@ -40,30 +17,6 @@ const pageSize = 250;
 const maxEvents = 2000;
 const timelineSize = 20;
 
-function object(value: Json | undefined) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-
-function describe(details: Json | null) {
-  const metadata = object(details);
-  const context = object(metadata.context);
-  const fields = { ...metadata, ...context, ...object(context.details) };
-  const title = [fields.title, fields.fileName, fields.newName].find((value): value is string => typeof value === "string" && !!value);
-  const course = typeof fields.courseCode === "string" ? fields.courseCode : null;
-  if (title) return [title, course].filter(Boolean).join(" · ");
-
-  const route = [fields.path, fields.page, metadata.resource].find((value): value is string => typeof value === "string" && value.startsWith("/"));
-  const path = route?.split(/[?#]/)[0];
-  if (path === "/") return "Home";
-  if (path === "/dashboard") return "Dashboard";
-  if (path === "/profile") return "Profile";
-  if (path === "/onboarding") return "Account setup";
-  if (path === "/contribute") return "Contribute materials";
-  if (path?.startsWith("/afit-pdfs")) return "AFIT library";
-  if (path?.startsWith("/past-questions")) return "Past questions";
-  return course;
-}
-
 export function StudentActivity({ userId }: { userId: string }) {
   const [days, setDays] = useState(7);
   const [group, setGroup] = useState<EventGroup | "all">("all");
@@ -71,6 +24,7 @@ export function StudentActivity({ userId }: { userId: string }) {
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["admin-student-activity", userId, days],
+    refetchInterval: 15_000,
     queryFn: async ({ signal }) => {
       const today = dateKey(new Date());
       const start = new Date(`${today}T00:00:00+01:00`).getTime() - (days - 1) * dayMs;
@@ -93,15 +47,7 @@ export function StudentActivity({ userId }: { userId: string }) {
           .abortSignal(signal);
         if (error) throw error;
         for (const row of rows) {
-          const [label, group] = eventTypes[row.activity_type.toUpperCase()] ??
-            [row.activity_type.toLowerCase().replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()), "Other" as const];
-          events.push({
-            id: row.id,
-            time: new Date(row.created_at),
-            label,
-            group,
-            detail: describe(row.details),
-          });
+          events.push({ id: row.id, time: new Date(row.created_at), ...formatActivity(row.activity_type, row.details) });
         }
         if (rows.length < pageSize) break;
       }

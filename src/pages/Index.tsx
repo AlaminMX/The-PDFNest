@@ -754,7 +754,6 @@ export default function Index() {
       thumbnailUrl: file.thumbnail_url
     });
     trackRecentFile(file.id, file.name);
-    logActivity("view_pdf", { fileName: file.name, fileId: file.id });
   };
 
   const handleOpenRecentFile = (fileId: string) => {
@@ -836,21 +835,25 @@ export default function Index() {
     toast.info(`Starting download of ${filesToDownload.length} files...`);
 
     await downloadMultiple(
-      filesToDownload.map((f) => ({ url: f.url!, fileName: `${f.name}.pdf` })),
+      filesToDownload.map((file) => ({
+        url: file.url!,
+        fileName: `${file.name}.pdf`,
+        onComplete: () => { void logActivity("download_pdf", { fileName: file.name, fileId: file.id }); },
+      })),
       3
     );
 
     setSelectedFiles(new Set());
   };
 
-  const handleFileDownload = (file: {url?: string | null;name: string;}) => {
+  const handleFileDownload = async (file: {url?: string | null;name: string;id: string;}) => {
     if (!file.url) {
       toast.error("File URL not available");
       return;
     }
-    downloadFile(file.url, `${file.name}.pdf`);
-    // Log activity
-    logActivity("download_pdf", { fileName: file.name });
+    if (await downloadFile(file.url, `${file.name}.pdf`)) {
+      void logActivity("download_pdf", { fileName: file.name, fileId: file.id });
+    }
   };
 
   const confirmBulkAction = async () => {
