@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
-import { useFaculties } from "@/hooks/useFaculties";
+import { useFaculties, type Faculty } from "@/hooks/useFaculties";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building, Edit, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { Building, Edit, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/AdminShell";
 import { LoadingState } from "@/components/LoadingState";
@@ -39,7 +39,10 @@ export default function AdminFaculties() {
   const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminStatus();
-  const { faculties, loading: facultiesLoading, refresh } = useFaculties();
+  const { faculties, loading: facultiesLoading, refresh } = useFaculties({ includeHidden: true });
+
+  const [orderDraft, setOrderDraft] = useState<Faculty[] | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newFaculty, setNewFaculty] = useState({
@@ -164,6 +167,36 @@ export default function AdminFaculties() {
     }
   };
 
+  const moveFaculty = (index: number, offset: -1 | 1) => {
+    setOrderDraft((current) => {
+      const destination = index + offset;
+      if (!current || destination < 0 || destination >= current.length) return current;
+      const next = [...current];
+      const [faculty] = next.splice(index, 1);
+      next.splice(destination, 0, faculty);
+      return next;
+    });
+  };
+
+  const saveOrder = async () => {
+    if (!orderDraft || savingOrder) return;
+    setSavingOrder(true);
+    try {
+      const { error } = await supabase.rpc("admin_set_faculty_order", {
+        _ordered_ids: orderDraft.map((faculty) => faculty.id),
+      });
+      if (error) throw error;
+      await refresh();
+      setOrderDraft(null);
+      toast.success("Faculty order saved");
+    } catch (error) {
+      console.error("Could not save faculty order", error);
+      toast.error("Could not save the order. If the faculty list changed, cancel and try again.");
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
   if (authLoading || adminLoading || !isAdmin) {
     return <LoadingState message="Verifying access..." />;
   }
@@ -175,11 +208,23 @@ export default function AdminFaculties() {
       icon={<Building className="h-6 w-6 text-primary" />}
     >
       <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-        <div className="flex justify-center">
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Faculty
-          </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          {orderDraft ? (
+            <>
+              <Button variant="outline" disabled={savingOrder} onClick={() => { setOrderDraft(null); void refresh(); }}>Cancel</Button>
+              <Button disabled={savingOrder} onClick={saveOrder}>{savingOrder ? "Saving…" : "Save order"}</Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Faculty
+              </Button>
+              <Button variant="outline" disabled={facultiesLoading || faculties.length < 2} onClick={() => setOrderDraft([...faculties])}>
+                Reorder faculties
+              </Button>
+            </>
+          )}
         </div>
 
         {facultiesLoading ? (
@@ -198,7 +243,7 @@ export default function AdminFaculties() {
           </Card>
         ) : (
           <div className="max-w-2xl mx-auto space-y-3">
-            {faculties.map((faculty) => {
+            {(orderDraft ?? faculties).map((faculty, index) => {
               const backgroundImage = getFacultyBackground(faculty);
               const icon = faculty.icon?.trim();
               return (
@@ -235,47 +280,60 @@ export default function AdminFaculties() {
                         {faculty.slug}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleToggleVisibility(faculty)}
-                      >
-                        {faculty.is_visible ? (
-                          <Eye className="h-4 w-4" />
-                        ) : (
-                          <EyeOff className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setEditingFaculty({
-                            id: faculty.id,
-                            name: faculty.name,
-                            icon: faculty.icon || "",
-                            color: faculty.color || "",
-                            is_visible: faculty.is_visible,
-                            backgroundImageUrl: backgroundImage || "",
-                            backgroundOverlayOpacity:
-                              faculty.background_overlay_opacity ?? 50,
-                          })
-                        }
-                        className="gap-1.5"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setDeletingFaculty(faculty)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {orderDraft ? (
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" aria-label={`Move ${faculty.name} up`}
+                          disabled={savingOrder || index === 0} onClick={() => moveFaculty(index, -1)}>
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" aria-label={`Move ${faculty.name} down`}
+                          disabled={savingOrder || index === orderDraft.length - 1} onClick={() => moveFaculty(index, 1)}>
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleToggleVisibility(faculty)}
+                        >
+                          {faculty.is_visible ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setEditingFaculty({
+                              id: faculty.id,
+                              name: faculty.name,
+                              icon: faculty.icon || "",
+                              color: faculty.color || "",
+                              is_visible: faculty.is_visible,
+                              backgroundImageUrl: backgroundImage || "",
+                              backgroundOverlayOpacity:
+                                faculty.background_overlay_opacity ?? 50,
+                            })
+                          }
+                          className="gap-1.5"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setDeletingFaculty(faculty)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </Card>
               );
