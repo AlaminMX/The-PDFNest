@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/media/tile-assets/:kind(faculty|department)/:image([a-f0-9-]+\\.webp)",
+      "destination": "https://xanbbjxvxktiupefvkha.supabase.co/storage/v1/object/public/avatars/tile-assets/:kind/:image"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

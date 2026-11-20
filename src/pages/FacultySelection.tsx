@@ -71,7 +71,8 @@ function FacultySelectionContent() {
         .select("id, name, slug, color, icon, background_image_url, background_overlay_opacity")
         .is("faculty_id", null)
         .eq("is_visible", true)
-        .order("display_order", { ascending: true });
+        .order("display_order", { ascending: true })
+        .order("id", { ascending: true });
       setStandaloneDepts((data || []) as StandaloneDept[]);
     })();
   }, []);

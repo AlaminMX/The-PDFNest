@@ -250,7 +250,8 @@ function FacultyGrid({
             "id, name, slug, icon, color, background_image_url, background_overlay_opacity, display_order, is_visible",
           )
           .eq("is_visible", true)
-          .order("display_order", { ascending: true });
+          .order("display_order", { ascending: true })
+          .order("id", { ascending: true });
 
         if (cancelled) return;
         const rows = (facData || []) as unknown as Faculty[];

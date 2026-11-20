@@ -19,45 +19,18 @@ export function normalizeImageMime(mime: string): AllowedImageMime | null {
   return null;
 }
 
-export function extensionForMime(mime: AllowedImageMime): "jpg" | "png" | "webp" {
-  if (mime === "image/png") return "png";
-  if (mime === "image/webp") return "webp";
-  return "jpg";
-}
-
-export interface UploadTileImageArgs {
+export async function uploadTileImage({ kind, blob }: {
   kind: "faculty" | "department";
   blob: Blob;
-  mime: string;
-}
-
-export interface UploadTileImageResult {
-  publicUrl: string;
-  path: string;
-}
-
-/**
- * Uploads a tile background image into the configured public storage bucket
- * and returns its public URL. Validates and normalizes MIME types so that
- * `image/jpg` and similar variants don't get rejected by Storage.
- */
-export async function uploadTileImage({ kind, blob, mime }: UploadTileImageArgs): Promise<UploadTileImageResult> {
-  const normalized = normalizeImageMime(mime);
-  if (!normalized) {
-    throw new Error(`Unsupported image type "${mime}". Use JPG, JPEG, PNG, or WebP.`);
+}): Promise<{ publicUrl: string; path: string }> {
+  if (blob.type !== "image/webp" || blob.size === 0) {
+    throw new Error("A compressed WebP image is required.");
   }
-
-  const path = `${TILE_UPLOAD_FOLDER}/${kind}/${crypto.randomUUID()}.${extensionForMime(normalized)}`;
-
-  const { error: upErr } = await supabase.storage
+  const path = `${TILE_UPLOAD_FOLDER}/${kind}/${crypto.randomUUID()}.webp`;
+  const { error } = await supabase.storage
     .from(TILE_UPLOAD_BUCKET)
-    .upload(path, blob, { contentType: normalized, upsert: true });
+    .upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+  if (error) throw error;
 
-  if (upErr) {
-    console.error("Tile image upload failed", { bucket: TILE_UPLOAD_BUCKET, path, contentType: normalized, error: upErr });
-    throw upErr;
-  }
-
-  const { data } = supabase.storage.from(TILE_UPLOAD_BUCKET).getPublicUrl(path);
-  return { publicUrl: data.publicUrl, path };
+  return { publicUrl: `/media/${path}`, path };
 }

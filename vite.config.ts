@@ -1,14 +1,26 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+
+function tileMediaProxy(mode: string) {
+  const target = loadEnv(mode, process.cwd()).VITE_SUPABASE_URL;
+  return target ? {
+    "^/media/tile-assets/(faculty|department)/[a-f0-9-]+\\.webp$": {
+      target,
+      changeOrigin: true,
+      rewrite: (requestPath: string) => requestPath.replace(/^\/media/, "/storage/v1/object/public/avatars"),
+    },
+  } : undefined;
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
     port: 3000,
+    proxy: tileMediaProxy(mode),
   },
   plugins: [
     react(),

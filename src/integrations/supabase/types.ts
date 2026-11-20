@@ -1397,6 +1397,10 @@ export type Database = {
         Args: { _source_id: string; _target_id: string }
         Returns: undefined
       }
+      admin_set_faculty_order: {
+        Args: { _ordered_ids: string[] }
+        Returns: undefined
+      }
       admin_set_department_order: {
         Args: { _ordered_ids: string[] }
         Returns: undefined

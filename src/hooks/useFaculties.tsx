@@ -20,15 +20,15 @@ let _cache: Faculty[] | null = null;
 let _cacheTime = 0;
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
-export function useFaculties() {
-  const [faculties, setFaculties] = useState<Faculty[]>(_cache ?? []);
-  const [loading, setLoading] = useState(_cache === null);
+export function useFaculties({ includeHidden = false } = {}) {
+  const [faculties, setFaculties] = useState<Faculty[]>(includeHidden ? [] : _cache ?? []);
+  const [loading, setLoading] = useState(includeHidden || _cache === null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchFaculties = async (force = false) => {
     // Serve from cache if still fresh
-    if (!force && _cache && Date.now() - _cacheTime < STALE_MS) {
+    if (!includeHidden && !force && _cache && Date.now() - _cacheTime < STALE_MS) {
       setFaculties(_cache);
       setLoading(false);
       return;
@@ -41,13 +41,13 @@ export function useFaculties() {
       setLoading(true);
       setError(null);
 
-      // Parallel fetch: faculties + dept counts in one round-trip
+      const facultyQuery = supabase.from("faculties").select("*")
+        .order("display_order", { ascending: true })
+        .order("id", { ascending: true });
+      if (!includeHidden) facultyQuery.eq("is_visible", true);
+
       const [{ data, error: facErr }, { data: deptData }] = await Promise.all([
-        supabase
-          .from("faculties")
-          .select("*")
-          .eq("is_visible", true)
-          .order("display_order", { ascending: true }),
+        facultyQuery,
         supabase
           .from("departments")
           .select("faculty_id")
@@ -67,8 +67,14 @@ export function useFaculties() {
         department_count: countMap.get(f.id) || 0,
       }));
 
-      _cache = enriched;
-      _cacheTime = Date.now();
+      if (includeHidden) {
+        // Admin edits invalidate the public list without caching hidden rows.
+        _cache = null;
+        _cacheTime = 0;
+      } else {
+        _cache = enriched;
+        _cacheTime = Date.now();
+      }
       setFaculties(enriched);
     } catch (err: any) {
       if (err?.name === "AbortError") return;
@@ -77,7 +83,7 @@ export function useFaculties() {
         err instanceof Error ? err.message : "Failed to fetch faculties",
       );
       // Serve stale cache on error so page isn't blank
-      if (_cache) setFaculties(_cache);
+      if (!includeHidden && _cache) setFaculties(_cache);
     } finally {
       setLoading(false);
     }

@@ -26,8 +26,8 @@ interface Props {
 }
 
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
-const EDITED_IMAGE_WIDTH = 1200;
-const EDITED_IMAGE_HEIGHT = 800;
+const EDITED_IMAGE_WIDTH = 960;
+const EDITED_IMAGE_HEIGHT = 640;
 const IMAGE_EXTENSION_TO_MIME: Record<string, (typeof ALLOWED_IMAGE_MIME_TYPES)[number]> = {
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
@@ -38,7 +38,6 @@ const IMAGE_ACCEPT = `${ALLOWED_IMAGE_MIME_TYPES.join(",")},.jpeg,.jpg,.png,.web
 
 type PendingImage = {
   name: string;
-  type: string;
   source: string;
   objectUrl?: string;
 };
@@ -57,7 +56,7 @@ export function TileImageUpload({
   value,
   onChange,
   label = "Background image",
-  helpText = "Upload any image format supported by your browser, edit the crop, then use it as the tile background. Leave empty to show the icon instead.",
+  helpText = "Crop a JPG, PNG, or WebP image. PDFNest saves it as a compressed WebP.",
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -120,7 +119,6 @@ export function TileImageUpload({
     const objectUrl = URL.createObjectURL(file);
     openEditor({
       name: file.name,
-      type: supportedType,
       source: objectUrl,
       objectUrl,
     });
@@ -151,13 +149,12 @@ export function TileImageUpload({
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
-      const outputType = normalizeImageMime(pendingImage.type) ?? "image/jpeg";
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, 0.92));
-      if (!blob) throw new Error("Could not prepare image for upload.");
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.8));
+      if (blob?.type !== "image/webp") throw new Error("This browser could not compress the image to WebP.");
 
       await verifyTileUploadBucketConfig();
 
-      const { publicUrl } = await uploadTileImage({ kind, blob, mime: outputType });
+      const { publicUrl } = await uploadTileImage({ kind, blob });
       onChange(publicUrl);
       setEditorOpen(false);
       toast.success("Image uploaded");
@@ -173,7 +170,6 @@ export function TileImageUpload({
     if (!value) return;
     openEditor({
       name: "current-background.jpg",
-      type: "image/jpeg",
       source: value,
     });
   };
