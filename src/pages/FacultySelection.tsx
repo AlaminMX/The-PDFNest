@@ -471,7 +471,6 @@ function NotesList({
 function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles: any; index: number; onClick: () => void }) {
   const vibrantBg = faculty.color || styles.accentBg;
   const bgImage = getFacultyBackground(faculty);
-  const usesDefaultBackground = Boolean(bgImage && !faculty.background_image_url?.trim());
   const icon = typeof faculty.icon === "string" ? faculty.icon.trim() : "";
   return (
     <motion.div
@@ -495,8 +494,8 @@ function FacultyCard({ faculty, styles, index, onClick }: { faculty: any; styles
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundColor: usesDefaultBackground ? "#000000" : faculty.color || "#000000",
-              opacity: usesDefaultBackground ? 0.4 : (faculty.background_overlay_opacity ?? 50) / 100,
+              backgroundColor: faculty.color || "#000000",
+              opacity: (faculty.background_overlay_opacity ?? 50) / 100,
             }}
           />
         ) : (

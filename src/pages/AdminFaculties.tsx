@@ -1,3 +1,4 @@
+import { getFacultyBackground } from "@/lib/facultyBackground";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,8 +114,8 @@ export default function AdminFaculties() {
           name: editingFaculty.name.trim(),
           icon: editingFaculty.icon?.trim() || null,
           color: editingFaculty.color?.trim() || null,
-          background_image_url:
-            editingFaculty.backgroundImageUrl || null,
+          background_image_url: editingFaculty.backgroundImageUrl ||
+            (getFacultyBackground({ name: editingFaculty.name }) ? "" : null),
           background_overlay_opacity: editingFaculty.backgroundOverlayOpacity,
           is_visible: editingFaculty.is_visible,
         } as any)
@@ -197,85 +198,88 @@ export default function AdminFaculties() {
           </Card>
         ) : (
           <div className="max-w-2xl mx-auto space-y-3">
-            {faculties.map((faculty) => (
-              <Card
-                key={faculty.id}
-                className={`overflow-hidden ${!faculty.is_visible ? "opacity-60" : ""}`}
-              >
-                <div className="p-4 flex items-center gap-4">
-                  {faculty.icon?.trim() && (
-                    <div
-                      className="relative w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0 overflow-hidden"
-                      style={{
-                        backgroundImage: faculty.background_image_url
-                          ? `url(${faculty.background_image_url})`
-                          : undefined,
-                      }}
-                    >
-                      {faculty.background_image_url && (
-                        <div
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            backgroundColor: faculty.color || "#000000",
-                            opacity: (faculty.background_overlay_opacity ?? 50) / 100,
-                          }}
-                        />
-                      )}
-                      <span className="relative">{faculty.icon.trim()}</span>
+            {faculties.map((faculty) => {
+              const backgroundImage = getFacultyBackground(faculty);
+              const icon = faculty.icon?.trim();
+              return (
+                <Card
+                  key={faculty.id}
+                  className={`overflow-hidden ${!faculty.is_visible ? "opacity-60" : ""}`}
+                >
+                  <div className="p-4 flex items-center gap-4">
+                    {(icon || backgroundImage) && (
+                      <div
+                        className="relative w-12 h-12 rounded-lg bg-primary/10 bg-cover bg-center flex items-center justify-center text-2xl shrink-0 overflow-hidden"
+                        style={{
+                          backgroundImage: backgroundImage
+                            ? `url(${backgroundImage})`
+                            : undefined,
+                        }}
+                      >
+                        {backgroundImage && (
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                              backgroundColor: faculty.color || "#000000",
+                              opacity: (faculty.background_overlay_opacity ?? 50) / 100,
+                            }}
+                          />
+                        )}
+                        <span className="relative">{icon}</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold">{faculty.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {faculty.department_count} departments · slug:{" "}
+                        {faculty.slug}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold">{faculty.name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {faculty.department_count} departments · slug:{" "}
-                      {faculty.slug}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleToggleVisibility(faculty)}
+                      >
+                        {faculty.is_visible ? (
+                          <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setEditingFaculty({
+                            id: faculty.id,
+                            name: faculty.name,
+                            icon: faculty.icon || "",
+                            color: faculty.color || "",
+                            is_visible: faculty.is_visible,
+                            backgroundImageUrl: backgroundImage || "",
+                            backgroundOverlayOpacity:
+                              faculty.background_overlay_opacity ?? 50,
+                          })
+                        }
+                        className="gap-1.5"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setDeletingFaculty(faculty)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleToggleVisibility(faculty)}
-                    >
-                      {faculty.is_visible ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setEditingFaculty({
-                          id: faculty.id,
-                          name: faculty.name,
-                          icon: faculty.icon || "",
-                          color: faculty.color || "",
-                          is_visible: faculty.is_visible,
-                          backgroundImageUrl:
-                            faculty.background_image_url || "",
-                          backgroundOverlayOpacity:
-                            faculty.background_overlay_opacity ?? 50,
-                        })
-                      }
-                      className="gap-1.5"
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setDeletingFaculty(faculty)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

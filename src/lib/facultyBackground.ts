@@ -14,5 +14,8 @@ function getDefaultFacultyBackground(name: string) {
 }
 
 export function getFacultyBackground(faculty: FacultyBackground) {
-  return faculty.background_image_url?.trim() || getDefaultFacultyBackground(faculty.name);
+  // Null means no image was configured. An empty string records an explicit removal.
+  return faculty.background_image_url == null
+    ? getDefaultFacultyBackground(faculty.name)
+    : faculty.background_image_url.trim() || undefined;
 }

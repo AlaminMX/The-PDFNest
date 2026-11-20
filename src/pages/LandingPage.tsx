@@ -167,10 +167,12 @@ function FacultyCard({
   const styles = getDepartmentStyles(faculty.color, index);
   const icon = faculty.icon?.trim();
   const backgroundImage = getFacultyBackground(faculty);
-  const usesDefaultBackground = Boolean(backgroundImage && !faculty.background_image_url?.trim());
   const [hovered, setHovered] = useState(false);
   const baseOverlayOpacity = (faculty.background_overlay_opacity ?? 50) / 100;
   const overlayOpacity = hovered ? Math.min(1, baseOverlayOpacity + 0.1) : baseOverlayOpacity;
+  const overlayColor = faculty.color
+    ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${overlayOpacity})`
+    : `rgba(0, 0, 0, ${overlayOpacity})`;
 
   return (
     <button
@@ -185,9 +187,7 @@ function FacultyCard({
             ? styles.bgHover
             : styles.bgLight,
         backgroundImage: backgroundImage
-          ? usesDefaultBackground
-            ? `linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.28)), url(${backgroundImage})`
-            : `linear-gradient(${faculty.color ? `hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${overlayOpacity}), hsla(${styles.hsl.h}, ${styles.hsl.s}%, ${styles.hsl.l}%, ${overlayOpacity})` : "rgba(0,0,0,0), rgba(0,0,0,0)"}), url(${backgroundImage})`
+          ? `linear-gradient(${overlayColor}, ${overlayColor}), url(${backgroundImage})`
           : undefined,
         backgroundSize: backgroundImage ? "cover" : undefined,
         backgroundPosition: backgroundImage ? "center" : undefined,
@@ -207,19 +207,19 @@ function FacultyCard({
       )}
       <p
         className="text-sm font-semibold leading-snug mb-1 line-clamp-2"
-        style={{ color: usesDefaultBackground ? "#fff" : styles.accentText }}
+        style={{ color: styles.accentText }}
       >
         {faculty.name}
       </p>
       {typeof faculty.department_count === "number" && (
-        <p className={usesDefaultBackground ? "text-[11px] text-white/85" : "text-[11px] text-muted-foreground/60"}>
+        <p className="text-[11px] text-muted-foreground/60">
           {faculty.department_count}{" "}
           {faculty.department_count === 1 ? "dept" : "depts"}
         </p>
       )}
-      <div className={usesDefaultBackground ? "flex items-center gap-1 mt-3 text-white/85" : "flex items-center gap-1 mt-3"}>
-        <span className={usesDefaultBackground ? "text-[11px]" : "text-[11px] text-muted-foreground/50"}>Browse</span>
-        <ArrowRight className={`w-3 h-3 group-hover:translate-x-0.5 transition-transform duration-150 ${usesDefaultBackground ? "" : "text-muted-foreground/40"}`} />
+      <div className="flex items-center gap-1 mt-3">
+        <span className="text-[11px] text-muted-foreground/50">Browse</span>
+        <ArrowRight className="w-3 h-3 text-muted-foreground/40 group-hover:translate-x-0.5 transition-transform duration-150" />
       </div>
     </button>
   );
