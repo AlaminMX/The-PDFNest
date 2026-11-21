@@ -1,5 +1,5 @@
 import { useRepStatus } from "@/hooks/useRepStatus";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,6 +48,8 @@ interface Category { id: string; name: string; color: string; file_count?: numbe
 
 const STORAGE_LIMIT = 300 * 1024 * 1024;
 const PROFILE_CACHE_KEY = "pdfnest_profile_cache";
+
+class ProfileNotFoundError extends Error {}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,59 +107,60 @@ export default function UserProfile() {
     return null;
   }, []);
 
-  // Redirect only once auth state is definitively known — never redirect
-  // (or render "not found") while the session is still being resolved.
-  useEffect(() => {
-    if (!authLoading && !user) {
-      sessionStorage.setItem("redirectAfterLogin", "/profile");
-      navigate("/auth");
-    }
-  }, [authLoading, user, navigate]);
-
-  const { data: profileData, isLoading, refetch } = useQuery({
+  const profileQuery = useQuery({
     queryKey: ["user-profile", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
+    queryFn: async ({ signal }) => {
+      if (!user) throw new Error("Sign in to open your profile.");
 
-      const { data, error } = await supabase.rpc("get_user_profile_summary", { p_user_id: user.id });
+      const { data, error } = await supabase
+        .rpc("get_user_profile_summary", { p_user_id: user.id })
+        .abortSignal(signal);
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        const summary = data[0];
-        const { data: extraData } = await supabase
-          .from("profiles")
-          .select("nickname, phone_number, date_of_birth")
-          .eq("id", user.id)
-          .maybeSingle();
+      const summary = data?.find(({ id }) => id === user.id);
+      if (!summary) throw new ProfileNotFoundError();
 
-        const profile: UserProfileData = {
-          id: summary.id,
-          display_name: summary.display_name,
-          full_name: summary.full_name,
-          email: summary.email,
-          avatar_url: summary.avatar_url,
-          total_storage_used: summary.total_storage_used,
-          created_at: summary.created_at,
-          department_id: summary.department_id,
-          department_name: summary.department_name,
-          pdf_count: Number(summary.pdf_count),
-          nickname: extraData?.nickname || null,
-          phone_number: extraData?.phone_number || null,
-          date_of_birth: (extraData as any)?.date_of_birth || null,
-        };
+      const { data: extraData, error: profileError } = await supabase
+        .from("profiles")
+        .select("nickname, phone_number, date_of_birth")
+        .eq("id", user.id)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (profileError) throw profileError;
 
+      const profile: UserProfileData = {
+        id: summary.id,
+        display_name: summary.display_name,
+        full_name: summary.full_name,
+        email: summary.email,
+        avatar_url: summary.avatar_url,
+        total_storage_used: summary.total_storage_used,
+        created_at: summary.created_at,
+        department_id: summary.department_id,
+        department_name: summary.department_name,
+        pdf_count: Number(summary.pdf_count),
+        nickname: extraData?.nickname || null,
+        phone_number: extraData?.phone_number || null,
+        date_of_birth: extraData?.date_of_birth || null,
+      };
+
+      try {
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
-        return profile;
+      } catch {
+        // The profile still works when browser storage is unavailable.
       }
-      return null;
+      return profile;
     },
-    enabled: !authLoading && !!user,
+    enabled: !authLoading && Boolean(user),
+    retry: 2,
+    retryDelay: (attempt) => 500 * 2 ** attempt,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
-    placeholderData: cachedProfile,
+    placeholderData: cachedProfile?.id === user?.id ? cachedProfile : undefined,
   });
 
-  const profile = profileData || (cachedProfile?.id === user?.id ? cachedProfile : null);
+  const { refetch } = profileQuery;
+  const profile = profileQuery.data?.id === user?.id ? profileQuery.data : null;
   const userId = profile?.id || null;
 
   const recentFiles = useMemo(() => {
@@ -217,13 +220,20 @@ export default function UserProfile() {
   };
 
   if (authLoading) return <ProfileSkeleton />;
-  if (!user) return null; // redirect effect above is already handling this
-  if (isLoading && !profile) return <ProfileSkeleton />;
-  if (!profile) return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-muted-foreground text-sm">Profile not found.</p>
-    </div>
-  );
+  if (!user) return null;
+  if (!profile && (profileQuery.isPending || profileQuery.isFetching)) return <ProfileSkeleton />;
+  if (!profile) {
+    const missing = profileQuery.error instanceof ProfileNotFoundError;
+    return (
+      <div className="min-h-screen grid place-content-center justify-items-center gap-3 bg-background px-6 text-center">
+        <p role="alert" className="text-sm text-muted-foreground">
+          {missing ? "We couldn’t find your profile." : "Couldn’t load your profile."}
+        </p>
+        <Button variant="outline" onClick={() => void refetch()}>Try again</Button>
+        <Button variant="ghost" onClick={() => navigate("/dashboard")}>Back to dashboard</Button>
+      </div>
+    );
+  }
 
   const displayName = profile.display_name || profile.full_name || "User";
   const storageUsed = profile.total_storage_used || 0;
