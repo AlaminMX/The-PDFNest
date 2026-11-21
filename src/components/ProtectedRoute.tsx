@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 export function ProtectedRoute({
   children,
   requireOnboarding = true,
+  pendingFallback,
 }: {
   children: ReactNode;
   requireOnboarding?: boolean;
+  pendingFallback?: ReactNode;
 }) {
   const navigate = useNavigate();
   const { pathname, search, hash } = useLocation();
@@ -41,6 +43,7 @@ export function ProtectedRoute({
     }
   }, [userId, requireOnboarding, onboarding.data, onboarding.isFetching, onboarding.isError, pathname, search, hash, navigate]);
 
+  if (userId === undefined) return pendingFallback ?? null;
   if (!userId) return null;
   if (requireOnboarding) {
     if (onboarding.isError) {
@@ -51,7 +54,7 @@ export function ProtectedRoute({
         </div>
       );
     }
-    if (onboarding.data !== true) return <LoadingState message="Checking account setup…" />;
+    if (onboarding.data !== true) return pendingFallback ?? <LoadingState message="Checking account setup…" />;
   }
   return <Fragment key={userId}>{children}</Fragment>;
 }

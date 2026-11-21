@@ -64,6 +64,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 import { ActivityRouteTracker } from "@/components/ActivityRouteTracker";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { AdminLayout } from "@/components/AdminShell";
+import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
@@ -187,7 +188,13 @@ const App = () => (
                 <Route path="/rep/upload" element={<ProtectedRoute><RepUpload /></ProtectedRoute>} />
                 <Route path="/rep/:userId" element={<ProtectedRoute><RepProfile /></ProtectedRoute>} />
                 <Route path="/user/:userId" element={<PublicProfile />} />
-                <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/profile" element={
+                  <ProtectedRoute pendingFallback={<ProfileSkeleton />}>
+                    <Suspense fallback={<ProfileSkeleton />}>
+                      <UserProfile />
+                    </Suspense>
+                  </ProtectedRoute>
+                } />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/contribute" element={<ProtectedRoute><CommunityUpload /></ProtectedRoute>} />
                 <Route path="/past-questions" element={<PQLevel />} />
