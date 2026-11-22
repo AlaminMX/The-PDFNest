@@ -1,12 +1,23 @@
 -- Keep writes behind the Edge Function that verifies the session and timestamps events.
-revoke execute on function public.insert_activity_event(text, text, text, text, text, text, jsonb)
-  from public, anon, authenticated;
-revoke execute on function public.insert_activity_event(timestamptz, text, text, text, text, text, jsonb)
-  from public, anon, authenticated;
-revoke execute on function public.record_failed_login_attempt(text, text, text, text, jsonb)
-  from public, anon, authenticated;
-revoke execute on function public.record_failed_login_attempt(text, inet, text, text, jsonb)
-  from public, anon, authenticated;
+DO $$
+DECLARE
+  fn regprocedure;
+BEGIN
+  FOR fn IN
+    SELECT p.oid::regprocedure
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.prokind = 'f'
+      AND p.proname IN ('insert_activity_event', 'record_failed_login_attempt')
+  LOOP
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated',
+      fn
+    );
+  END LOOP;
+END;
+$$;
 
 
 CREATE OR REPLACE FUNCTION public.purge_old_session_data()
