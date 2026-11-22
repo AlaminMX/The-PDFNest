@@ -8,5 +8,28 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'sha256-3TQzrJ5CfyChfko5ZZyKNSf4LpSDC0miKWFK0Xjzuwc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https://xanbbjxvxktiupefvkha.supabase.co wss://xanbbjxvxktiupefvkha.supabase.co; worker-src 'self' blob:; frame-src 'self' blob: https://xanbbjxvxktiupefvkha.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    }
   ]
 }

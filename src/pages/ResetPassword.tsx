@@ -7,7 +7,7 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/validation";
 import { AlertTriangle, KeyRound, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { hasRecoveryParams } from "@/lib/authRecovery";
