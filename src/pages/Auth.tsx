@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/validation";
 import { motion, AnimatePresence } from "framer-motion";
 import { logActivity } from "@/lib/sessionLogger";
 import {
